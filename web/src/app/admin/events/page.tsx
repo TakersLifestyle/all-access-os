@@ -15,13 +15,29 @@ interface Event {
   date: string;
   location: string;
   description: string;
-  image: string;
-  price: string;
-  memberPrice: string;
+  imageUrl: string;
+  generalPrice: number | string;
+  memberPrice: number | string;
+  capacity: number | string;
+  ticketsRemaining: number | string;
+  isMembersOnly: boolean;
+  status: "active" | "draft" | "sold_out";
   createdAt?: Timestamp;
 }
 
-const empty = { title: "", date: "", location: "", description: "", image: "", price: "", memberPrice: "" };
+const empty = {
+  title: "",
+  date: "",
+  location: "",
+  description: "",
+  imageUrl: "",
+  generalPrice: "",
+  memberPrice: "",
+  capacity: "",
+  ticketsRemaining: "",
+  isMembersOnly: true,
+  status: "active" as const,
+};
 
 export default function AdminEventsPage() {
   const { isAdmin, loading } = useAuth();
@@ -46,14 +62,20 @@ export default function AdminEventsPage() {
     e.preventDefault();
     if (!form.title.trim()) return;
     setSaving(true);
+    const cap = Number(form.capacity) || 0;
+    const remaining = Number(form.ticketsRemaining) || cap;
     const data = {
       title: form.title,
       date: form.date,
       location: form.location,
       description: form.description,
-      image: form.image,
-      price: form.price,
-      memberPrice: form.memberPrice,
+      imageUrl: form.imageUrl,
+      generalPrice: Number(form.generalPrice) || 0,
+      memberPrice: Number(form.memberPrice) || 0,
+      capacity: cap,
+      ticketsRemaining: remaining,
+      isMembersOnly: form.isMembersOnly,
+      status: form.status,
     };
     if (editId) {
       await updateDoc(doc(db, "events", editId), data);
@@ -75,13 +97,17 @@ export default function AdminEventsPage() {
   const handleEdit = (ev: Event) => {
     setEditId(ev.id);
     setForm({
-      title: ev.title,
-      date: ev.date,
-      location: ev.location,
-      description: ev.description,
-      image: ev.image || "",
-      price: ev.price || "",
-      memberPrice: ev.memberPrice || "",
+      title: ev.title || "",
+      date: ev.date || "",
+      location: ev.location || "",
+      description: ev.description || "",
+      imageUrl: ev.imageUrl || "",
+      generalPrice: ev.generalPrice?.toString() || "",
+      memberPrice: ev.memberPrice?.toString() || "",
+      capacity: ev.capacity?.toString() || "",
+      ticketsRemaining: ev.ticketsRemaining?.toString() || "",
+      isMembersOnly: ev.isMembersOnly ?? true,
+      status: ev.status || "active",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -125,38 +151,71 @@ export default function AdminEventsPage() {
           />
         </div>
 
+        {/* Pricing */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">$</span>
+            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">General Price</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">$</span>
+              <input
+                value={form.generalPrice}
+                onChange={(e) => setForm({ ...form, generalPrice: e.target.value })}
+                placeholder="0 = not available"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-pink-400 uppercase tracking-wider pl-1 block mb-1">Member Price</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400">$</span>
+              <input
+                value={form.memberPrice}
+                onChange={(e) => setForm({ ...form, memberPrice: e.target.value })}
+                placeholder="0 = FREE for members"
+                className="w-full bg-white/5 border border-pink-500/30 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Capacity */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">Total Capacity</label>
             <input
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              placeholder="General Ticket Price"
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+              placeholder="e.g. 50"
+              type="number"
+              min={0}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
             />
           </div>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400">$</span>
+          <div>
+            <label className="text-xs text-amber-400 uppercase tracking-wider pl-1 block mb-1">Tickets Remaining</label>
             <input
-              value={form.memberPrice}
-              onChange={(e) => setForm({ ...form, memberPrice: e.target.value })}
-              placeholder="Member Price (leave blank = FREE)"
-              className="w-full bg-white/5 border border-pink-500/30 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              value={form.ticketsRemaining}
+              onChange={(e) => setForm({ ...form, ticketsRemaining: e.target.value })}
+              placeholder="Tracks urgency / scarcity"
+              type="number"
+              min={0}
+              className="w-full bg-white/5 border border-amber-500/30 rounded-xl px-4 py-3 outline-none focus:border-amber-500 transition"
             />
           </div>
         </div>
 
+        {/* Image URL */}
         <input
-          value={form.image}
-          onChange={(e) => setForm({ ...form, image: e.target.value })}
+          value={form.imageUrl}
+          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
           placeholder="Image URL (paste a direct image link)"
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
         />
 
-        {/* Image preview */}
-        {form.image && (
+        {form.imageUrl && (
           <div className="rounded-xl overflow-hidden border border-white/10 h-40">
-            <img src={form.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           </div>
         )}
 
@@ -167,6 +226,29 @@ export default function AdminEventsPage() {
           rows={3}
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition resize-none"
         />
+
+        {/* Toggles */}
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setForm({ ...form, isMembersOnly: !form.isMembersOnly })}
+              className={`w-10 h-6 rounded-full transition-colors ${form.isMembersOnly ? "bg-pink-600" : "bg-white/20"} relative`}
+            >
+              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${form.isMembersOnly ? "translate-x-5" : "translate-x-1"}`} />
+            </div>
+            <span className="text-sm text-white/70">Members Only</span>
+          </label>
+
+          <select
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })}
+            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-pink-500 transition"
+          >
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="sold_out">Sold Out</option>
+          </select>
+        </div>
 
         <div className="flex gap-3">
           <button
@@ -192,32 +274,51 @@ export default function AdminEventsPage() {
       <div className="space-y-4">
         {events.length === 0 ? (
           <p className="text-white/40">No events yet. Add one above.</p>
-        ) : events.map((ev) => (
-          <div key={ev.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden flex gap-0">
-            {ev.image && (
-              <img src={ev.image} alt={ev.title} className="w-32 h-full object-cover shrink-0" />
-            )}
-            <div className="flex-1 p-5 flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="font-semibold text-lg">{ev.title}</h3>
-                {ev.date && <p className="text-white/50 text-sm">{new Date(ev.date + "T12:00:00").toLocaleDateString("en-CA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}{ev.location ? ` · ${ev.location}` : ""}</p>}
-                {ev.description && <p className="text-white/40 text-sm line-clamp-2">{ev.description}</p>}
-                <div className="flex gap-3 pt-1">
-                  {ev.price && <span className="text-white/50 text-sm">General: <span className="text-white font-medium">${ev.price}</span></span>}
-                  {ev.memberPrice ? (
-                    <span className="text-pink-400 text-sm font-medium">Members: ${ev.memberPrice}</span>
-                  ) : ev.price ? (
-                    <span className="text-pink-400 text-sm font-medium">Members: FREE</span>
-                  ) : null}
+        ) : events.map((ev) => {
+          const pct = ev.capacity ? Math.round(((ev.capacity - (ev.ticketsRemaining ?? ev.capacity)) / ev.capacity) * 100) : 0;
+          return (
+            <div key={ev.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden flex">
+              {ev.imageUrl && (
+                <img src={ev.imageUrl} alt={ev.title} className="w-28 object-cover shrink-0" />
+              )}
+              <div className="flex-1 p-5 space-y-2">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{ev.title}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${ev.status === "active" ? "border-green-700/50 text-green-400" : ev.status === "sold_out" ? "border-red-700/50 text-red-400" : "border-white/20 text-white/40"}`}>
+                        {ev.status === "sold_out" ? "SOLD OUT" : ev.status}
+                      </span>
+                      {ev.isMembersOnly && <span className="text-xs px-2 py-0.5 rounded-full border border-pink-700/50 text-pink-400">Members Only</span>}
+                    </div>
+                    {ev.date && <p className="text-white/50 text-sm">{new Date(ev.date + "T12:00:00").toLocaleDateString("en-CA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}{ev.location ? ` · ${ev.location}` : ""}</p>}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleEdit(ev)} className="text-sm px-3 py-1 rounded-lg border border-white/20 hover:border-white/40 transition">Edit</button>
+                    <button onClick={() => handleDelete(ev.id)} className="text-sm px-3 py-1 rounded-lg border border-red-800 text-red-400 hover:bg-red-950/40 transition">Delete</button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button onClick={() => handleEdit(ev)} className="text-sm px-3 py-1 rounded-lg border border-white/20 hover:border-white/40 transition">Edit</button>
-                <button onClick={() => handleDelete(ev.id)} className="text-sm px-3 py-1 rounded-lg border border-red-800 text-red-400 hover:bg-red-950/40 transition">Delete</button>
+
+                <div className="flex gap-4 text-sm">
+                  {ev.generalPrice ? <span className="text-white/50">General: <span className="text-white">${ev.generalPrice}</span></span> : <span className="text-white/30">General: N/A</span>}
+                  <span className="text-pink-400">Members: {ev.memberPrice ? `$${ev.memberPrice}` : "FREE"}</span>
+                </div>
+
+                {ev.capacity ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-white/40">
+                      <span>{ev.ticketsRemaining ?? ev.capacity} spots remaining</span>
+                      <span>{pct}% filled</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${pct > 80 ? "bg-red-500" : pct > 50 ? "bg-amber-500" : "bg-green-500"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );
