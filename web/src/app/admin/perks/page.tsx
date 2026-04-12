@@ -12,14 +12,24 @@ import {
 interface Perk {
   id: string;
   title: string;
-  description: string;
   partner: string;
   discount: string;
   code: string;
+  redemptionMethod: string;
+  description: string;
+  status: "active" | "inactive";
   createdAt?: Timestamp;
 }
 
-const empty = { title: "", description: "", partner: "", discount: "", code: "" };
+const empty = {
+  title: "",
+  partner: "",
+  discount: "",
+  code: "",
+  redemptionMethod: "",
+  description: "",
+  status: "active" as const,
+};
 
 export default function AdminPerksPage() {
   const { isAdmin, loading } = useAuth();
@@ -46,10 +56,12 @@ export default function AdminPerksPage() {
     setSaving(true);
     const data = {
       title: form.title,
-      description: form.description,
       partner: form.partner,
       discount: form.discount,
       code: form.code.toUpperCase(),
+      redemptionMethod: form.redemptionMethod,
+      description: form.description,
+      status: form.status,
     };
     if (editId) {
       await updateDoc(doc(db, "perks", editId), data);
@@ -62,6 +74,12 @@ export default function AdminPerksPage() {
     setSaving(false);
   };
 
+  const toggleStatus = async (perk: Perk) => {
+    const newStatus = perk.status === "active" ? "inactive" : "active";
+    await updateDoc(doc(db, "perks", perk.id), { status: newStatus });
+    setPerks((prev) => prev.map((p) => p.id === perk.id ? { ...p, status: newStatus } : p));
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this perk?")) return;
     await deleteDoc(doc(db, "perks", id));
@@ -70,17 +88,30 @@ export default function AdminPerksPage() {
 
   const handleEdit = (p: Perk) => {
     setEditId(p.id);
-    setForm({ title: p.title, description: p.description, partner: p.partner, discount: p.discount, code: p.code || "" });
+    setForm({
+      title: p.title || "",
+      partner: p.partner || "",
+      discount: p.discount || "",
+      code: p.code || "",
+      redemptionMethod: p.redemptionMethod || "",
+      description: p.description || "",
+      status: p.status || "active",
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (loading || !isAdmin) return null;
 
+  const activeCount = perks.filter((p) => p.status === "active").length;
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-12 space-y-10">
       <div className="flex items-center gap-4">
         <button onClick={() => router.push("/admin")} className="text-white/40 hover:text-white text-sm transition">← Back</button>
-        <h1 className="text-3xl font-bold">Manage Perks</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Manage Perks</h1>
+          <p className="text-white/40 text-sm mt-0.5">{activeCount} active · {perks.length} total</p>
+        </div>
       </div>
 
       {/* Form */}
@@ -90,7 +121,7 @@ export default function AdminPerksPage() {
         <input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="Perk title * (e.g. 20% off at Bison)"
+          placeholder="Perk title * (e.g. VIP Lounge Entry Access)"
           required
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
         />
@@ -99,34 +130,51 @@ export default function AdminPerksPage() {
           <input
             value={form.partner}
             onChange={(e) => setForm({ ...form, partner: e.target.value })}
-            placeholder="Partner / Brand name"
+            placeholder="Partner / Brand (can be updated later)"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
           />
           <input
             value={form.discount}
             onChange={(e) => setForm({ ...form, discount: e.target.value })}
-            placeholder="Discount label (e.g. 20% off, $10 off, Free item)"
+            placeholder="Discount label (e.g. Free entry, 15% off, $25 off)"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
           />
         </div>
 
-        <div className="relative">
-          <input
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-            placeholder="PROMO CODE (e.g. ALLACCESS20)"
-            className="w-full bg-pink-950/20 border border-pink-500/30 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition font-mono tracking-widest text-pink-300 uppercase"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-white/30">CODE</span>
-        </div>
+        <input
+          value={form.code}
+          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+          placeholder='Promo Code — type "none" or "automatic" if no code'
+          className="w-full bg-pink-950/20 border border-pink-500/30 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition font-mono tracking-widest text-pink-300 uppercase"
+        />
+
+        <textarea
+          value={form.redemptionMethod}
+          onChange={(e) => setForm({ ...form, redemptionMethod: e.target.value })}
+          placeholder="How to redeem — what the member needs to do to claim this perk"
+          rows={2}
+          className="w-full bg-white/5 border border-amber-500/20 rounded-xl px-4 py-3 outline-none focus:border-amber-500 transition resize-none"
+        />
 
         <textarea
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Description — how to redeem, what's included, any restrictions"
+          placeholder="Description — sell the value, any restrictions, partner details"
           rows={3}
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition resize-none"
         />
+
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setForm({ ...form, status: form.status === "active" ? "inactive" : "active" })}
+              className={`w-10 h-6 rounded-full transition-colors ${form.status === "active" ? "bg-green-600" : "bg-white/20"} relative cursor-pointer`}
+            >
+              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${form.status === "active" ? "translate-x-5" : "translate-x-1"}`} />
+            </div>
+            <span className="text-sm text-white/70">Active</span>
+          </label>
+        </div>
 
         <div className="flex gap-3">
           <button
@@ -149,29 +197,63 @@ export default function AdminPerksPage() {
       </form>
 
       {/* List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {perks.length === 0 ? (
           <p className="text-white/40">No perks yet. Add one above.</p>
         ) : perks.map((p) => (
-          <div key={p.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-start justify-between gap-4">
+          <div
+            key={p.id}
+            className={`border rounded-2xl p-5 flex items-start justify-between gap-4 transition ${
+              p.status === "active"
+                ? "bg-white/5 border-white/10"
+                : "bg-white/[0.02] border-white/5 opacity-60"
+            }`}
+          >
             <div className="space-y-2 flex-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <h3 className="font-semibold">{p.title}</h3>
                 {p.discount && (
-                  <span className="bg-pink-600/20 border border-pink-500/30 text-pink-300 text-xs px-2 py-0.5 rounded-full font-medium">{p.discount}</span>
+                  <span className="bg-pink-600/20 border border-pink-500/30 text-pink-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                    {p.discount}
+                  </span>
                 )}
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                  p.status === "active"
+                    ? "border-green-700/50 text-green-400"
+                    : "border-white/10 text-white/30"
+                }`}>
+                  {p.status === "active" ? "Active" : "Inactive"}
+                </span>
               </div>
               {p.partner && <p className="text-pink-400 text-sm font-medium">{p.partner}</p>}
+              {p.redemptionMethod && (
+                <p className="text-amber-300/70 text-sm">
+                  <span className="text-white/30 mr-1">How to redeem:</span>{p.redemptionMethod}
+                </p>
+              )}
               {p.description && <p className="text-white/40 text-sm">{p.description}</p>}
-              {p.code && (
+              {p.code && !["NONE", "AUTOMATIC"].includes(p.code) && (
                 <div className="inline-flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5">
                   <span className="font-mono text-sm text-pink-300 tracking-widest">{p.code}</span>
                 </div>
               )}
+              {p.code === "AUTOMATIC" && (
+                <span className="text-white/30 text-xs">✦ Automatic — no code needed</span>
+              )}
             </div>
-            <div className="flex gap-2 shrink-0">
-              <button onClick={() => handleEdit(p)} className="text-sm px-3 py-1 rounded-lg border border-white/20 hover:border-white/40 transition">Edit</button>
-              <button onClick={() => handleDelete(p.id)} className="text-sm px-3 py-1 rounded-lg border border-red-800 text-red-400 hover:bg-red-950/40 transition">Delete</button>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                onClick={() => toggleStatus(p)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition ${
+                  p.status === "active"
+                    ? "border-yellow-700/50 text-yellow-400 hover:bg-yellow-950/30"
+                    : "border-green-700/50 text-green-400 hover:bg-green-950/30"
+                }`}
+              >
+                {p.status === "active" ? "Deactivate" : "Activate"}
+              </button>
+              <button onClick={() => handleEdit(p)} className="text-xs px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition">Edit</button>
+              <button onClick={() => handleDelete(p.id)} className="text-xs px-3 py-1.5 rounded-lg border border-red-800 text-red-400 hover:bg-red-950/40 transition">Delete</button>
             </div>
           </div>
         ))}
