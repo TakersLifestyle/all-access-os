@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 function CheckoutStatus() {
   const params = useSearchParams();
@@ -26,7 +27,7 @@ function CheckoutStatus() {
 }
 
 export default function ProfilePage() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, isAdmin, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,6 +35,13 @@ export default function ProfilePage() {
   }, [loading, user, router]);
 
   if (loading || !profile) return null;
+
+  const roleLabel = profile.role === "admin" ? "Owner" : "Member";
+  const roleBadgeClass = profile.role === "admin"
+    ? "text-amber-400 bg-amber-400/10 border border-amber-400/30"
+    : "text-white/60 bg-white/5 border border-white/10";
+
+  const initial = (profile.displayName ?? profile.email ?? "M")[0].toUpperCase();
 
   return (
     <main className="max-w-xl mx-auto px-6 py-12 space-y-8">
@@ -43,29 +51,52 @@ export default function ProfilePage() {
 
       <h1 className="text-3xl font-bold">Your Profile</h1>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+        {/* Avatar + name */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-pink-600 flex items-center justify-center text-2xl font-bold">
-            {(profile.displayName ?? profile.email ?? "M")[0].toUpperCase()}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-600 to-pink-800 flex items-center justify-center text-2xl font-bold shrink-0">
+            {initial}
           </div>
           <div>
-            <p className="font-semibold">{profile.displayName ?? "Member"}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-lg">{profile.displayName ?? profile.email?.split("@")[0] ?? "Member"}</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleBadgeClass}`}>
+                {roleLabel}
+              </span>
+            </div>
             <p className="text-white/40 text-sm">{profile.email}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 pt-2">
+        {/* Status + Role */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-white/40 text-xs uppercase tracking-wide">Status</p>
-            <p className={`font-semibold mt-1 ${profile.status === "active" ? "text-green-400" : "text-yellow-400"}`}>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Status</p>
+            <p className={`font-semibold ${profile.status === "active" ? "text-green-400" : "text-yellow-400"}`}>
               {profile.status === "active" ? "Active Member" : "Inactive"}
             </p>
           </div>
           <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-white/40 text-xs uppercase tracking-wide">Role</p>
-            <p className="font-semibold mt-1 capitalize">{profile.role}</p>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Role</p>
+            <p className={`font-semibold ${profile.role === "admin" ? "text-amber-400" : "text-white"}`}>
+              {roleLabel}
+            </p>
           </div>
         </div>
+
+        {/* Admin shortcut */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center justify-between w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl px-5 py-4 transition group"
+          >
+            <div>
+              <p className="font-semibold text-amber-400">Admin Dashboard</p>
+              <p className="text-white/40 text-sm">Manage events, perks, and members</p>
+            </div>
+            <span className="text-amber-400 group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
+        )}
       </div>
     </main>
   );

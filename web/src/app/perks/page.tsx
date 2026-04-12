@@ -9,8 +9,29 @@ interface Perk {
   id: string;
   title: string;
   description: string;
-  offerDetails: string;
-  expiration?: string;
+  partner: string;
+  discount: string;
+  code: string;
+}
+
+function CopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-2 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 rounded-xl px-4 py-2.5 transition w-full group"
+    >
+      <span className="font-mono font-bold text-pink-300 tracking-widest flex-1 text-left">{code}</span>
+      <span className="text-xs text-pink-400 group-hover:text-pink-200 transition shrink-0">
+        {copied ? "✓ Copied!" : "Tap to copy"}
+      </span>
+    </button>
+  );
 }
 
 function PerksList() {
@@ -18,25 +39,49 @@ function PerksList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDocs(query(collection(db, "perks"), orderBy("title")))
+    getDocs(query(collection(db, "perks"), orderBy("createdAt", "desc")))
       .then((snap) => setPerks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Perk))))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-white/40">Loading perks...</p>;
-  if (perks.length === 0) return <p className="text-white/40">No perks yet. Check back soon.</p>;
+  if (perks.length === 0) return (
+    <div className="text-center py-20 space-y-2">
+      <p className="text-4xl">🎁</p>
+      <p className="text-white/60 font-medium">Exclusive perks coming soon.</p>
+      <p className="text-white/30 text-sm">Check back — new partner deals drop regularly.</p>
+    </div>
+  );
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
+    <div className="grid md:grid-cols-2 gap-5">
       {perks.map((perk) => (
-        <div key={perk.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-          <h2 className="text-xl font-semibold">{perk.title}</h2>
-          <p className="text-white/50 text-sm">{perk.description}</p>
-          <div className="bg-pink-950/40 border border-pink-800/30 rounded-lg p-3 text-pink-300 text-sm font-medium">
-            {perk.offerDetails}
+        <div key={perk.id} className="bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl p-6 space-y-4 transition">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold leading-tight">{perk.title}</h2>
+              {perk.partner && <p className="text-pink-400 text-sm font-medium mt-0.5">{perk.partner}</p>}
+            </div>
+            {perk.discount && (
+              <span className="bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full shrink-0 whitespace-nowrap">
+                {perk.discount}
+              </span>
+            )}
           </div>
-          {perk.expiration && (
-            <p className="text-white/30 text-xs">Expires: {perk.expiration}</p>
+
+          {/* Description */}
+          {perk.description && (
+            <p className="text-white/50 text-sm leading-relaxed">{perk.description}</p>
+          )}
+
+          {/* Code */}
+          {perk.code && <CopyButton code={perk.code} />}
+
+          {!perk.code && (
+            <div className="bg-white/5 rounded-xl px-4 py-2.5 text-white/40 text-sm">
+              Show your membership at checkout
+            </div>
           )}
         </div>
       ))}
@@ -48,7 +93,10 @@ export default function PerksPage() {
   return (
     <MemberGate>
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-8">
-        <h1 className="text-3xl font-bold">Member Perks</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Member Perks</h1>
+          <p className="text-white/40 mt-1">Exclusive deals and discounts — just for ALL ACCESS members.</p>
+        </div>
         <PerksList />
       </main>
     </MemberGate>
