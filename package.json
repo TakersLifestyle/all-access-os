@@ -1,0 +1,9 @@
+{
+  "name": "all-access-platform",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix web run dev",
+    "build:functions": "npm --prefix functions run build",
+    "serve:functions": "npm --prefix functions run serve"
+  }
+}
