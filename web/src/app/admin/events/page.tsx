@@ -36,7 +36,7 @@ const empty = {
   capacity: "",
   ticketsRemaining: "",
   isMembersOnly: true,
-  status: "active" as const,
+  status: "active" as "active" | "draft" | "sold_out",
 };
 
 export default function AdminEventsPage() {
