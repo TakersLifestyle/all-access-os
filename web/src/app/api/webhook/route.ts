@@ -1,8 +1,10 @@
 // Stripe webhook — syncs subscription status to Firestore + Firebase Auth custom claims
 // Custom claims (role, status) are read by Firestore security rules — zero extra reads
+// Also sends transactional emails via Resend after confirmed payments
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { sendMembershipWelcome, sendTicketConfirmation } from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -144,6 +146,9 @@ export async function POST(req: NextRequest) {
           const db = adminDb();
 
           // Use transaction to safely decrement ticketsRemaining
+          let alreadyPaid = false;
+          let savedOrderData: FirebaseFirestore.DocumentData | undefined;
+
           await db.runTransaction(async (tx) => {
             const eventRef = db.collection("events").doc(eventId);
             const orderRef = db.collection("ticketOrders").doc(orderId);
@@ -166,9 +171,11 @@ export async function POST(req: NextRequest) {
             // Idempotency — don't double-process
             if (orderSnap.data()?.paymentStatus === "paid") {
               console.log(`[webhook] event_ticket — order ${orderId} already paid, skipping`);
+              alreadyPaid = true;
               return;
             }
 
+            savedOrderData = orderSnap.data();
             const eventData = eventSnap.data()!;
             const currentRemaining = typeof eventData.ticketsRemaining === "number"
               ? eventData.ticketsRemaining
@@ -194,6 +201,46 @@ export async function POST(req: NextRequest) {
           });
 
           console.log(`[webhook] event_ticket confirmed — orderId=${orderId} eventId=${eventId} qty=${qty}`);
+
+          // ── Send ticket confirmation email (after transaction, idempotent) ──
+          if (!alreadyPaid && savedOrderData) {
+            const toEmail = savedOrderData.userEmail ?? session.customer_details?.email;
+            if (toEmail) {
+              // Fetch event data for details
+              const eventSnap = await db.collection("events").doc(eventId).get();
+              const eventData = eventSnap.data() ?? {};
+
+              // Resolve display name: try Auth first, fall back to session
+              let displayName: string | null = null;
+              const buyerUid = savedOrderData.userId || session.client_reference_id;
+              if (buyerUid) {
+                try {
+                  const auth = adminAuth();
+                  const userRecord = await auth.getUser(buyerUid);
+                  displayName = userRecord.displayName ?? null;
+                } catch { /* no-op */ }
+              }
+
+              await sendTicketConfirmation({
+                orderId,
+                toEmail,
+                displayName,
+                eventTitle: savedOrderData.eventTitle ?? eventData.title ?? "Your Event",
+                eventDate: eventData.date ?? "",
+                eventLocation: eventData.location ?? "",
+                quantity: qty,
+                unitPriceCents: Math.round((savedOrderData.unitPrice ?? 0) * 100),
+                totalPaidCents: Math.round((savedOrderData.totalPrice ?? 0) * 100),
+                stripePaymentIntentId: paymentIntentId ?? session.id,
+                paidAt: new Date().toISOString(),
+              }).catch((err) =>
+                console.error("[webhook] ticket confirmation email failed:", err)
+              );
+            } else {
+              console.warn(`[webhook] event_ticket — no email address for orderId=${orderId}`);
+            }
+          }
+
           break;
         }
 
@@ -216,6 +263,42 @@ export async function POST(req: NextRequest) {
           stripeCurrentPeriodEnd: subscription.current_period_end,
           stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
+
+        // ── Send membership welcome email (idempotent) ────
+        {
+          const toEmail =
+            session.customer_details?.email ??
+            session.customer_email ??
+            null;
+
+          if (toEmail) {
+            // Resolve display name from Firebase Auth
+            let displayName: string | null = null;
+            try {
+              const auth = adminAuth();
+              const userRecord = await auth.getUser(uid);
+              displayName = userRecord.displayName ?? null;
+            } catch { /* no-op */ }
+
+            // Amount paid = first invoice line total (cents)
+            const amountPaidCents = session.amount_total ?? 0;
+            const paidAt = session.created; // Unix timestamp
+
+            await sendMembershipWelcome({
+              uid,
+              toEmail,
+              displayName,
+              amountPaidCents,
+              stripeSessionId: session.id,
+              paidAt,
+            }).catch((err) =>
+              console.error("[webhook] membership welcome email failed:", err)
+            );
+          } else {
+            console.warn(`[webhook] membership — no email address for uid=${uid}`);
+          }
+        }
+
         break;
       }
 
