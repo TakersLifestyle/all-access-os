@@ -126,9 +126,78 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
 
-      // ── Subscription created via checkout ─────────────────
+      // ── Checkout completed — route by type ───────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // ── Event ticket purchase ──────────────────────────
+        if (session.metadata?.type === "event_ticket") {
+          const { orderId, eventId, quantity } = session.metadata;
+          const paymentIntentId = session.payment_intent as string | null;
+          const qty = parseInt(quantity ?? "1", 10);
+
+          if (!orderId || !eventId) {
+            console.error("[webhook] event_ticket — missing orderId or eventId");
+            break;
+          }
+
+          const db = adminDb();
+
+          // Use transaction to safely decrement ticketsRemaining
+          await db.runTransaction(async (tx) => {
+            const eventRef = db.collection("events").doc(eventId);
+            const orderRef = db.collection("ticketOrders").doc(orderId);
+
+            const [eventSnap, orderSnap] = await Promise.all([
+              tx.get(eventRef),
+              tx.get(orderRef),
+            ]);
+
+            if (!eventSnap.exists) {
+              console.error(`[webhook] event_ticket — event ${eventId} not found`);
+              return;
+            }
+
+            if (!orderSnap.exists) {
+              console.error(`[webhook] event_ticket — order ${orderId} not found`);
+              return;
+            }
+
+            // Idempotency — don't double-process
+            if (orderSnap.data()?.paymentStatus === "paid") {
+              console.log(`[webhook] event_ticket — order ${orderId} already paid, skipping`);
+              return;
+            }
+
+            const eventData = eventSnap.data()!;
+            const currentRemaining = typeof eventData.ticketsRemaining === "number"
+              ? eventData.ticketsRemaining
+              : (eventData.capacity ?? 0);
+
+            const newRemaining = Math.max(0, currentRemaining - qty);
+
+            // Mark order as paid
+            tx.update(orderRef, {
+              paymentStatus: "paid",
+              stripePaymentIntentId: paymentIntentId ?? null,
+              stripeCheckoutSessionId: session.id,
+              paidAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+
+            // Decrement ticketsRemaining, auto-mark sold_out if needed
+            tx.update(eventRef, {
+              ticketsRemaining: newRemaining,
+              ...(newRemaining === 0 ? { status: "sold_out" } : {}),
+              updatedAt: new Date().toISOString(),
+            });
+          });
+
+          console.log(`[webhook] event_ticket confirmed — orderId=${orderId} eventId=${eventId} qty=${qty}`);
+          break;
+        }
+
+        // ── Membership subscription checkout ──────────────
         const uid = session.client_reference_id ?? session.metadata?.uid;
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;

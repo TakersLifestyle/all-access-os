@@ -183,6 +183,22 @@ service cloud.firestore {
 
 
     // ─────────────────────────────────────────────────────────
+    // ticketOrders/{orderId}
+    //
+    // CREATE  → server-side only (API route via Admin SDK — bypasses rules)
+    // READ    → own order (by userId field) or admin
+    // UPDATE  → server-side only (webhook via Admin SDK)
+    // DELETE  → admin only
+    // ─────────────────────────────────────────────────────────
+    match /ticketOrders/{orderId} {
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create, update: if false; // Server-side Admin SDK only
+      allow delete: if isAdmin();
+    }
+
+
+    // ─────────────────────────────────────────────────────────
     // Catch-all: deny everything else not explicitly matched
     // ─────────────────────────────────────────────────────────
     match /{document=**} {
