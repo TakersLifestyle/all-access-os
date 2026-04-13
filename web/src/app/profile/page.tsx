@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -27,8 +27,24 @@ function CheckoutStatus() {
 }
 
 export default function ProfilePage() {
-  const { user, profile, isAdmin, loading } = useAuth();
+  const { user, profile, isAdmin, loading, refreshToken } = useAuth();
   const router = useRouter();
+  const didRefresh = useRef(false);
+
+  // Force-refresh the Firebase ID token when landing from checkout success
+  // so new custom claims (status: "active") apply immediately
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.search.includes("checkout=success") &&
+      user &&
+      !didRefresh.current
+    ) {
+      didRefresh.current = true;
+      // Small delay to give the webhook time to set claims before we refresh
+      setTimeout(() => refreshToken(), 2500);
+    }
+  }, [user, refreshToken]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
