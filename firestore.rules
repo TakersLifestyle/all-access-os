@@ -112,19 +112,14 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────
     // events/{eventId}
     //
-    // READ    → active members + admins get full doc
-    //           Public (non-member) events (isMembersOnly == false) are
-    //           readable by anyone authenticated — teaser data served
-    //           server-side for unauthenticated visitors
+    // READ    → any authenticated user (MemberGate + client logic
+    //           handle UI-level gating — rules cannot filter
+    //           isMembersOnly on list queries since resource.data
+    //           is unavailable for collection reads)
     // WRITE   → admins only
     // ─────────────────────────────────────────────────────────
     match /events/{eventId} {
-      // Full read: active members and admins
-      // Limited read: authenticated users for non-member-only events
-      allow read: if hasFullAccess()
-                  || (isSignedIn() && resource.data.isMembersOnly == false)
-                  || isAdmin();
-
+      allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
