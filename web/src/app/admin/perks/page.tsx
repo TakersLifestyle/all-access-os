@@ -28,7 +28,7 @@ const empty = {
   code: "",
   redemptionMethod: "",
   description: "",
-  status: "active" as const,
+  status: "active" as "active" | "inactive",
 };
 
 export default function AdminPerksPage() {
