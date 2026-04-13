@@ -275,7 +275,9 @@ export default function AdminEventsPage() {
         {events.length === 0 ? (
           <p className="text-white/40">No events yet. Add one above.</p>
         ) : events.map((ev) => {
-          const pct = ev.capacity ? Math.round(((ev.capacity - (ev.ticketsRemaining ?? ev.capacity)) / ev.capacity) * 100) : 0;
+          const cap = Number(ev.capacity) || 0;
+          const rem = Number(ev.ticketsRemaining ?? ev.capacity) || 0;
+          const pct = cap ? Math.round(((cap - rem) / cap) * 100) : 0;
           return (
             <div key={ev.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden flex">
               {ev.imageUrl && (
