@@ -32,34 +32,6 @@ const nextConfig: NextConfig = {
         destination: "https://allaccesswinnipeg.ca/:path*",
         permanent: true,
       },
-      // takerslifestyle.ca → allaccesswinnipeg.ca
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "takerslifestyle.ca" }],
-        destination: "https://allaccesswinnipeg.ca/:path*",
-        permanent: true,
-      },
-      // www.takerslifestyle.ca → allaccesswinnipeg.ca
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.takerslifestyle.ca" }],
-        destination: "https://allaccesswinnipeg.ca/:path*",
-        permanent: true,
-      },
-      // takerslifestyle.com → allaccesswinnipeg.ca
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "takerslifestyle.com" }],
-        destination: "https://allaccesswinnipeg.ca/:path*",
-        permanent: true,
-      },
-      // www.takerslifestyle.com → allaccesswinnipeg.ca
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.takerslifestyle.com" }],
-        destination: "https://allaccesswinnipeg.ca/:path*",
-        permanent: true,
-      },
     ];
   },
 };
