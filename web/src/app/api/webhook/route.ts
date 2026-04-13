@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           stripeStatus: subscription.status,
-          stripeCurrentPeriodEnd: subscription.current_period_end,
+          stripeCurrentPeriodEnd: (subscription as any).billing_cycle_anchor,
           stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
 
@@ -313,7 +313,7 @@ export async function POST(req: NextRequest) {
           stripeCustomerId: sub.customer as string,
           stripeSubscriptionId: sub.id,
           stripeStatus: sub.status,
-          stripeCurrentPeriodEnd: sub.current_period_end,
+          stripeCurrentPeriodEnd: (sub as any).billing_cycle_anchor,
           stripeCancelAtPeriodEnd: sub.cancel_at_period_end,
         });
         break;
@@ -330,7 +330,7 @@ export async function POST(req: NextRequest) {
           stripeCustomerId: sub.customer as string,
           stripeSubscriptionId: sub.id,
           stripeStatus: "canceled",
-          stripeCurrentPeriodEnd: sub.current_period_end,
+          stripeCurrentPeriodEnd: (sub as any).billing_cycle_anchor,
           stripeCancelAtPeriodEnd: false,
         });
         break;
@@ -340,19 +340,20 @@ export async function POST(req: NextRequest) {
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.billing_reason === "subscription_create") break; // Handled above
-        const subId = invoice.subscription as string;
+        const subId = (invoice as any).subscription as string | null;
         if (!subId) break;
 
-        const uid = await uidFromCustomerId(invoice.customer as string);
+        const customerId = (invoice as any).customer as string;
+        const uid = await uidFromCustomerId(customerId);
         if (!uid) break;
 
         const subscription = await stripe.subscriptions.retrieve(subId);
         await syncUser({
           uid,
-          stripeCustomerId: invoice.customer as string,
+          stripeCustomerId: customerId,
           stripeSubscriptionId: subId,
           stripeStatus: subscription.status,
-          stripeCurrentPeriodEnd: subscription.current_period_end,
+          stripeCurrentPeriodEnd: (subscription as any).billing_cycle_anchor,
           stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
         });
         break;
@@ -361,13 +362,15 @@ export async function POST(req: NextRequest) {
       // ── Payment failed → past_due ─────────────────────────
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        const uid = await uidFromCustomerId(invoice.customer as string);
+        const customerId = (invoice as any).customer as string;
+        const subId = (invoice as any).subscription as string | null;
+        const uid = await uidFromCustomerId(customerId);
         if (!uid) break;
 
         await syncUser({
           uid,
-          stripeCustomerId: invoice.customer as string,
-          stripeSubscriptionId: invoice.subscription as string,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subId ?? "",
           stripeStatus: "past_due",
           stripeCurrentPeriodEnd: undefined,
           stripeCancelAtPeriodEnd: false,
