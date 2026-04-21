@@ -129,7 +129,10 @@ export async function POST(req: NextRequest) {
     ].filter(Boolean);
 
     // ── 8. Create Stripe Checkout Session ───────────────────
-    const session = await stripe.checkout.sessions.create({
+    // Cast to any: automatic_payment_methods is valid at runtime but missing
+    // from Stripe SDK v22 SessionCreateParams type for mode:"payment"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionParams: any = {
       mode: "payment",
       automatic_payment_methods: { enabled: true },
       line_items: [
@@ -165,7 +168,8 @@ export async function POST(req: NextRequest) {
           type: "event_ticket",
         },
       },
-    });
+    };
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     // ── 9. Store session ID on pending order ────────────────
     await orderRef.update({
