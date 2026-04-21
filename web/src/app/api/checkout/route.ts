@@ -1,125 +1,107 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { adminDb } from "@/lib/firebase-admin";
 
-type CheckoutData = {
-  url?: string;
-  checkoutUrl?: string;
-  sessionUrl?: string;
-  stripeCheckoutUrl?: string;
-  data?: {
-    url?: string;
-    checkoutUrl?: string;
-    sessionUrl?: string;
-  };
-};
+const FOUNDING_LIMIT = 50;
+const FOUNDING_COUPON_ID = "FOUNDING_MEMBER_50";
 
-function extractUrlFromJson(data: CheckoutData): string | null {
-  if (!data) return null;
-
-  return (
-    data.url ||
-    data.checkoutUrl ||
-    data.sessionUrl ||
-    data.stripeCheckoutUrl ||
-    data?.data?.url ||
-    data?.data?.checkoutUrl ||
-    data?.data?.sessionUrl ||
-    null
-  );
-}
-
-function extractStripeUrlFromText(raw: string): string | null {
-  if (!raw) return null;
-
-  // Stripe Checkout URLs commonly look like https://checkout.stripe.com/c/pay/...
-  const match = raw.match(/https:\/\/checkout\.stripe\.com\/[^\s"'<>]+/i);
-  return match?.[0] ?? null;
+/**
+ * Ensure the founding-member coupon exists in Stripe (idempotent).
+ * $49 CAD off once → makes $99/mo first month = $50.
+ */
+async function ensureFoundingCoupon(stripe: Stripe): Promise<string> {
+  try {
+    await stripe.coupons.retrieve(FOUNDING_COUPON_ID);
+    return FOUNDING_COUPON_ID;
+  } catch {
+    // Doesn't exist yet — create it
+    const coupon = await stripe.coupons.create({
+      id: FOUNDING_COUPON_ID,
+      name: "Founding Member — First Month $50",
+      amount_off: 4900,
+      currency: "cad",
+      duration: "once",
+      max_redemptions: FOUNDING_LIMIT,
+    });
+    return coupon.id;
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const fnUrl = process.env.CREATE_CHECKOUT_SESSION_URL;
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const priceId = process.env.STRIPE_PRICE_ID;
+    const appUrl = process.env.APP_URL ?? "https://allaccesswinnipeg.ca";
 
-    if (!fnUrl) {
-      return NextResponse.json(
-        { error: "Missing CREATE_CHECKOUT_SESSION_URL in web/.env.local" },
-        { status: 500 }
-      );
+    if (!stripeKey?.trim()) {
+      return NextResponse.json({ error: "Missing STRIPE_SECRET_KEY" }, { status: 500 });
+    }
+    if (!priceId?.trim()) {
+      return NextResponse.json({ error: "Missing STRIPE_PRICE_ID" }, { status: 500 });
     }
 
-    // Forward uid so the Cloud Function can stamp client_reference_id on the session
+    const stripe = new Stripe(stripeKey);
+
     let uid: string | null = null;
     try {
       const body = await req.json();
       uid = body?.uid ?? null;
-    } catch {
-      // No body or invalid JSON — uid stays null
+    } catch { /* no body */ }
+
+    // Look up existing Stripe customer ID
+    let customerId: string | undefined;
+    if (uid) {
+      try {
+        const db = adminDb();
+        const userDoc = await db.collection("users").doc(uid).get();
+        customerId = userDoc.data()?.stripeCustomerId ?? undefined;
+      } catch { /* new user */ }
     }
 
-    const res = await fetch(fnUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uid }),
-      // If the function responds with a redirect, don't auto-follow it.
-      redirect: "manual",
-      cache: "no-store",
+    // Count active members to determine founding status
+    let activeCount = 0;
+    try {
+      const db = adminDb();
+      const snap = await db.collection("users").where("status", "==", "active").get();
+      activeCount = snap.size;
+    } catch { /* assume full */ }
+
+    const isFoundingSlotAvailable = activeCount < FOUNDING_LIMIT;
+
+    // Get or create the founding coupon when slots remain
+    let couponId: string | undefined;
+    if (isFoundingSlotAvailable) {
+      try {
+        couponId = await ensureFoundingCoupon(stripe);
+      } catch (e) {
+        console.warn("[checkout] Could not ensure founding coupon:", e);
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/profile?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/profile?checkout=cancel`,
+      // Only allow manual promo codes when no auto-discount is applied
+      allow_promotion_codes: !couponId,
+      ...(uid ? { client_reference_id: uid } : {}),
+      ...(customerId ? { customer: customerId } : {}),
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
     });
 
-    // ✅ Case 1: Redirect (e.g., res.redirect(session.url))
-    const location = res.headers.get("location");
-    if (location && location.startsWith("http")) {
-      return NextResponse.json({ url: location });
+    if (!session.url) {
+      return NextResponse.json({ error: "Stripe returned no URL" }, { status: 500 });
     }
 
-    const raw = await res.text();
-
-    // If function failed, bubble the payload up so you can see it in UI
-    if (!res.ok) {
-      // Try to find a Stripe URL even in error pages (rare but possible)
-      const maybeStripe = extractStripeUrlFromText(raw);
-      if (maybeStripe) return NextResponse.json({ url: maybeStripe });
-
-      return NextResponse.json(
-        {
-          error: "Cloud Function returned non-200",
-          status: res.status,
-          raw: raw?.trim() ? raw : "(empty body)",
-        },
-        { status: 500 }
-      );
-    }
-
-    // ✅ Case 2: JSON body
-    let data: CheckoutData | null = null;
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch {
-      // ✅ Case 3: Not JSON (HTML/text)
-      const maybeStripe = extractStripeUrlFromText(raw);
-      if (maybeStripe) return NextResponse.json({ url: maybeStripe });
-
-      return NextResponse.json(
-        {
-          error: "Cloud Function did not return JSON (and no Stripe URL found)",
-          raw: raw?.trim() ? raw : "(empty body)",
-        },
-        { status: 500 }
-      );
-    }
-
-    const url = data ? extractUrlFromJson(data) : null;
-    if (!url) {
-      return NextResponse.json(
-        { error: "No checkout URL returned", details: data },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ url });
+    return NextResponse.json({
+      url: session.url,
+      isFoundingMember: isFoundingSlotAvailable,
+      spotsRemaining: Math.max(0, FOUNDING_LIMIT - activeCount),
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { error: "Server failed to call Cloud Function", details: message },
-      { status: 500 }
-    );
+    console.error("[checkout] error:", message);
+    return NextResponse.json({ error: "Checkout failed", details: message }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
-// Event ticket checkout — server-side only
-// Validates event, pricing, membership, and quantity before creating Stripe session
-// Never trusts frontend pricing — all prices read from Firestore server-side
+// Event ticket checkout — open to ALL users (public + members)
+// Members automatically receive discounted pricing server-side
+// Pricing always read from Firestore — never trusted from frontend
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -20,11 +20,10 @@ export async function POST(req: NextRequest) {
       userEmail?: string;
     };
 
-    // ── 1. Validate inputs ──────────────────────────────────────────────────
+    // ── 1. Validate inputs ──────────────────────────────────
     if (!eventId || typeof eventId !== "string") {
       return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
     }
-
     const qty = Math.floor(Number(quantity));
     if (!qty || qty < 1 || qty > MAX_QUANTITY) {
       return NextResponse.json(
@@ -33,7 +32,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── 2. Load event from Firestore (server-side — never trust frontend price) ──
+    // ── 2. Load event from Firestore ────────────────────────
     const db = adminDb();
     const eventDoc = await db.collection("events").doc(eventId).get();
 
@@ -44,13 +43,13 @@ export async function POST(req: NextRequest) {
     const event = eventDoc.data()!;
 
     if (event.status !== "active") {
-      return NextResponse.json({ error: "Event is not available" }, { status: 400 });
+      return NextResponse.json({ error: "Event is not currently available" }, { status: 400 });
     }
 
-    // ── 3. Check capacity / prevent overselling ─────────────────────────────
+    // ── 3. Check capacity ───────────────────────────────────
     const remaining = typeof event.ticketsRemaining === "number"
       ? event.ticketsRemaining
-      : event.capacity ?? 0;
+      : (event.capacity ?? 0);
 
     if (remaining < qty) {
       return NextResponse.json(
@@ -59,55 +58,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── 4. Validate membership for members-only events ──────────────────────
-    let membershipStatus: "active" | "inactive" | "admin" = "inactive";
-    let resolvedUid = uid ?? null;
-
+    // ── 4. Resolve membership status ────────────────────────
+    // Members get discounted pricing — non-members pay general price
+    // No hard gate: everyone can purchase tickets
+    let isMember = false;
     if (uid) {
       try {
         const auth = adminAuth();
         const userRecord = await auth.getUser(uid);
         const claims = userRecord.customClaims as { role?: string; status?: string } | undefined;
-        if (claims?.role === "admin") membershipStatus = "admin";
-        else if (claims?.status === "active") membershipStatus = "active";
+        isMember = claims?.role === "admin" || claims?.status === "active";
       } catch {
-        // Token lookup failed — treat as inactive
+        isMember = false;
       }
     }
 
-    if (event.isMembersOnly && membershipStatus === "inactive") {
-      return NextResponse.json(
-        { error: "This event is for active members only. Subscribe to access." },
-        { status: 403 }
-      );
-    }
+    // ── 5. Server-side pricing (never trust frontend) ───────
+    const memberPrice = Number(event.memberPrice) || 0;
+    const generalPrice = Number(event.generalPrice) || 0;
 
-    // ── 5. Determine correct unit price (server-side) ───────────────────────
-    const isMember = membershipStatus === "active" || membershipStatus === "admin";
-    const unitPriceDollars: number = isMember
-      ? (event.memberPrice ?? event.generalPrice ?? 0)
-      : (event.generalPrice ?? 0);
+    const unitPriceDollars: number = isMember && memberPrice > 0
+      ? memberPrice
+      : generalPrice;
 
     if (!unitPriceDollars || unitPriceDollars <= 0) {
-      return NextResponse.json(
-        { error: "Event pricing is not available" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Event pricing unavailable" }, { status: 400 });
     }
 
     const unitPriceCents = Math.round(unitPriceDollars * 100);
+    const savingsPerTicket = isMember && memberPrice > 0 && generalPrice > 0
+      ? generalPrice - memberPrice
+      : 0;
 
-    // ── 6. Create pending order in Firestore ────────────────────────────────
+    // ── 6. Create pending ticketOrder in Firestore ──────────
     const orderRef = db.collection("ticketOrders").doc();
     await orderRef.set({
       orderId: orderRef.id,
-      userId: resolvedUid ?? null,
+      userId: uid ?? null,
       userEmail: userEmail ?? null,
       eventId,
       eventTitle: event.title,
       quantity: qty,
       unitPrice: unitPriceDollars,
       totalPrice: unitPriceDollars * qty,
+      isMemberPrice: isMember && memberPrice > 0,
+      savingsTotal: savingsPerTicket * qty,
       paymentStatus: "pending",
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: null,
@@ -115,7 +110,20 @@ export async function POST(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
 
-    // ── 7. Create Stripe Checkout Session ───────────────────────────────────
+    // ── 7. Build Stripe line item description ───────────────
+    const eventDateStr = event.date
+      ? new Date(event.date + "T12:00:00").toLocaleDateString("en-CA", {
+          weekday: "long", year: "numeric", month: "long", day: "numeric",
+        })
+      : null;
+
+    const descParts = [
+      eventDateStr,
+      event.location ?? null,
+      isMember && savingsPerTicket > 0 ? `Member rate — save $${savingsPerTicket}/ticket` : null,
+    ].filter(Boolean);
+
+    // ── 8. Create Stripe Checkout Session ───────────────────
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -126,16 +134,7 @@ export async function POST(req: NextRequest) {
             unit_amount: unitPriceCents,
             product_data: {
               name: event.title,
-              description: [
-                event.date
-                  ? new Date(event.date + "T12:00:00").toLocaleDateString("en-CA", {
-                      weekday: "long", year: "numeric", month: "long", day: "numeric",
-                    })
-                  : null,
-                event.location ?? null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
+              description: descParts.join(" · ") || undefined,
             },
           },
           quantity: qty,
@@ -143,13 +142,13 @@ export async function POST(req: NextRequest) {
       ],
       success_url: `${APP_URL}/events?order=success&orderId=${orderRef.id}`,
       cancel_url: `${APP_URL}/events?order=cancel&eventId=${eventId}`,
-      ...(resolvedUid ? { client_reference_id: resolvedUid } : {}),
+      ...(uid ? { client_reference_id: uid } : {}),
       ...(userEmail ? { customer_email: userEmail } : {}),
       metadata: {
         orderId: orderRef.id,
         eventId,
         quantity: String(qty),
-        userId: resolvedUid ?? "",
+        userId: uid ?? "",
         type: "event_ticket",
       },
       payment_intent_data: {
@@ -157,13 +156,13 @@ export async function POST(req: NextRequest) {
           orderId: orderRef.id,
           eventId,
           quantity: String(qty),
-          userId: resolvedUid ?? "",
+          userId: uid ?? "",
           type: "event_ticket",
         },
       },
     });
 
-    // ── 8. Store session ID on pending order ────────────────────────────────
+    // ── 9. Store session ID on pending order ────────────────
     await orderRef.update({
       stripeCheckoutSessionId: session.id,
       updatedAt: new Date().toISOString(),
@@ -173,9 +172,6 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[event-checkout] error:", message);
-    return NextResponse.json(
-      { error: "Checkout failed. Please try again.", details: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Checkout failed. Please try again." }, { status: 500 });
   }
 }

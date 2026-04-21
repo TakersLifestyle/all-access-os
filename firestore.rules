@@ -1,59 +1,45 @@
 rules_version = '2';
 
 // ============================================================
-// ALL ACCESS by TakersLifestyle — Firestore Security Rules
-// Production-grade. Updated: 2026-04-11
+// ALL ACCESS Winnipeg — Non-Profit Community Platform
+// Updated: 2026-04-21
 //
-// GATING MODEL:
-//   request.auth.token.role   → "admin" | "member"  (custom claim, no read cost)
-//   request.auth.token.status → "active" | "inactive" | "past_due" | "cancelled"
+// ACCESS MODEL:
+//   Public    → view events, purchase tickets
+//   Members   → discounted pricing, perks, community feed
+//   Admin     → full control
 //
-// Custom claims are set by the Stripe webhook Cloud Function the moment
-// a subscription activates, cancels, or changes. This avoids a get()
-// read on every security check — keeping reads cheap and latency low.
-//
-// COLLECTIONS:
-//   users/      — one doc per Firebase Auth uid
-//   events/     — platform events (admin writes, members read)
-//   perks/      — member perks (admin writes, active members read)
-//   posts/      — community feed (active members read/write)
-//   comments/   — post comments (active members read/write)
+// Custom claims: request.auth.token.role / .status
+// Set by Stripe webhook — zero Firestore read cost in rules
 // ============================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─────────────────────────────────────────────────────────
-    // HELPER FUNCTIONS
-    // ─────────────────────────────────────────────────────────
+    // ─── Helpers ────────────────────────────────────────────
 
-    // Signed in with a verified Firebase Auth token
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Admin via custom claim (set by webhook — zero extra reads)
     function isAdmin() {
       return isSignedIn() && request.auth.token.role == "admin";
     }
 
-    // Active paying member via custom claim
+    // Active paying member
     function isActive() {
       return isSignedIn() && request.auth.token.status == "active";
     }
 
-    // Active OR admin — full platform access
-    function hasFullAccess() {
+    // Member OR admin — perks/community access
+    function isMemberOrAdmin() {
       return isActive() || isAdmin();
     }
 
-    // Owns this specific document
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Fields the requesting user is NOT allowed to touch
-    // (prevents members from escalating their own role or status)
     function writingProtectedFields() {
       return request.resource.data.diff(resource.data)
         .affectedKeys()
@@ -61,7 +47,6 @@ service cloud.firestore {
                  "stripeCurrentPeriodEnd", "stripeCancelAtPeriodEnd"]);
     }
 
-    // Content validation helpers
     function validPost() {
       let d = request.resource.data;
       return d.uid == request.auth.uid
@@ -82,125 +67,70 @@ service cloud.firestore {
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // users/{uid}
-    //
-    // CREATE  → only on first sign-in (handled server-side by webhook,
-    //           not by client — but this rule allows it safely)
-    // READ    → own doc only, or admin
-    // UPDATE  → own doc (safe fields only) or admin (all fields)
-    // DELETE  → admin only
-    // ─────────────────────────────────────────────────────────
+    // ─── users/{uid} ────────────────────────────────────────
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-
-      // Members can update only safe profile fields (displayName, etc.)
-      // Admins can update anything including role/status
-      allow update: if isOwner(uid) && !writingProtectedFields()
-                    || isAdmin();
-
-      // New user documents are created server-side (Stripe webhook / Cloud Function)
-      // This rule allows it to succeed if triggered via authenticated client (onboarding flow)
+      allow update: if (isOwner(uid) && !writingProtectedFields()) || isAdmin();
       allow create: if isSignedIn() && isOwner(uid)
                     && request.resource.data.role == "member"
                     && request.resource.data.status == "inactive";
-
       allow delete: if isAdmin();
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // events/{eventId}
-    //
-    // READ    → any authenticated user (MemberGate + client logic
-    //           handle UI-level gating — rules cannot filter
-    //           isMembersOnly on list queries since resource.data
-    //           is unavailable for collection reads)
-    // WRITE   → admins only
-    // ─────────────────────────────────────────────────────────
+    // ─── events/{eventId} ───────────────────────────────────
+    // PUBLIC READ — anyone can view and purchase tickets
     match /events/{eventId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // perks/{perkId}
-    //
-    // READ    → active members (active status only) + admins
-    // WRITE   → admins only
-    // Note: inactive perks are hidden by rule, not just UI
-    // ─────────────────────────────────────────────────────────
+    // ─── perks/{perkId} ─────────────────────────────────────
+    // Members only — perk codes are a membership benefit
     match /perks/{perkId} {
       allow read: if isAdmin()
-                  || (isActive() && resource.data.status == "active");
-
+                  || (isMemberOrAdmin() && resource.data.status == "active");
       allow create, update, delete: if isAdmin();
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // posts/{postId}
-    //
-    // READ    → active members + admins
-    // CREATE  → active members (validated: own uid, content limits)
-    // UPDATE  → only edit own content/body, no other fields; admins all
-    // DELETE  → own post or admin (moderation)
-    // ─────────────────────────────────────────────────────────
+    // ─── posts/{postId} ─────────────────────────────────────
+    // Community feed — members only
     match /posts/{postId} {
-      allow read: if hasFullAccess();
-
+      allow read: if isMemberOrAdmin();
       allow create: if isActive() && validPost();
-
       allow update: if isAdmin()
                     || (isOwner(resource.data.uid) && isActive()
                         && request.resource.data.diff(resource.data)
-                           .affectedKeys()
-                           .hasOnly(["content", "updatedAt"]));
-
+                           .affectedKeys().hasOnly(["content", "updatedAt"]));
       allow delete: if isAdmin() || (isOwner(resource.data.uid) && isActive());
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // comments/{commentId}
-    //
-    // Same pattern as posts, scoped to a postId
-    // ─────────────────────────────────────────────────────────
+    // ─── comments/{commentId} ───────────────────────────────
     match /comments/{commentId} {
-      allow read: if hasFullAccess();
-
+      allow read: if isMemberOrAdmin();
       allow create: if isActive() && validComment();
-
       allow update: if isAdmin()
                     || (isOwner(resource.data.uid) && isActive()
                         && request.resource.data.diff(resource.data)
-                           .affectedKeys()
-                           .hasOnly(["content", "updatedAt"]));
-
+                           .affectedKeys().hasOnly(["content", "updatedAt"]));
       allow delete: if isAdmin() || (isOwner(resource.data.uid) && isActive());
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // ticketOrders/{orderId}
-    //
-    // CREATE  → server-side only (API route via Admin SDK — bypasses rules)
-    // READ    → own order (by userId field) or admin
-    // UPDATE  → server-side only (webhook via Admin SDK)
-    // DELETE  → admin only
-    // ─────────────────────────────────────────────────────────
+    // ─── ticketOrders/{orderId} ─────────────────────────────
+    // Server-side Admin SDK only for writes
     match /ticketOrders/{orderId} {
       allow read: if isAdmin()
                   || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create, update: if false; // Server-side Admin SDK only
+      allow create, update: if false;
       allow delete: if isAdmin();
     }
 
 
-    // ─────────────────────────────────────────────────────────
-    // Catch-all: deny everything else not explicitly matched
-    // ─────────────────────────────────────────────────────────
+    // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
