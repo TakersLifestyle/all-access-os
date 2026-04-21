@@ -79,10 +79,15 @@ export async function POST(req: NextRequest) {
 
     const unitPriceDollars: number = isMember && memberPrice > 0
       ? memberPrice
-      : generalPrice;
+      : generalPrice > 0
+        ? generalPrice
+        : memberPrice; // fallback for members-only events
 
     if (!unitPriceDollars || unitPriceDollars <= 0) {
-      return NextResponse.json({ error: "Event pricing unavailable" }, { status: 400 });
+      return NextResponse.json(
+        { error: "This event is for members only. Become a member to purchase tickets." },
+        { status: 403 }
+      );
     }
 
     const unitPriceCents = Math.round(unitPriceDollars * 100);
@@ -126,7 +131,7 @@ export async function POST(req: NextRequest) {
     // ── 8. Create Stripe Checkout Session ───────────────────
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      automatic_payment_methods: { enabled: true },
       line_items: [
         {
           price_data: {

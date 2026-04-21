@@ -7,8 +7,8 @@ import Nav from "@/components/Nav";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ALL ACCESS by TakersLifestyle",
-  description: "Premium membership — exclusive events, perks, and community.",
+  title: "ALL ACCESS Winnipeg",
+  description: "Winnipeg's community experience platform — events, perks, and real connection for youth and young adults.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

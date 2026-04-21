@@ -24,6 +24,7 @@ export default function Nav() {
             <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
             <Link href="/perks" className="text-white/70 hover:text-white transition">Perks</Link>
             <Link href="/community" className="text-white/70 hover:text-white transition">Community</Link>
+            <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
             {isAdmin && (
               <Link href="/admin" className="text-amber-400 hover:text-amber-300 transition font-medium">
                 Admin
@@ -41,6 +42,8 @@ export default function Nav() {
           </>
         ) : (
           <>
+            <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
+            <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
             <Link href="/login" className="text-white/70 hover:text-white transition">Log in</Link>
             <Link
               href="/signup"
