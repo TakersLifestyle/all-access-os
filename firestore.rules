@@ -2,12 +2,13 @@ rules_version = '2';
 
 // ============================================================
 // ALL ACCESS Winnipeg — Non-Profit Community Platform
-// Updated: 2026-04-21
+// Updated: 2026-04-22
 //
 // ACCESS MODEL:
-//   Public    → view events, purchase tickets
-//   Members   → discounted pricing, perks, community feed
-//   Admin     → full control
+//   Public      → view events, purchase tickets (full price)
+//   Signed-in   → read community feed, purchase tickets
+//   Members     → 15% off tickets, post/comment/reply, perks
+//   Admin       → full control + delete any content
 //
 // Custom claims: request.auth.token.role / .status
 // Set by Stripe webhook — zero Firestore read cost in rules
@@ -31,13 +32,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.status == "active";
     }
 
-    // Member OR admin — perks/community access
+    // Member OR admin — community write access
     function isMemberOrAdmin() {
       return isActive() || isAdmin();
     }
 
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function writingProtectedFields() {
@@ -47,23 +48,37 @@ service cloud.firestore {
                  "stripeCurrentPeriodEnd", "stripeCancelAtPeriodEnd"]);
     }
 
+    // Validate post — userId field matches frontend writes
     function validPost() {
       let d = request.resource.data;
-      return d.uid == request.auth.uid
+      return d.userId == request.auth.uid
           && d.content is string
           && d.content.size() > 0
           && d.content.size() <= 2000
-          && d.keys().hasAll(["uid", "content", "createdAt"]);
+          && d.keys().hasAll(["userId", "content", "createdAt"]);
     }
 
+    // Validate comment — userId field
     function validComment() {
       let d = request.resource.data;
-      return d.uid == request.auth.uid
+      return d.userId == request.auth.uid
           && d.postId is string
           && d.content is string
           && d.content.size() > 0
           && d.content.size() <= 1000
-          && d.keys().hasAll(["uid", "postId", "content", "createdAt"]);
+          && d.keys().hasAll(["userId", "postId", "content", "createdAt"]);
+    }
+
+    // Validate reply — userId field
+    function validReply() {
+      let d = request.resource.data;
+      return d.userId == request.auth.uid
+          && d.commentId is string
+          && d.postId is string
+          && d.content is string
+          && d.content.size() > 0
+          && d.content.size() <= 500
+          && d.keys().hasAll(["userId", "commentId", "postId", "content", "createdAt"]);
     }
 
 
@@ -79,7 +94,7 @@ service cloud.firestore {
 
 
     // ─── events/{eventId} ───────────────────────────────────
-    // PUBLIC READ — anyone can view and purchase tickets
+    // PUBLIC READ — anyone can browse events and purchase tickets
     match /events/{eventId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -96,27 +111,44 @@ service cloud.firestore {
 
 
     // ─── posts/{postId} ─────────────────────────────────────
-    // Community feed — members only
+    // READ  — signed-in users only (community is gated behind auth)
+    // WRITE — active members and admins only
     match /posts/{postId} {
-      allow read: if isMemberOrAdmin();
-      allow create: if isActive() && validPost();
+      allow read: if isSignedIn();
+      allow create: if isMemberOrAdmin() && validPost();
       allow update: if isAdmin()
-                    || (isOwner(resource.data.uid) && isActive()
+                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["content", "updatedAt"]));
-      allow delete: if isAdmin() || (isOwner(resource.data.uid) && isActive());
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
     }
 
 
     // ─── comments/{commentId} ───────────────────────────────
+    // READ  — signed-in users only
+    // WRITE — active members and admins only
     match /comments/{commentId} {
-      allow read: if isMemberOrAdmin();
-      allow create: if isActive() && validComment();
+      allow read: if isSignedIn();
+      allow create: if isMemberOrAdmin() && validComment();
       allow update: if isAdmin()
-                    || (isOwner(resource.data.uid) && isActive()
+                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["content", "updatedAt"]));
-      allow delete: if isAdmin() || (isOwner(resource.data.uid) && isActive());
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
+    }
+
+
+    // ─── replies/{replyId} ──────────────────────────────────
+    // READ  — signed-in users only
+    // WRITE — active members and admins only
+    match /replies/{replyId} {
+      allow read: if isSignedIn();
+      allow create: if isMemberOrAdmin() && validReply();
+      allow update: if isAdmin()
+                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
+                        && request.resource.data.diff(resource.data)
+                           .affectedKeys().hasOnly(["content", "updatedAt"]));
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
     }
 
 

@@ -7,7 +7,6 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 
 // ── Pricing constant ────────────────────────────────────────────────────────
-// Members receive exactly 15% off generalPrice — calculated dynamically
 const MEMBER_DISCOUNT = 0.15;
 
 function calcMemberPrice(generalPrice: number): number {
@@ -17,6 +16,12 @@ function calcSavings(generalPrice: number): number {
   return Math.round(generalPrice * MEMBER_DISCOUNT * 100) / 100;
 }
 
+// Format price — drop .00, keep .50 etc.
+function fmt(n: number): string {
+  const r = Math.round(n * 100) / 100;
+  return `$${r % 1 === 0 ? r.toFixed(0) : r.toFixed(2)}`;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -24,7 +29,7 @@ interface Event {
   date: string;
   location: string;
   generalPrice: number;
-  memberPrice: number; // legacy field — kept for type safety but NOT used for pricing
+  memberPrice: number;
   capacity: number;
   ticketsRemaining: number;
   isMembersOnly: boolean;
@@ -72,7 +77,6 @@ function UrgencyBar({ capacity, remaining }: { capacity: number; remaining: numb
 
 const MAX_QTY = 5;
 
-// ── Signed-out gate shown at the bottom of each event card ──────────────────
 function SignInGate() {
   return (
     <div className="border-t border-white/8 pt-4 mt-2 space-y-3">
@@ -88,16 +92,10 @@ function SignInGate() {
         </div>
       </div>
       <div className="flex gap-2">
-        <Link
-          href="/login"
-          className="flex-1 text-center border border-white/15 hover:border-white/30 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition"
-        >
+        <Link href="/login" className="flex-1 text-center border border-white/15 hover:border-white/30 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition">
           Log in
         </Link>
-        <Link
-          href="/signup"
-          className="flex-1 text-center bg-pink-600 hover:bg-pink-500 py-3 rounded-xl text-sm font-bold transition"
-        >
+        <Link href="/signup" className="flex-1 text-center bg-pink-600 hover:bg-pink-500 py-3 rounded-xl text-sm font-bold transition">
           Create account
         </Link>
       </div>
@@ -116,14 +114,10 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
   const isCritical = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= 5;
   const isLow = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
 
-  // ── Pricing ──────────────────────────────────────────────────────────────
-  // generalPrice is the single source of truth.
-  // Members always get MEMBER_DISCOUNT (15%) off — calculated dynamically.
+  // ── Pricing ─────────────────────────────────────────────
   const generalPrice = Number(ev.generalPrice) || 0;
   const memberDiscountedPrice = generalPrice > 0 ? calcMemberPrice(generalPrice) : 0;
   const savingsAmount = generalPrice > 0 ? calcSavings(generalPrice) : 0;
-
-  // Price used in UI totals and sent to checkout API
   const displayPrice = isMember && memberDiscountedPrice > 0 ? memberDiscountedPrice : generalPrice;
 
   const [qty, setQty] = useState(1);
@@ -140,21 +134,11 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
       const res = await fetch("/api/event-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: ev.id,
-          quantity: qty,
-          uid: uid ?? null,
-          userEmail: userEmail ?? null,
-        }),
+        body: JSON.stringify({ eventId: ev.id, quantity: qty, uid: uid ?? null, userEmail: userEmail ?? null }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Checkout failed. Please try again.");
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
+      if (!res.ok) throw new Error(data.error ?? "Checkout failed. Please try again.");
+      if (data.url) { window.location.href = data.url; return; }
       throw new Error("No redirect URL returned. Please try again.");
     } catch (e: unknown) {
       setCheckoutError(e instanceof Error ? e.message : String(e));
@@ -171,54 +155,41 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
         : "border border-white/10 bg-white/5 hover:border-white/25 hover:shadow-[0_0_40px_rgba(236,72,153,0.06)]"
     }`}>
 
-      {/* Banner image */}
       {ev.imageUrl && (
         <div className="relative w-full h-60 overflow-hidden">
-          <img
-            src={ev.imageUrl}
-            alt={ev.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
+          <img src={ev.imageUrl} alt={ev.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-          {/* Status badges — top left */}
+          {/* Status badges */}
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
             {isSoldOut && (
-              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full">
-                SOLD OUT
-              </span>
+              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full">SOLD OUT</span>
             )}
             {isCritical && !isSoldOut && (
-              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-                🔥 {ev.ticketsRemaining} Left
-              </span>
+              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">🔥 {ev.ticketsRemaining} Left</span>
             )}
             {!isCritical && isLow && (
-              <span className="bg-amber-900/90 backdrop-blur-sm border border-amber-500/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-                ⚡ Limited Spots
-              </span>
+              <span className="bg-amber-900/90 backdrop-blur-sm border border-amber-500/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">⚡ Limited Spots</span>
             )}
           </div>
 
-          {/* Price badge — bottom right of image */}
+          {/* Price badge — bottom right */}
           <div className="absolute bottom-4 right-4 text-right">
             {!isSignedIn ? (
-              /* Signed out — show FREE */
               <div className="bg-emerald-600/90 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-emerald-500/40 shadow-lg">
                 FREE
               </div>
             ) : isMember && memberDiscountedPrice > 0 ? (
-              /* Active member — show discounted price + strikethrough */
-              <div className="space-y-1 text-right">
+              /* Member — discounted price primary, original muted below */
+              <div className="space-y-0.5 text-right">
                 <div className="bg-pink-600 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-pink-900/50">
-                  ${memberDiscountedPrice.toFixed(2)}
+                  {fmt(memberDiscountedPrice)}
                 </div>
-                <div className="text-white/45 text-xs line-through">${generalPrice.toFixed(2)}</div>
+                <div className="text-white/40 text-xs line-through pr-1">{fmt(generalPrice)}</div>
               </div>
             ) : generalPrice > 0 ? (
-              /* Signed in non-member — full price */
               <div className="bg-white/15 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/20">
-                ${generalPrice.toFixed(2)}
+                {fmt(generalPrice)}
               </div>
             ) : null}
           </div>
@@ -231,31 +202,21 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
           <div className="flex justify-between items-start gap-3 flex-wrap">
             <div className="flex gap-2 flex-wrap">
               {isCritical && (
-                <span className="bg-red-900/60 border border-red-500/40 text-red-300 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-                  🔥 {ev.ticketsRemaining} Left
-                </span>
+                <span className="bg-red-900/60 border border-red-500/40 text-red-300 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">🔥 {ev.ticketsRemaining} Left</span>
               )}
               {!isCritical && isLow && (
-                <span className="bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-                  ⚡ Limited
-                </span>
+                <span className="bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">⚡ Limited</span>
               )}
             </div>
             {!isSignedIn ? (
-              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-600/20 border-emerald-500/30 text-emerald-400">
-                FREE
-              </span>
+              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-600/20 border-emerald-500/30 text-emerald-400">FREE</span>
             ) : isMember && memberDiscountedPrice > 0 ? (
               <div className="text-right">
-                <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-pink-600/20 border-pink-500/30 text-pink-300">
-                  ${memberDiscountedPrice.toFixed(2)}
-                </span>
-                <div className="text-white/40 text-xs line-through mt-0.5">${generalPrice.toFixed(2)}</div>
+                <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-pink-600/20 border-pink-500/30 text-pink-300">{fmt(memberDiscountedPrice)}</span>
+                <div className="text-white/35 text-xs line-through mt-0.5">{fmt(generalPrice)}</div>
               </div>
             ) : generalPrice > 0 ? (
-              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-white/10 border-white/15 text-white">
-                ${generalPrice.toFixed(2)}
-              </span>
+              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-white/10 border-white/15 text-white">{fmt(generalPrice)}</span>
             ) : null}
           </div>
         )}
@@ -284,27 +245,27 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
           )}
         </div>
 
-        {/* ── Savings / membership callout ── */}
+        {/* ── Member / savings callout ── */}
         {isSignedIn && generalPrice > 0 && savingsAmount > 0 && (
           isMember ? (
-            /* Active member — "You're saving" confirmation */
+            /* Active member — premium confirmation, no salesy language */
             <div className="flex items-center gap-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl px-4 py-2.5">
               <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
               </svg>
-              <span className="text-emerald-300 text-sm">
-                You&apos;re saving <span className="font-bold">${savingsAmount.toFixed(2)}</span> on this event as a member
+              <span className="text-emerald-300 text-sm font-medium">
+                Member access unlocked — <span className="font-bold">{fmt(savingsAmount)}</span> saved
               </span>
             </div>
           ) : (
-            /* Signed-in non-member — "Members save" prompt */
+            /* Non-member — clean incentive, not pushy */
             <div className="flex items-center gap-2 bg-pink-950/30 border border-pink-500/20 rounded-xl px-4 py-2.5">
               <svg className="w-4 h-4 text-pink-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
               </svg>
               <span className="text-pink-300 text-sm">
-                Members save <span className="font-bold">${savingsAmount.toFixed(2)}</span> on this event —{" "}
-                <Link href="/" className="underline hover:text-pink-200 transition">join for $25/mo</Link>
+                Unlock member pricing — save <span className="font-bold">{fmt(savingsAmount)}</span> with{" "}
+                <Link href="/" className="underline hover:text-pink-200 transition">membership</Link>
               </span>
             </div>
           )
@@ -317,9 +278,7 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
 
         {/* Description */}
         {ev.description && (
-          <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">
-            {ev.description}
-          </p>
+          <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">{ev.description}</p>
         )}
 
         {/* Action section */}
@@ -329,41 +288,33 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
               Sold Out
             </div>
           ) : !isSignedIn ? (
-            /* ── SIGNED OUT — show gate ─────────────────── */
             <SignInGate />
           ) : (
-            /* ── SIGNED IN — show checkout controls ─────── */
             <>
               {/* Quantity selector */}
               <div className="flex items-center justify-between bg-black/30 border border-white/10 rounded-xl px-4 py-3 gap-3">
                 <span className="text-sm text-white/50 shrink-0">Qty</span>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    disabled={qty <= 1}
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1}
                     className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                    aria-label="Decrease"
-                  >−</button>
+                    aria-label="Decrease">−</button>
                   <span className="w-8 text-center font-bold text-lg tabular-nums">{qty}</span>
-                  <button
-                    onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-                    disabled={qty >= maxQty}
+                  <button onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty}
                     className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                    aria-label="Increase"
-                  >+</button>
+                    aria-label="Increase">+</button>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-white font-bold text-lg tabular-nums">${totalPrice.toFixed(2)}</div>
+                  <div className="text-white font-bold text-lg tabular-nums">{fmt(totalPrice)}</div>
                   {qty > 1 && (
                     <div className="text-white/30 text-xs">
-                      ${displayPrice.toFixed(2)} × {qty}
-                      {isMember && <span className="text-emerald-400/70 ml-1">(15% off)</span>}
+                      {fmt(displayPrice)} × {qty}
+                      {isMember && <span className="text-emerald-400/60 ml-1">· 15% off</span>}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* CTA */}
+              {/* CTA button */}
               <button
                 onClick={handleGetTickets}
                 disabled={checkoutLoading}
@@ -376,7 +327,7 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                   </>
                 ) : (
                   <>
-                    <span>Get Tickets — ${totalPrice.toFixed(2)}</span>
+                    <span>Reserve Spot — {fmt(totalPrice)}</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
                     </svg>
@@ -390,10 +341,8 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                     <span className="shrink-0 mt-0.5">⚠</span>
                     <span>{checkoutError}</span>
                   </p>
-                  <button
-                    onClick={() => { setCheckoutError(null); handleGetTickets(); }}
-                    className="text-red-300 text-xs underline hover:text-red-200 transition pl-5"
-                  >
+                  <button onClick={() => { setCheckoutError(null); handleGetTickets(); }}
+                    className="text-red-300 text-xs underline hover:text-red-200 transition pl-5">
                     Try again →
                   </button>
                 </div>
@@ -454,31 +403,20 @@ export default function EventsList() {
     if (authLoading) return;
     getDocs(query(collection(db, "events"), orderBy("date", "asc")))
       .then((snap) => {
-        const all = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() } as Event))
-          .filter((ev) => ev.status !== "draft");
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Event)).filter((ev) => ev.status !== "draft");
         setEvents(all);
       })
-      .catch((err) => {
-        console.error("Events fetch failed:", err.code, err.message);
-        setError(true);
-      })
+      .catch((err) => { console.error("Events fetch failed:", err.code, err.message); setError(true); })
       .finally(() => setLoading(false));
   }, [authLoading]);
 
   if (loading || authLoading) return (
     <div className="space-y-6">
-      {[1, 2].map((i) => (
-        <div key={i} className="bg-white/5 border border-white/10 rounded-2xl h-80 animate-pulse" />
-      ))}
+      {[1, 2].map((i) => <div key={i} className="bg-white/5 border border-white/10 rounded-2xl h-80 animate-pulse" />)}
     </div>
   );
 
-  if (error) return (
-    <div className="text-center py-16">
-      <p className="text-white/40">Couldn&apos;t load events. Please refresh.</p>
-    </div>
-  );
+  if (error) return <div className="text-center py-16"><p className="text-white/40">Couldn&apos;t load events. Please refresh.</p></div>;
 
   if (events.length === 0) return (
     <div className="text-center py-24 space-y-3">
@@ -495,14 +433,7 @@ export default function EventsList() {
     <>
       <div className="space-y-6">
         {events.map((ev) => (
-          <EventCard
-            key={ev.id}
-            ev={ev}
-            isSignedIn={isSignedIn}
-            isMember={isMember}
-            uid={user?.uid}
-            userEmail={user?.email ?? undefined}
-          />
+          <EventCard key={ev.id} ev={ev} isSignedIn={isSignedIn} isMember={isMember} uid={user?.uid} userEmail={user?.email ?? undefined} />
         ))}
       </div>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
