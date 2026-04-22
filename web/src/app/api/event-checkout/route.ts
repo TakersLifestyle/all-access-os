@@ -168,15 +168,19 @@ export async function POST(req: NextRequest) {
     const successUrl = `${APP_URL}/events?order=success&orderId=${orderRef.id}`;
     const cancelUrl = `${APP_URL}/events?order=cancel&eventId=${eventId}`;
 
+    // Only pass images to Stripe if the URL is absolute (Stripe rejects relative paths)
+    const imageUrl = typeof event.imageUrl === "string" && event.imageUrl.startsWith("http")
+      ? event.imageUrl
+      : null;
+
     console.log(
       `[event-checkout] Creating session | event="${event.title}" qty=${qty} ` +
-      `unitPriceCents=${unitPriceCents} isMember=${isMember} ` +
-      `successUrl=${successUrl}`
+      `unitPriceCents=${unitPriceCents} isMember=${isMember} imageUrl=${imageUrl ?? "none"}`
     );
 
     // Cast to any: automatic_payment_methods is valid at runtime in Stripe API
-    // v22 (2026-01-28.clover) but is absent from the SDK's SessionCreateParams
-    // TypeScript type. payment_method_types:["card"] was removed in v22.
+    // v22 (2026-01-28.clover) but absent from SDK's SessionCreateParams type.
+    // payment_method_types:["card"] was removed in v22.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionParams: any = {
       mode: "payment",
@@ -185,11 +189,12 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "cad",
-            unit_amount: unitPriceCents,           // integer cents e.g. $45 → 4500
+            unit_amount: unitPriceCents,   // integer cents — e.g. $45 → 4500
             product_data: {
               name: event.title,
               description: descParts.join(" · ") || undefined,
-              ...(event.imageUrl ? { images: [event.imageUrl] } : {}),
+              // Only include images if we have an absolute URL
+              ...(imageUrl ? { images: [imageUrl] } : {}),
             },
           },
           quantity: qty,
@@ -219,6 +224,11 @@ export async function POST(req: NextRequest) {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
+    if (!session.url) {
+      console.error(`[event-checkout] Stripe returned no URL | sessionId=${session.id}`);
+      return NextResponse.json({ error: "Payment session created but no redirect URL returned." }, { status: 500 });
+    }
+
     // ── 10. Store session ID on pending order ───────────────
     await orderRef.update({
       stripeCheckoutSessionId: session.id,
@@ -232,23 +242,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url });
 
   } catch (err: unknown) {
-    // Detailed error logging — surface Stripe API errors clearly
-    if (err instanceof Stripe.errors.StripeError) {
+    // Duck-type Stripe errors — instanceof can fail under Turbopack module bundling
+    // Stripe error objects always have a string `type` property
+    const maybeStripe = err as Record<string, unknown>;
+    const isStripeError =
+      typeof maybeStripe?.type === "string" &&
+      (maybeStripe.type.toLowerCase().includes("stripe") ||
+        typeof maybeStripe?.statusCode === "number");
+
+    if (isStripeError) {
+      const stripeMsg = typeof maybeStripe.message === "string"
+        ? maybeStripe.message
+        : "Payment provider error. Please try again.";
       console.error(
-        `[event-checkout] Stripe error | type=${err.type} code=${err.code} ` +
-        `message="${err.message}"`
+        `[event-checkout] Stripe error | type=${maybeStripe.type} ` +
+        `code=${maybeStripe.code ?? "n/a"} message="${stripeMsg}"`
       );
-      // Return the Stripe message directly — it's user-safe for most error types
-      return NextResponse.json(
-        { error: err.message ?? "Payment provider error. Please try again." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: stripeMsg }, { status: 400 });
     }
 
     const message = err instanceof Error ? err.message : String(err);
     console.error("[event-checkout] Unexpected error:", message);
     return NextResponse.json(
-      { error: "Checkout failed. Please try again or contact support." },
+      { error: `Checkout failed: ${message}` },
       { status: 500 }
     );
   }
