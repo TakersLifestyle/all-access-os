@@ -85,20 +85,34 @@ function EventCard({ ev, isMember, uid, userEmail }: {
   const totalPrice = displayPrice * qty;
 
   const handleGetTickets = useCallback(async () => {
+    // Clear previous error and lock button immediately
     setCheckoutError(null);
     setCheckoutLoading(true);
     try {
       const res = await fetch("/api/event-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: ev.id, quantity: qty, uid: uid ?? null, userEmail: userEmail ?? null }),
+        body: JSON.stringify({
+          eventId: ev.id,
+          quantity: qty,
+          uid: uid ?? null,
+          userEmail: userEmail ?? null,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Checkout failed");
-      if (data.url) window.location.href = data.url;
+      if (!res.ok) {
+        // Surface the exact server error message — server now returns meaningful errors
+        throw new Error(data.error ?? "Checkout failed. Please try again.");
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        // Don't reset loading — page is navigating
+        return;
+      }
+      throw new Error("No redirect URL returned. Please try again.");
     } catch (e: unknown) {
       setCheckoutError(e instanceof Error ? e.message : String(e));
-    } finally {
+      // Re-enable button on failure so user can retry cleanly
       setCheckoutLoading(false);
     }
   }, [ev.id, qty, uid, userEmail]);
@@ -285,10 +299,18 @@ function EventCard({ ev, isMember, uid, userEmail }: {
               </button>
 
               {checkoutError && (
-                <p className="text-red-400 text-xs bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2 flex items-start gap-2">
-                  <span className="shrink-0 mt-0.5">⚠</span>
-                  <span>{checkoutError}</span>
-                </p>
+                <div className="bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2.5 space-y-1.5">
+                  <p className="text-red-400 text-xs flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5">⚠</span>
+                    <span>{checkoutError}</span>
+                  </p>
+                  <button
+                    onClick={() => { setCheckoutError(null); handleGetTickets(); }}
+                    className="text-red-300 text-xs underline hover:text-red-200 transition pl-5"
+                  >
+                    Try again →
+                  </button>
+                </div>
               )}
 
               <p className="text-center text-white/20 text-xs flex items-center justify-center gap-1.5">
