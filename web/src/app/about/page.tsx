@@ -130,6 +130,80 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* ── Founder's Note ───────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">A Note From the Founder</p>
+        </div>
+
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-6 space-y-4">
+          <div className="space-y-3 text-white/60 text-sm leading-relaxed">
+            <p>
+              I know what it feels like to go through things and keep moving like everything is fine.
+            </p>
+            <p>
+              To show up, stay strong, and handle life — without always having the right space to process it.
+            </p>
+            <p className="text-white/40 italic">
+              That experience shaped this.
+            </p>
+          </div>
+
+          <div className="border-t border-white/8 pt-4 space-y-3 text-white/65 text-sm leading-relaxed">
+            <p>
+              ALL ACCESS is built for people who want more than just distractions.
+              It&apos;s for people who want real connection, better environments, and moments that actually mean something.
+            </p>
+            <p className="text-white/50">
+              You don&apos;t have to explain everything you&apos;ve been through to belong here.
+            </p>
+            <p className="text-white font-semibold text-base">
+              Just show up.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Why This Exists ──────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">Why This Exists</p>
+          <h2 className="text-2xl font-bold">Why This Exists</h2>
+        </div>
+
+        <div className="space-y-4 text-white/55 text-sm leading-relaxed">
+          <p className="text-white/70">
+            ALL ACCESS didn&apos;t start as a business idea.
+          </p>
+          <p>
+            It started from a place of understanding what it feels like to carry things quietly.
+          </p>
+          <p>
+            There are moments in life where you&apos;re surrounded by people, but still feel disconnected.
+            Times where your environment doesn&apos;t reflect the energy you&apos;re trying to grow into.
+          </p>
+          <p className="text-white/70 font-medium">
+            That gap — between where you are and what you need — is real.
+          </p>
+          <p>
+            ALL ACCESS was built to close that gap.
+          </p>
+          <p>
+            Not just with events, but with intentional spaces where people can show up, feel safe,
+            and connect without pressure.
+          </p>
+        </div>
+
+        <div className="space-y-3 border-t border-white/8 pt-5">
+          <p className="text-white/40 text-sm italic">This isn&apos;t about status or clout.</p>
+          <p className="text-white/70 text-sm font-semibold">It&apos;s about environment.</p>
+          <p className="text-white/50 text-sm leading-relaxed">
+            Because the right environment can change everything.
+            And sometimes, being in the right room with the right people is where healing starts.
+          </p>
+        </div>
+      </section>
+
       {/* ── CTA ──────────────────────────────────────────── */}
       <section className="flex flex-col sm:flex-row gap-3 pt-2">
         <Link href="/events"
