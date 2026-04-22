@@ -1,6 +1,6 @@
-// Event ticket checkout — open to ALL users (public + members)
-// Members automatically receive discounted pricing server-side
+// Event ticket checkout — open to ALL signed-in users (members get 15% off)
 // Pricing always read from Firestore — never trusted from frontend
+// Member discount: MEMBER_DISCOUNT (15%) off generalPrice, calculated server-side
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -13,6 +13,15 @@ const APP_URL = (process.env.APP_URL ?? "https://allaccesswinnipeg.ca").replace(
 
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 5;
+
+// ── Member discount constant ────────────────────────────────────────────────
+// Active members receive exactly 15% off generalPrice, calculated server-side.
+// Frontend displays the same calculation — these must stay in sync.
+const MEMBER_DISCOUNT = 0.15;
+
+function applyMemberDiscount(price: number): number {
+  return Math.round(price * (1 - MEMBER_DISCOUNT) * 100) / 100;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,7 +86,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Resolve membership status ────────────────────────
-    // All users can purchase tickets — members receive discounted pricing
+    // All signed-in users can purchase — active members get 15% discount
     let isMember = false;
     if (uid) {
       try {
@@ -93,24 +102,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 6. Server-side pricing (never trust frontend) ───────
-    const memberPrice = Number(event.memberPrice) || 0;
+    // ── 6. Server-side pricing ──────────────────────────────
+    // generalPrice is the single source of truth from Firestore.
+    // Members receive MEMBER_DISCOUNT (15%) off — calculated here, never from frontend.
     const generalPrice = Number(event.generalPrice) || 0;
 
-    // Price resolution order:
-    //   Member  → memberPrice if set, else generalPrice
-    //   Public  → generalPrice if set, else memberPrice (open-access fallback)
-    const unitPriceDollars: number =
-      isMember && memberPrice > 0
-        ? memberPrice
-        : generalPrice > 0
-        ? generalPrice
-        : memberPrice;
-
-    if (!unitPriceDollars || isNaN(unitPriceDollars) || unitPriceDollars <= 0) {
+    if (!generalPrice || isNaN(generalPrice) || generalPrice <= 0) {
       console.error(
-        `[event-checkout] Event ${eventId} has no valid price. ` +
-        `memberPrice=${memberPrice}, generalPrice=${generalPrice}`
+        `[event-checkout] Event ${eventId} has no valid generalPrice. ` +
+        `generalPrice=${generalPrice}`
       );
       return NextResponse.json(
         { error: "Ticket pricing is not available for this event." },
@@ -118,11 +118,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Apply 15% member discount server-side
+    const unitPriceDollars: number = isMember
+      ? applyMemberDiscount(generalPrice)
+      : generalPrice;
+
     // unit_amount must be an integer number of cents
     const unitPriceCents = Math.round(unitPriceDollars * 100);
 
-    const savingsPerTicket =
-      isMember && memberPrice > 0 && generalPrice > 0 ? generalPrice - memberPrice : 0;
+    const savingsPerTicket = isMember
+      ? Math.round(generalPrice * MEMBER_DISCOUNT * 100) / 100
+      : 0;
 
     // ── 7. Create pending ticketOrder in Firestore ──────────
     const orderRef = db.collection("ticketOrders").doc();
@@ -136,7 +142,8 @@ export async function POST(req: NextRequest) {
       unitPrice: unitPriceDollars,
       unitPriceCents,
       totalPrice: unitPriceDollars * qty,
-      isMemberPrice: isMember && memberPrice > 0,
+      isMemberPrice: isMember,
+      memberDiscountPct: isMember ? MEMBER_DISCOUNT * 100 : 0,
       savingsTotal: savingsPerTicket * qty,
       paymentStatus: "pending",
       stripeCheckoutSessionId: null,
@@ -158,13 +165,12 @@ export async function POST(req: NextRequest) {
     const descParts = [
       eventDateStr,
       event.location ?? null,
-      isMember && savingsPerTicket > 0
-        ? `Member rate — you save $${savingsPerTicket}/ticket`
+      isMember
+        ? `Member rate — 15% off (saving $${savingsPerTicket.toFixed(2)}/ticket)`
         : null,
     ].filter(Boolean);
 
     // ── 9. Create Stripe Checkout Session ───────────────────
-    // success_url and cancel_url must be absolute URLs
     const successUrl = `${APP_URL}/events?order=success&orderId=${orderRef.id}`;
     const cancelUrl = `${APP_URL}/events?order=cancel&eventId=${eventId}`;
 
@@ -175,12 +181,10 @@ export async function POST(req: NextRequest) {
 
     console.log(
       `[event-checkout] Creating session | event="${event.title}" qty=${qty} ` +
-      `unitPriceCents=${unitPriceCents} isMember=${isMember} imageUrl=${imageUrl ?? "none"}`
+      `generalPrice=${generalPrice} unitPriceCents=${unitPriceCents} ` +
+      `isMember=${isMember} discount=${isMember ? "15%" : "none"} imageUrl=${imageUrl ?? "none"}`
     );
 
-    // Cast to any: automatic_payment_methods is valid at runtime in Stripe API
-    // v22 (2026-01-28.clover) but absent from SDK's SessionCreateParams type.
-    // payment_method_types:["card"] was removed in v22.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionParams: any = {
       mode: "payment",
@@ -189,11 +193,10 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "cad",
-            unit_amount: unitPriceCents,   // integer cents — e.g. $45 → 4500
+            unit_amount: unitPriceCents, // integer cents — e.g. $85 member price on $100 event → 8500
             product_data: {
               name: event.title,
               description: descParts.join(" · ") || undefined,
-              // Only include images if we have an absolute URL
               ...(imageUrl ? { images: [imageUrl] } : {}),
             },
           },
@@ -210,6 +213,8 @@ export async function POST(req: NextRequest) {
         quantity: String(qty),
         userId: uid ?? "",
         type: "event_ticket",
+        isMemberPrice: String(isMember),
+        discountPct: isMember ? "15" : "0",
       },
       payment_intent_data: {
         metadata: {
@@ -218,6 +223,8 @@ export async function POST(req: NextRequest) {
           quantity: String(qty),
           userId: uid ?? "",
           type: "event_ticket",
+          isMemberPrice: String(isMember),
+          discountPct: isMember ? "15" : "0",
         },
       },
     };
@@ -236,14 +243,14 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(
-      `[event-checkout] Session created | sessionId=${session.id} orderId=${orderRef.id}`
+      `[event-checkout] Session created | sessionId=${session.id} orderId=${orderRef.id} ` +
+      `unitPriceDollars=${unitPriceDollars} isMember=${isMember}`
     );
 
     return NextResponse.json({ url: session.url });
 
   } catch (err: unknown) {
     // Duck-type Stripe errors — instanceof can fail under Turbopack module bundling
-    // Stripe error objects always have a string `type` property
     const maybeStripe = err as Record<string, unknown>;
     const isStripeError =
       typeof maybeStripe?.type === "string" &&

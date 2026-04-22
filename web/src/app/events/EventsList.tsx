@@ -6,6 +6,17 @@ import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 
+// ── Pricing constant ────────────────────────────────────────────────────────
+// Members receive exactly 15% off generalPrice — calculated dynamically
+const MEMBER_DISCOUNT = 0.15;
+
+function calcMemberPrice(generalPrice: number): number {
+  return Math.round(generalPrice * (1 - MEMBER_DISCOUNT) * 100) / 100;
+}
+function calcSavings(generalPrice: number): number {
+  return Math.round(generalPrice * MEMBER_DISCOUNT * 100) / 100;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -13,7 +24,7 @@ interface Event {
   date: string;
   location: string;
   generalPrice: number;
-  memberPrice: number;
+  memberPrice: number; // legacy field — kept for type safety but NOT used for pricing
   capacity: number;
   ticketsRemaining: number;
   isMembersOnly: boolean;
@@ -105,12 +116,15 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
   const isCritical = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= 5;
   const isLow = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
 
-  const memberPrice = Number(ev.memberPrice) || 0;
+  // ── Pricing ──────────────────────────────────────────────────────────────
+  // generalPrice is the single source of truth.
+  // Members always get MEMBER_DISCOUNT (15%) off — calculated dynamically.
   const generalPrice = Number(ev.generalPrice) || 0;
+  const memberDiscountedPrice = generalPrice > 0 ? calcMemberPrice(generalPrice) : 0;
+  const savingsAmount = generalPrice > 0 ? calcSavings(generalPrice) : 0;
 
-  // Price shown to signed-in users
-  const displayPrice = isMember && memberPrice > 0 ? memberPrice : generalPrice > 0 ? generalPrice : memberPrice;
-  const savings = isMember && memberPrice > 0 && generalPrice > 0 ? generalPrice - memberPrice : 0;
+  // Price used in UI totals and sent to checkout API
+  const displayPrice = isMember && memberDiscountedPrice > 0 ? memberDiscountedPrice : generalPrice;
 
   const [qty, setQty] = useState(1);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -193,18 +207,18 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
               <div className="bg-emerald-600/90 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-emerald-500/40 shadow-lg">
                 FREE
               </div>
-            ) : isMember && savings > 0 ? (
-              /* Signed in member with savings */
-              <>
+            ) : isMember && memberDiscountedPrice > 0 ? (
+              /* Active member — show discounted price + strikethrough */
+              <div className="space-y-1 text-right">
                 <div className="bg-pink-600 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-pink-900/50">
-                  Members ${memberPrice}
+                  ${memberDiscountedPrice.toFixed(2)}
                 </div>
-                <div className="text-white/50 text-xs mt-1 line-through">${generalPrice} public</div>
-              </>
-            ) : displayPrice > 0 ? (
-              /* Signed in, no savings or general price */
+                <div className="text-white/45 text-xs line-through">${generalPrice.toFixed(2)}</div>
+              </div>
+            ) : generalPrice > 0 ? (
+              /* Signed in non-member — full price */
               <div className="bg-white/15 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/20">
-                From ${displayPrice}
+                ${generalPrice.toFixed(2)}
               </div>
             ) : null}
           </div>
@@ -227,13 +241,22 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                 </span>
               )}
             </div>
-            <span className={`text-sm font-bold px-3 py-1.5 rounded-xl border ${
-              !isSignedIn
-                ? "bg-emerald-600/20 border-emerald-500/30 text-emerald-400"
-                : "bg-white/10 border-white/15 text-white"
-            }`}>
-              {!isSignedIn ? "FREE" : (isMember && memberPrice > 0 ? `Members $${memberPrice}` : displayPrice > 0 ? `$${displayPrice}` : "FREE")}
-            </span>
+            {!isSignedIn ? (
+              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-600/20 border-emerald-500/30 text-emerald-400">
+                FREE
+              </span>
+            ) : isMember && memberDiscountedPrice > 0 ? (
+              <div className="text-right">
+                <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-pink-600/20 border-pink-500/30 text-pink-300">
+                  ${memberDiscountedPrice.toFixed(2)}
+                </span>
+                <div className="text-white/40 text-xs line-through mt-0.5">${generalPrice.toFixed(2)}</div>
+              </div>
+            ) : generalPrice > 0 ? (
+              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-white/10 border-white/15 text-white">
+                ${generalPrice.toFixed(2)}
+              </span>
+            ) : null}
           </div>
         )}
 
@@ -261,17 +284,30 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
           )}
         </div>
 
-        {/* Member savings callout — signed-in non-members only */}
-        {isSignedIn && !isMember && memberPrice > 0 && generalPrice > 0 && (
-          <div className="flex items-center gap-2 bg-pink-950/30 border border-pink-500/20 rounded-xl px-4 py-2.5">
-            <svg className="w-4 h-4 text-pink-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-            </svg>
-            <span className="text-pink-300 text-sm">
-              Members save <span className="font-bold">${generalPrice - memberPrice}</span> on this event —{" "}
-              <Link href="/" className="underline hover:text-pink-200 transition">join for $25/mo</Link>
-            </span>
-          </div>
+        {/* ── Savings / membership callout ── */}
+        {isSignedIn && generalPrice > 0 && savingsAmount > 0 && (
+          isMember ? (
+            /* Active member — "You're saving" confirmation */
+            <div className="flex items-center gap-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl px-4 py-2.5">
+              <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+              </svg>
+              <span className="text-emerald-300 text-sm">
+                You&apos;re saving <span className="font-bold">${savingsAmount.toFixed(2)}</span> on this event as a member
+              </span>
+            </div>
+          ) : (
+            /* Signed-in non-member — "Members save" prompt */
+            <div className="flex items-center gap-2 bg-pink-950/30 border border-pink-500/20 rounded-xl px-4 py-2.5">
+              <svg className="w-4 h-4 text-pink-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+              </svg>
+              <span className="text-pink-300 text-sm">
+                Members save <span className="font-bold">${savingsAmount.toFixed(2)}</span> on this event —{" "}
+                <Link href="/" className="underline hover:text-pink-200 transition">join for $25/mo</Link>
+              </span>
+            </div>
+          )
         )}
 
         {/* Capacity bar */}
@@ -318,7 +354,12 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-white font-bold text-lg tabular-nums">${totalPrice.toFixed(2)}</div>
-                  {qty > 1 && <div className="text-white/30 text-xs">${displayPrice} × {qty}</div>}
+                  {qty > 1 && (
+                    <div className="text-white/30 text-xs">
+                      ${displayPrice.toFixed(2)} × {qty}
+                      {isMember && <span className="text-emerald-400/70 ml-1">(15% off)</span>}
+                    </div>
+                  )}
                 </div>
               </div>
 
