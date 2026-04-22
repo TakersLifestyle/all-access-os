@@ -10,12 +10,31 @@ let dbInstance: ReturnType<typeof getFirestore> | null = null;
 function ensureInitialized() {
   if (getApps().length) return;
 
-  const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    ?? process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
   if (raw && raw.trim().length > 0) {
-    // Local development: parse service account JSON from env
     const cleaned = raw.trim().replace(/^['"]|['"]$/g, "");
-    const creds = JSON.parse(cleaned);
+
+    // Guard: if the value looks like an env var name or doesn't start with {,
+    // it was misconfigured — throw a clear error rather than a cryptic parse crash.
+    if (!cleaned.startsWith("{")) {
+      throw new Error(
+        `Firebase credentials env var does not contain valid JSON. ` +
+        `Value starts with: "${cleaned.slice(0, 30)}...". ` +
+        `Check GOOGLE_APPLICATION_CREDENTIALS_JSON in Vercel Environment Variables.`
+      );
+    }
+
+    let creds: Record<string, string>;
+    try {
+      creds = JSON.parse(cleaned);
+    } catch (parseErr) {
+      throw new Error(
+        `Failed to parse Firebase credentials JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}. ` +
+        `Ensure GOOGLE_APPLICATION_CREDENTIALS_JSON is a valid JSON string in Vercel Environment Variables.`
+      );
+    }
 
     if (typeof creds.private_key === "string") {
       creds.private_key = creds.private_key.replace(/\\n/g, "\n");
@@ -31,7 +50,7 @@ function ensureInitialized() {
     }
 
     console.log(
-      `[firebase-admin] Using service account credentials (project: ${creds.project_id})`
+      `[firebase-admin] Initialized with service account (project: ${creds.project_id})`
     );
 
     initializeApp({
@@ -43,7 +62,11 @@ function ensureInitialized() {
     });
   } else {
     // Production (Firebase App Hosting / Cloud Run): ADC is provided automatically.
-    console.log("[firebase-admin] Using Application Default Credentials.");
+    // On Vercel, GOOGLE_APPLICATION_CREDENTIALS_JSON MUST be set — ADC is not available.
+    console.warn(
+      "[firebase-admin] No credentials env var found. " +
+      "Attempting Application Default Credentials (only works on GCP/Firebase App Hosting)."
+    );
     initializeApp();
   }
 }

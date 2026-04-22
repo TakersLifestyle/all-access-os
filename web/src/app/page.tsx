@@ -177,7 +177,10 @@ export default function Home() {
                     <h3 className="font-semibold text-sm leading-tight">{ev.title}</h3>
                     <div className="flex items-center justify-between">
                       <span className="text-white/40 text-xs">{formatDate(ev.date)}</span>
-                      {ev.generalPrice > 0 ? (
+                      {/* Signed-out users see FREE — real pricing only after sign-in */}
+                      {!user ? (
+                        <span className="text-emerald-400 text-xs font-semibold">FREE</span>
+                      ) : ev.generalPrice > 0 ? (
                         <span className="text-white/60 text-xs font-semibold">
                           From ${ev.memberPrice > 0 ? ev.memberPrice : ev.generalPrice}
                         </span>
