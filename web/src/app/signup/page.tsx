@@ -67,9 +67,9 @@ export default function SignupPage() {
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-3xl font-bold">Create your account</h1>
-          <p className="text-white/50 text-sm">Then subscribe to unlock full access.</p>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">Join the Community</h1>
+          <p className="text-white/50 text-sm">Free to join. Events open to everyone.</p>
         </div>
 
         {/* Google */}
@@ -130,11 +130,32 @@ export default function SignupPage() {
         </form>
 
         <p className="text-center text-white/50 text-sm">
-          Already a member?{" "}
+          Already have an account?{" "}
           <Link href="/login" className="text-pink-400 hover:text-pink-300">
             Log in
           </Link>
         </p>
+
+        {/* Mission trust block */}
+        <div className="border-t border-white/5 pt-5 space-y-3">
+          <p className="text-center text-white/20 text-xs uppercase tracking-widest font-semibold">Why we exist</p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { icon: "🛡️", label: "Safe spaces" },
+              { icon: "🧠", label: "Real connection" },
+              { icon: "🌱", label: "Community growth" },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-white/6 rounded-xl py-3 px-2 space-y-1">
+                <span className="text-lg">{item.icon}</span>
+                <p className="text-white/30 text-xs">{item.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-white/20 text-xs leading-relaxed">
+            ALL ACCESS is building toward nonprofit registration.<br />
+            Community-supported · Open to everyone · Mission-driven.
+          </p>
+        </div>
       </div>
     </main>
   );

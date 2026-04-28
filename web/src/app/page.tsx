@@ -237,6 +237,90 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── HOW SUPPORT HELPS ─────────────────────────────── */}
+      {(!user || !isActive) && (
+        <section className="space-y-8">
+          <div className="text-center space-y-2">
+            <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Community Investment</p>
+            <h2 className="text-2xl font-bold">How Your Support Helps</h2>
+            <p className="text-white/40 text-sm max-w-md mx-auto">
+              Every membership contribution goes directly back into building safer, stronger, more connected communities.
+            </p>
+          </div>
+
+          {/* Impact areas */}
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {[
+              {
+                icon: "🛡️",
+                title: "Safer Spaces",
+                desc: "Every event is designed with safety, comfort, and community standards built in — not bolted on.",
+              },
+              {
+                icon: "🧠",
+                title: "Wellness-Centered Experiences",
+                desc: "Programming that prioritizes mental well-being, healthy social environments, and genuine connection.",
+              },
+              {
+                icon: "🌍",
+                title: "Cultural Programming",
+                desc: "Events that reflect and celebrate Winnipeg's diversity — bringing communities together across backgrounds.",
+              },
+              {
+                icon: "🤝",
+                title: "Local Partnerships",
+                desc: "Connecting our community to local businesses, resources, and organizations that share our values.",
+              },
+              {
+                icon: "🔓",
+                title: "Accessibility Initiatives",
+                desc: "Keeping experiences open and affordable for everyone — not just those who can pay the most.",
+              },
+              {
+                icon: "🌱",
+                title: "Platform Growth",
+                desc: "Building the infrastructure, tools, and reach to serve more people and create deeper impact.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="bg-white/[0.03] border border-white/8 hover:border-pink-500/20 rounded-2xl p-5 space-y-2.5 transition">
+                <span className="text-2xl">{item.icon}</span>
+                <h3 className="font-semibold text-sm text-white/90">{item.title}</h3>
+                <p className="text-white/40 text-xs leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Allocation breakdown */}
+          <div className="bg-white/[0.02] border border-white/6 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-white/50 text-sm font-semibold">Planned Fund Allocation</p>
+              <span className="text-white/20 text-xs">Community-supported model</span>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: "Safe event production & experiences", pct: 40, color: "bg-pink-500" },
+                { label: "Community programming & outreach", pct: 25, color: "bg-purple-500" },
+                { label: "Platform development & operations", pct: 20, color: "bg-blue-500/70" },
+                { label: "Accessibility & inclusion initiatives", pct: 15, color: "bg-emerald-500/80" },
+              ].map((item) => (
+                <div key={item.label} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/45 text-xs">{item.label}</span>
+                    <span className="text-white/35 text-xs font-semibold tabular-nums">{item.pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-white/20 text-xs">
+              Allocation reflects organizational priorities as we build toward nonprofit registration. Subject to update as the platform grows.
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* ── MEMBERSHIP ────────────────────────────────────── */}
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
