@@ -77,7 +77,7 @@ export default function Home() {
       <section className="pt-16 text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-4 py-1.5 text-sm text-pink-300 font-medium">
           <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
-          Winnipeg&apos;s Community Experience Platform
+          Community Impact Organization · Winnipeg
         </div>
 
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
@@ -86,8 +86,8 @@ export default function Home() {
         </h1>
 
         <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed">
-          Events. Perks. Connection.<br />
-          <span className="text-white/80">ALL ACCESS</span> brings Winnipeg together through shared experiences.
+          Safe events. Real connection. Lasting impact.<br />
+          <span className="text-white/80">ALL ACCESS</span> exists to build healthier communities — one experience at a time.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -241,8 +241,25 @@ export default function Home() {
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Support the Community</h2>
-            <p className="text-white/40 text-sm max-w-sm mx-auto">Membership is optional — but it helps us grow and gives you real benefits in return.</p>
+            <h2 className="text-2xl font-bold">Support the Mission</h2>
+            <p className="text-white/40 text-sm max-w-sm mx-auto">
+              Membership is a voluntary community contribution — not a requirement. Every supporter helps fund safe events, accessibility programs, and community growth.
+            </p>
+          </div>
+
+          {/* Where support goes */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { icon: "🎯", text: "Safe event production" },
+              { icon: "🔓", text: "Accessibility programs" },
+              { icon: "🤝", text: "Community partnerships" },
+              { icon: "🌱", text: "Platform & outreach" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-2.5 bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5">
+                <span className="text-base">{item.icon}</span>
+                <p className="text-white/45 text-xs">{item.text}</p>
+              </div>
+            ))}
           </div>
 
           <div className="bg-white/5 border border-pink-500/30 rounded-2xl p-8 space-y-6 relative overflow-hidden">
@@ -260,10 +277,10 @@ export default function Home() {
               {[
                 "15% off all event tickets",
                 "Early access to new events",
-                "6+ local partner perks & discounts",
+                "Local partner perks & discounts",
                 "Community feed access",
-                "Help keep events accessible for everyone",
-                "Support a Winnipeg community platform",
+                "Directly fund safe, accessible experiences",
+                "Be part of building Winnipeg's social ecosystem",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-white/70">
                   <span className="text-pink-400 shrink-0">✓</span> {item}
@@ -276,7 +293,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
             >
-              {checkoutLoading ? "Redirecting..." : "Become a Member — $25/mo"}
+              {checkoutLoading ? "Redirecting..." : "Become a Supporter — $25/mo"}
             </button>
 
             {error && (
@@ -286,7 +303,7 @@ export default function Home() {
             )}
 
             <p className="text-center text-white/20 text-xs">
-              Secure checkout via Stripe. Cancel anytime.
+              Secure checkout via Stripe. Cancel anytime. Events are open to everyone — membership is optional.
             </p>
           </div>
         </section>
@@ -298,8 +315,11 @@ export default function Home() {
         <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
           ALL ACCESS Winnipeg exists to create safe, engaging, and accessible experiences for youth and young adults — fostering social connection, mental well-being, and cultural growth across our city.
         </p>
+        <p className="text-white/30 text-sm max-w-xl mx-auto">
+          Community-supported · Mission-driven · Incorporating as a nonprofit organization
+        </p>
         <div className="flex flex-wrap gap-3 justify-center pt-2">
-          {["Social Connection", "Mental Well-being", "Youth Engagement", "Cultural Experiences"].map((tag) => (
+          {["Social Connection", "Mental Well-being", "Youth Engagement", "Cultural Experiences", "Safe Spaces", "Open to Everyone"].map((tag) => (
             <span key={tag} className="bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-white/40 text-xs font-medium">
               {tag}
             </span>

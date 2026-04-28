@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "About — ALL ACCESS Winnipeg",
-  description: "ALL ACCESS was built to create environments where people feel comfortable showing up, connecting, and being themselves without judgment.",
+  description: "ALL ACCESS Winnipeg is a community-first, mission-driven organization creating safe, accessible experiences that foster social connection, mental well-being, and cultural growth.",
 };
 
 export default function AboutPage() {
@@ -220,8 +220,7 @@ export default function AboutPage() {
             It keeps us accountable to the people we serve, not to shareholders or sponsors with their own agenda.
           </p>
           <p>
-            We are not a registered nonprofit — but we operate with the same values: mission over profit,
-            people over optics, and long-term community impact over short-term gains.
+            We are currently in the process of incorporating as a nonprofit organization — formalizing what has always been true about how we operate: mission over profit, people over optics, and long-term community impact over short-term gains.
           </p>
           <p className="text-white/70 font-medium">
             Everything we earn goes back into building this.
