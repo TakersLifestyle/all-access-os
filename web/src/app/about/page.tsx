@@ -130,6 +130,117 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* ── Our Impact Goals ─────────────────────────────── */}
+      <section className="space-y-8">
+        <div className="space-y-2">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">Measuring What Matters</p>
+          <h2 className="text-2xl font-bold">Our Impact Goals</h2>
+          <p className="text-white/45 text-sm leading-relaxed max-w-lg">
+            We believe community organizations should be held accountable to the people they serve.
+            Here&apos;s what we&apos;re working toward — publicly.
+          </p>
+        </div>
+
+        {/* 2026 Short-term goals */}
+        <div className="space-y-3">
+          <p className="text-white/35 text-xs uppercase tracking-widest font-semibold">2026 Goals</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { icon: "🎉", goal: "8+ community events", context: "Across social, cultural, and wellness formats" },
+              { icon: "👥", goal: "100+ active supporters", context: "Members who directly fund the mission" },
+              { icon: "🤝", goal: "5+ local partnerships", context: "Businesses and orgs aligned with our values" },
+              { icon: "🛡️", goal: "Zero safety incidents", context: "Every event meets our community standard" },
+              { icon: "🔓", goal: "1+ accessibility initiative", context: "Subsidized or free access for those who need it" },
+              { icon: "📋", goal: "Nonprofit filing initiated", context: "Formal registration underway by year-end" },
+            ].map((item) => (
+              <div key={item.goal} className="flex items-start gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5">
+                <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                <div className="space-y-0.5">
+                  <p className="text-white/80 text-sm font-semibold">{item.goal}</p>
+                  <p className="text-white/35 text-xs">{item.context}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2027–2028 Long-term vision */}
+        <div className="space-y-3">
+          <p className="text-white/35 text-xs uppercase tracking-widest font-semibold">2027–2028 Vision</p>
+          <div className="grid md:grid-cols-3 gap-3">
+            {[
+              { stat: "500+", label: "Active community members" },
+              { stat: "20+", label: "Annual events & experiences" },
+              { stat: "3+", label: "Wellness programs launched" },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-pink-500/15 rounded-xl py-5 px-4 text-center space-y-1.5">
+                <p className="text-3xl font-bold text-pink-400/80">{item.stat}</p>
+                <p className="text-white/40 text-xs">{item.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-white/30 text-xs leading-relaxed">
+            Long-term targets contingent on community growth, nonprofit registration, and grant funding secured.
+          </p>
+        </div>
+
+        {/* How We Measure */}
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-white/35 text-xs uppercase tracking-widest font-semibold">How We Measure Success</p>
+          </div>
+          <div className="space-y-3">
+            {[
+              {
+                metric: "Events delivered",
+                method: "Number of community experiences hosted — tracked against annual goal",
+              },
+              {
+                metric: "Community reach",
+                method: "Total attendees across all events, including non-members",
+              },
+              {
+                metric: "Supporter growth",
+                method: "Active monthly members funding the mission — reported each quarter",
+              },
+              {
+                metric: "Safety & conduct",
+                method: "Zero-incident events tracked by category; community standard enforcement log",
+              },
+              {
+                metric: "Accessibility impact",
+                method: "Number of subsidized or comp experiences provided each year",
+              },
+              {
+                metric: "Partnership reach",
+                method: "Active local partnerships and member discount access points",
+              },
+            ].map((item) => (
+              <div key={item.metric} className="flex items-start gap-4 py-3 border-b border-white/5 last:border-0">
+                <span className="text-pink-400/60 shrink-0 mt-0.5 text-sm">→</span>
+                <div className="space-y-0.5">
+                  <p className="text-white/70 text-sm font-semibold">{item.metric}</p>
+                  <p className="text-white/35 text-xs leading-relaxed">{item.method}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Public accountability pledge */}
+        <div className="bg-white/[0.02] border border-white/6 rounded-2xl px-5 py-5 space-y-2">
+          <p className="text-white/55 text-sm font-semibold">Public Accountability</p>
+          <p className="text-white/35 text-xs leading-relaxed">
+            We are committed to publishing an annual impact report summarizing events held, members supported,
+            community reach, fund allocation, and progress toward nonprofit registration.
+            Our first report will be published upon completing our 2026 programming year.
+          </p>
+          <p className="text-pink-300/50 text-xs font-medium pt-1">
+            Accountable to the community — not shareholders.
+          </p>
+        </div>
+      </section>
+
       {/* ── Founder's Note ───────────────────────────────── */}
       <section className="space-y-5">
         <div className="space-y-1">

@@ -143,6 +143,31 @@ export default function Home() {
         ))}
       </section>
 
+      {/* ── 2026 GOALS STRIP ──────────────────────────────── */}
+      <section className="bg-white/[0.02] border border-white/6 rounded-2xl px-5 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="shrink-0">
+            <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">2026 Impact Goals</p>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {[
+              { stat: "8+", label: "community events" },
+              { stat: "100+", label: "members supported" },
+              { stat: "5+", label: "local partnerships" },
+              { stat: "0", label: "safety incidents" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-baseline gap-1.5">
+                <span className="text-pink-400 font-bold text-sm">{item.stat}</span>
+                <span className="text-white/30 text-xs">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="sm:ml-auto shrink-0">
+            <span className="text-white/15 text-xs">Publicly tracked · Updated annually</span>
+          </div>
+        </div>
+      </section>
+
       {/* ── UPCOMING EVENTS ───────────────────────────────── */}
       {events.length > 0 && (
         <section className="space-y-6">
