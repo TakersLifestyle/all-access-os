@@ -251,6 +251,68 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* ── Nonprofit in Development ─────────────────────── */}
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">Our Structure</p>
+          <h2 className="text-2xl font-bold">Nonprofit in Development</h2>
+        </div>
+
+        <p className="text-white/55 text-sm leading-relaxed">
+          ALL ACCESS Winnipeg is actively building toward formal nonprofit registration — creating the structural foundation to match the mission we&apos;ve been executing from day one.
+        </p>
+
+        <div className="grid md:grid-cols-3 gap-3">
+          {[
+            {
+              label: "Where We Are",
+              color: "border-white/8",
+              items: [
+                "Community-supported and independently operated",
+                "Full revenue reinvestment into the mission",
+                "Functioning under nonprofit-aligned values",
+              ],
+            },
+            {
+              label: "Where We&apos;re Going",
+              color: "border-pink-500/20",
+              items: [
+                "Formal nonprofit incorporation",
+                "Expanded grant and funding eligibility",
+                "Institutional community partnerships",
+              ],
+            },
+            {
+              label: "Why It Matters",
+              color: "border-white/8",
+              items: [
+                "Long-term organizational sustainability",
+                "Public accountability and transparency",
+                "Broader community reach and impact",
+              ],
+            },
+          ].map((col) => (
+            <div key={col.label} className={`bg-white/[0.03] border ${col.color} rounded-xl px-4 py-4 space-y-3`}>
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">{col.label}</p>
+              <ul className="space-y-2">
+                {col.items.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-white/45 text-xs leading-relaxed">
+                    <span className="text-pink-400/60 shrink-0 mt-0.5">·</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white/[0.02] border border-white/6 rounded-xl px-5 py-4">
+          <p className="text-white/35 text-xs leading-relaxed">
+            Our registration status will be publicly updated here the moment it is formalized. Until then, ALL ACCESS operates under full mission alignment — every dollar reinvested, every decision community-first.
+          </p>
+        </div>
+      </section>
+
       {/* ── Partners & Sponsors ──────────────────────────── */}
       <section className="space-y-5 border-t border-white/5 pt-10">
         <div className="space-y-1">
