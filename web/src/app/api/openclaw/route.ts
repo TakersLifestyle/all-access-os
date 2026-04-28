@@ -1,21 +1,24 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { adminDb } from "@/lib/firebase-admin";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You are OpenClaw — the AI concierge for ALL ACCESS Winnipeg.
+// Single source of truth — matches /api/checkout/route.ts unit_amount exactly
+const MEMBERSHIP_PRICE_CAD = 25;
+const MEMBER_DISCOUNT_PCT = 15; // must match MEMBER_DISCOUNT in /api/event-checkout/route.ts
 
-ALL ACCESS is Winnipeg's premium membership and events platform built for driven youth and young professionals aged 18–35. Think exclusive experiences, real community, and VIP access to the city's best events.
+function buildSystemPrompt(eventsBlock: string): string {
+  return `You are OpenClaw — the AI concierge for ALL ACCESS Winnipeg.
+
+ALL ACCESS is Winnipeg's premium membership and events platform for driven youth and young professionals aged 18–35. Think exclusive experiences, real community, and VIP access to the city's best events.
 
 MEMBERSHIP:
-- Price: $50 first month, then $99/month CAD (recurring, cancel anytime)
-- Benefits: Member pricing on all events, access to the community feed, exclusive partner perks, early event access, and Winnipeg's top social network
-- How to join: allaccesswinnipeg.ca → click "Join Now" → secure Stripe checkout (takes 2 minutes)
+- Price: $${MEMBERSHIP_PRICE_CAD}/month CAD — cancel anytime
+- Benefits: ${MEMBER_DISCOUNT_PCT}% off all event tickets, access to the community feed, exclusive partner perks, early event access, and Winnipeg's top social network
+- How to join: allaccesswinnipeg.ca → click "Become a Member" → secure Stripe checkout (takes 2 minutes)
 
 UPCOMING EVENTS:
-1. VIP Launch Night — June 14, 2026 | Members only | $45/ticket
-2. Winnipeg After Dark: DIABLO — July 19, 2026 | Members $35 / General $50
-3. Mansion Party — August 9, 2026 | Members $60 / General $80
-4. Sea Bears Courtside — August 23, 2026 | Members $55 / General $75
+${eventsBlock}
 Tickets & details: allaccesswinnipeg.ca/events
 
 LEAD CAPTURE RULES:
@@ -36,6 +39,47 @@ HARD RULES:
 - Never say you are Claude, an AI, or a language model. You are OpenClaw.
 - Never repeat yourself across messages
 - If someone is rude or spamming, politely end the conversation`;
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    return new Date(dateStr + "T12:00:00").toLocaleDateString("en-CA", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+async function fetchLiveEventsBlock(): Promise<string> {
+  try {
+    const snapshot = await adminDb()
+      .collection("events")
+      .where("status", "==", "active")
+      .orderBy("date", "asc")
+      .get();
+
+    if (snapshot.empty) {
+      return "No events currently scheduled — check allaccesswinnipeg.ca/events for updates.";
+    }
+
+    return snapshot.docs
+      .map((doc) => {
+        const d = doc.data();
+        const general = Number(d.generalPrice) || 0;
+        const member = Math.round(general * (1 - MEMBER_DISCOUNT_PCT / 100) * 100) / 100;
+        const date = formatDate(d.date ?? "");
+        const membersOnly = d.isMembersOnly ? " | MEMBERS ONLY EVENT" : "";
+        const location = d.location ? ` | 📍 ${d.location}` : "";
+        return `- ${d.title} | ${date} | General: $${general} CAD | Members: $${member} CAD (${MEMBER_DISCOUNT_PCT}% off)${membersOnly}${location}`;
+      })
+      .join("\n");
+  } catch {
+    return "Event pricing unavailable right now — visit allaccesswinnipeg.ca/events for current details.";
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -45,11 +89,15 @@ export async function POST(request: Request) {
       return new Response("Invalid messages", { status: 400 });
     }
 
+    // Fetch live event data — always current, no stale hardcoding
+    const eventsBlock = await fetchLiveEventsBlock();
+    const systemPrompt = buildSystemPrompt(eventsBlock);
+
     const stream = anthropic.messages.stream({
       model: "claude-sonnet-4-6",
       max_tokens: 500,
-      system: SYSTEM_PROMPT,
-      messages: messages.slice(-12), // keep last 12 messages to stay within token limits
+      system: systemPrompt,
+      messages: messages.slice(-12),
     });
 
     const readable = new ReadableStream({
