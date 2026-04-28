@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import Nav from "@/components/Nav";
 import Link from "next/link";
+import OpenClaw from "@/components/OpenClaw";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Nav />
           <div className="flex-1">{children}</div>
           <Footer />
+          <OpenClaw />
         </AuthProvider>
       </body>
     </html>

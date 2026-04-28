@@ -162,6 +162,19 @@ service cloud.firestore {
     }
 
 
+    // ─── leads/{leadId} ─────────────────────────────────────
+    // OpenClaw widget captures public leads (name, email, instagram)
+    // Anyone can submit; only admin can read/manage
+    match /leads/{leadId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasAll(["name", "email", "source", "capturedAt"])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() <= 200
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() <= 200;
+    }
+
+
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
