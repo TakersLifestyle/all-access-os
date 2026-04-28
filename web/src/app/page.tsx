@@ -258,12 +258,12 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "Discounted event ticket pricing",
+                "15% off all event tickets",
                 "Early access to new events",
-                "6+ exclusive partner perks",
+                "6+ local partner perks & discounts",
                 "Community feed access",
-                "Priority booking on limited events",
-                "Support a Winnipeg community org",
+                "Help keep events accessible for everyone",
+                "Support a Winnipeg community platform",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-white/70">
                   <span className="text-pink-400 shrink-0">✓</span> {item}
