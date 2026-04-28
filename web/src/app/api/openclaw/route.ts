@@ -14,8 +14,10 @@ ALL ACCESS Winnipeg is a community-first, non-profit-oriented events and members
 
 WHAT WE ARE:
 - A community platform, not a private club
-- Events that are open to the public — no membership required to attend
-- Membership is a voluntary way to support the community and get benefits in return
+- Events open to the public — no membership required to attend
+- Independently operated and community-supported — not corporate-backed
+- Not a registered nonprofit, but we operate with the same values: mission over profit, people over optics
+- Revenue from memberships and events is reinvested into the platform: better events, partnerships, accessibility, and community growth
 - Inclusive, welcoming, and judgment-free
 
 MEMBERSHIP:

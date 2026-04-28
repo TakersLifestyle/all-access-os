@@ -204,6 +204,88 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* ── How We Operate ───────────────────────────────── */}
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">Our Model</p>
+          <h2 className="text-2xl font-bold">Community-Supported. Mission-Driven.</h2>
+        </div>
+
+        <div className="space-y-4 text-white/55 text-sm leading-relaxed">
+          <p className="text-white/75">
+            ALL ACCESS is independently operated and community-supported — not backed by corporate investors or external funding.
+          </p>
+          <p>
+            We grow through membership support and event participation. That&apos;s intentional.
+            It keeps us accountable to the people we serve, not to shareholders or sponsors with their own agenda.
+          </p>
+          <p>
+            We are not a registered nonprofit — but we operate with the same values: mission over profit,
+            people over optics, and long-term community impact over short-term gains.
+          </p>
+          <p className="text-white/70 font-medium">
+            Everything we earn goes back into building this.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: "🎯", label: "Event quality & production" },
+            { icon: "🤝", label: "Community partnerships" },
+            { icon: "⚙️", label: "Platform growth & operations" },
+            { icon: "🔓", label: "Accessibility & inclusion" },
+          ].map((item) => (
+            <div key={item.label} className="bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5 flex items-center gap-3">
+              <span className="text-lg">{item.icon}</span>
+              <p className="text-white/55 text-xs leading-snug">{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-pink-950/20 border border-pink-500/15 rounded-2xl px-5 py-4 space-y-1">
+          <p className="text-white/65 text-sm leading-relaxed">
+            Membership isn&apos;t charity — it&apos;s how we stay independent and keep doing this.
+          </p>
+          <p className="text-pink-300/70 text-sm font-medium">
+            Every member makes the next event possible.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Partners & Sponsors ──────────────────────────── */}
+      <section className="space-y-5 border-t border-white/5 pt-10">
+        <div className="space-y-1">
+          <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">Work With Us</p>
+          <h2 className="text-2xl font-bold">Sponsors & Partners</h2>
+        </div>
+
+        <p className="text-white/50 text-sm leading-relaxed">
+          We partner with organizations that share our values — businesses, nonprofits, and community groups
+          who want to reach Winnipeg&apos;s young adult community in a meaningful, trust-first environment.
+        </p>
+
+        <div className="space-y-3">
+          {[
+            "Event sponsorships and co-branding",
+            "Community outreach and impact partnerships",
+            "Grant-aligned programming and accessibility initiatives",
+            "Local business perks and member discount partnerships",
+          ].map((item) => (
+            <div key={item} className="flex items-start gap-3 text-white/60 text-sm">
+              <span className="text-pink-400/70 shrink-0 mt-0.5">→</span>
+              {item}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-white/35 text-xs">
+          Interested in partnering?{" "}
+          <a href="mailto:hello@allaccesswinnipeg.ca" className="text-pink-400/70 hover:text-pink-400 transition underline underline-offset-2">
+            hello@allaccesswinnipeg.ca
+          </a>
+        </p>
+      </section>
+
       {/* ── CTA ──────────────────────────────────────────── */}
       <section className="flex flex-col sm:flex-row gap-3 pt-2">
         <Link href="/events"
