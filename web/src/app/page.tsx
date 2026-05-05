@@ -16,6 +16,8 @@ interface EventTeaser {
   capacity: number;
   memberPrice: number;
   generalPrice: number;
+  isLaunchEvent?: boolean;
+  status: string;
 }
 
 function useEventTeasers() {
@@ -27,9 +29,16 @@ function useEventTeasers() {
         orderBy("date", "asc"),
         limit(3)
       )
-    ).then((snap) =>
-      setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as EventTeaser)))
-    ).catch(() => {});
+    ).then((snap) => {
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as EventTeaser));
+      // Launch event always first
+      all.sort((a, b) => {
+        if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
+        if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
+        return (a.date ?? "").localeCompare(b.date ?? "");
+      });
+      setEvents(all);
+    }).catch(() => {});
   }, []);
   return events;
 }
@@ -43,11 +52,19 @@ function formatDate(dateStr: string) {
   } catch { return dateStr; }
 }
 
+function fmt(n: number): string {
+  const r = Math.round(n * 100) / 100;
+  return `$${r % 1 === 0 ? r.toFixed(0) : r.toFixed(2)}`;
+}
+
 export default function Home() {
   const { user, isActive, loading } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const events = useEventTeasers();
+
+  const launchEvent = events.find((e) => e.isLaunchEvent);
+  const otherEvents = events.filter((e) => !e.isLaunchEvent);
 
   const handleCheckout = async () => {
     setError(null);
@@ -77,7 +94,7 @@ export default function Home() {
       <section className="pt-16 text-center space-y-6">
         <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-4 py-1.5 text-sm text-pink-300 font-medium">
           <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
-          Community Impact Organization · Winnipeg
+          Launching June 30 — Only 15 Tickets
         </div>
 
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
@@ -95,14 +112,14 @@ export default function Home() {
             href="/events"
             className="bg-pink-600 hover:bg-pink-500 px-8 py-3.5 rounded-xl font-bold text-lg transition"
           >
-            Explore Events →
+            Get Tickets →
           </Link>
           {!user ? (
             <Link
               href="/signup"
               className="border border-white/20 hover:border-white/40 px-8 py-3.5 rounded-xl font-semibold text-lg transition text-white/70 hover:text-white"
             >
-              Become a Member
+              Create Account
             </Link>
           ) : !isActive ? (
             <button
@@ -110,7 +127,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="border border-pink-500/40 hover:border-pink-500/70 px-8 py-3.5 rounded-xl font-semibold text-lg transition text-pink-300 hover:text-pink-200"
             >
-              {checkoutLoading ? "Redirecting..." : "Unlock Member Benefits"}
+              {checkoutLoading ? "Redirecting..." : "Unlock Member Pricing"}
             </button>
           ) : (
             <Link
@@ -129,10 +146,86 @@ export default function Home() {
         )}
       </section>
 
+      {/* ── LAUNCH EVENT SPOTLIGHT ────────────────────────── */}
+      {launchEvent && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-white/20 text-xs uppercase tracking-widest font-semibold">First Launch Event</span>
+            <div className="flex-1 h-px bg-white/5" />
+            <Link href="/events" className="text-pink-400 hover:text-pink-300 text-xs transition">View all →</Link>
+          </div>
+
+          <Link href="/events" className="group block rounded-2xl overflow-hidden border border-pink-500/25 bg-pink-950/10 hover:border-pink-500/50 transition-all duration-300 hover:shadow-[0_0_40px_rgba(236,72,153,0.1)]">
+            <div className="flex flex-col md:flex-row">
+              {/* Image */}
+              {launchEvent.imageUrl && (
+                <div className="relative md:w-72 h-52 md:h-auto shrink-0 overflow-hidden">
+                  <img src={launchEvent.imageUrl} alt={launchEvent.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/30 md:bg-gradient-to-l" />
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-5">
+                <div className="space-y-3">
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      🚀 Launch Event
+                    </span>
+                    <span className="bg-black/40 border border-white/20 text-white/80 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                      Only {launchEvent.ticketsRemaining} tickets
+                    </span>
+                    <span className="bg-white/5 border border-white/15 text-white/50 text-xs font-medium px-3 py-1 rounded-full">
+                      June 30, 2026
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">Founding 15</p>
+                    <h2 className="text-2xl md:text-3xl font-bold leading-tight group-hover:text-pink-300 transition">
+                      Sea Bears Courtside Experience
+                    </h2>
+                  </div>
+
+                  <p className="text-white/50 text-sm leading-relaxed max-w-md">
+                    15 people. First launch. Founding energy.
+                    This is not mass entry — it&apos;s the beginning of something real.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="space-y-0.5">
+                    {!user ? (
+                      <p className="text-white/40 text-sm">Sign in to view pricing</p>
+                    ) : (
+                      <>
+                        <p className="text-white font-bold text-xl">
+                          {isActive
+                            ? fmt(Math.round(launchEvent.generalPrice * 0.85))
+                            : fmt(launchEvent.generalPrice)}
+                        </p>
+                        {isActive && (
+                          <p className="text-emerald-400 text-xs">Member pricing applied — 15% off</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <span className="text-pink-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                    Reserve your spot →
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </section>
+      )}
+
       {/* ── STATS ─────────────────────────────────────────── */}
       <section className="grid grid-cols-3 gap-4 text-center">
         {[
-          { stat: "4", label: "Events this summer" },
+          { stat: "15", label: "Founding seats available" },
           { stat: "6+", label: "Community perks" },
           { stat: "WPG", label: "100% Winnipeg-based" },
         ].map((item) => (
@@ -143,44 +236,20 @@ export default function Home() {
         ))}
       </section>
 
-      {/* ── 2026 GOALS STRIP ──────────────────────────────── */}
-      <section className="bg-white/[0.02] border border-white/6 rounded-2xl px-5 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="shrink-0">
-            <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">2026 Impact Goals</p>
-          </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {[
-              { stat: "8+", label: "community events" },
-              { stat: "100+", label: "members supported" },
-              { stat: "5+", label: "local partnerships" },
-              { stat: "0", label: "safety incidents" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-baseline gap-1.5">
-                <span className="text-pink-400 font-bold text-sm">{item.stat}</span>
-                <span className="text-white/30 text-xs">{item.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="sm:ml-auto shrink-0">
-            <span className="text-white/15 text-xs">Publicly tracked · Updated annually</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ── UPCOMING EVENTS ───────────────────────────────── */}
-      {events.length > 0 && (
+      {/* ── MORE EVENTS ───────────────────────────────────── */}
+      {otherEvents.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Upcoming Events</h2>
+            <h2 className="text-2xl font-bold">More This Summer</h2>
             <Link href="/events" className="text-pink-400 hover:text-pink-300 text-sm transition">
               View all →
             </Link>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
-            {events.map((ev) => {
+            {otherEvents.map((ev) => {
               const spotsLow = ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.3);
+              const memberPrice = Math.round(ev.generalPrice * 0.85);
               return (
                 <Link key={ev.id} href="/events" className="bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl overflow-hidden transition group">
                   <div className="relative h-40 bg-white/5 overflow-hidden">
@@ -202,12 +271,11 @@ export default function Home() {
                     <h3 className="font-semibold text-sm leading-tight">{ev.title}</h3>
                     <div className="flex items-center justify-between">
                       <span className="text-white/40 text-xs">{formatDate(ev.date)}</span>
-                      {/* Signed-out users see FREE — real pricing only after sign-in */}
                       {!user ? (
                         <span className="text-emerald-400 text-xs font-semibold">FREE</span>
                       ) : ev.generalPrice > 0 ? (
                         <span className="text-white/60 text-xs font-semibold">
-                          From ${ev.memberPrice > 0 ? ev.memberPrice : ev.generalPrice}
+                          From {fmt(isActive ? memberPrice : ev.generalPrice)}
                         </span>
                       ) : (
                         <span className="text-emerald-400 text-xs font-semibold">Free</span>
@@ -262,113 +330,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW SUPPORT HELPS ─────────────────────────────── */}
-      {(!user || !isActive) && (
-        <section className="space-y-8">
-          <div className="text-center space-y-2">
-            <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Community Investment</p>
-            <h2 className="text-2xl font-bold">How Your Support Helps</h2>
-            <p className="text-white/40 text-sm max-w-md mx-auto">
-              Every membership contribution goes directly back into building safer, stronger, more connected communities.
-            </p>
-          </div>
-
-          {/* Impact areas */}
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[
-              {
-                icon: "🛡️",
-                title: "Safer Spaces",
-                desc: "Every event is designed with safety, comfort, and community standards built in — not bolted on.",
-              },
-              {
-                icon: "🧠",
-                title: "Wellness-Centered Experiences",
-                desc: "Programming that prioritizes mental well-being, healthy social environments, and genuine connection.",
-              },
-              {
-                icon: "🌍",
-                title: "Cultural Programming",
-                desc: "Events that reflect and celebrate Winnipeg's diversity — bringing communities together across backgrounds.",
-              },
-              {
-                icon: "🤝",
-                title: "Local Partnerships",
-                desc: "Connecting our community to local businesses, resources, and organizations that share our values.",
-              },
-              {
-                icon: "🔓",
-                title: "Accessibility Initiatives",
-                desc: "Keeping experiences open and affordable for everyone — not just those who can pay the most.",
-              },
-              {
-                icon: "🌱",
-                title: "Platform Growth",
-                desc: "Building the infrastructure, tools, and reach to serve more people and create deeper impact.",
-              },
-            ].map((item) => (
-              <div key={item.title} className="bg-white/[0.03] border border-white/8 hover:border-pink-500/20 rounded-2xl p-5 space-y-2.5 transition">
-                <span className="text-2xl">{item.icon}</span>
-                <h3 className="font-semibold text-sm text-white/90">{item.title}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Allocation breakdown */}
-          <div className="bg-white/[0.02] border border-white/6 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-white/50 text-sm font-semibold">Planned Fund Allocation</p>
-              <span className="text-white/20 text-xs">Community-supported model</span>
-            </div>
-            <div className="space-y-3">
-              {[
-                { label: "Safe event production & experiences", pct: 40, color: "bg-pink-500" },
-                { label: "Community programming & outreach", pct: 25, color: "bg-purple-500" },
-                { label: "Platform development & operations", pct: 20, color: "bg-blue-500/70" },
-                { label: "Accessibility & inclusion initiatives", pct: 15, color: "bg-emerald-500/80" },
-              ].map((item) => (
-                <div key={item.label} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/45 text-xs">{item.label}</span>
-                    <span className="text-white/35 text-xs font-semibold tabular-nums">{item.pct}%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-white/20 text-xs">
-              Allocation reflects organizational priorities as we build toward nonprofit registration. Subject to update as the platform grows.
-            </p>
-          </div>
-        </section>
-      )}
-
       {/* ── MEMBERSHIP ────────────────────────────────────── */}
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-bold">Support the Mission</h2>
             <p className="text-white/40 text-sm max-w-sm mx-auto">
-              Membership is a voluntary community contribution — not a requirement. Every supporter helps fund safe events, accessibility programs, and community growth.
+              Membership is voluntary — but it funds real impact and saves you 15% on every ticket.
             </p>
-          </div>
-
-          {/* Where support goes */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { icon: "🎯", text: "Safe event production" },
-              { icon: "🔓", text: "Accessibility programs" },
-              { icon: "🤝", text: "Community partnerships" },
-              { icon: "🌱", text: "Platform & outreach" },
-            ].map((item) => (
-              <div key={item.text} className="flex items-center gap-2.5 bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5">
-                <span className="text-base">{item.icon}</span>
-                <p className="text-white/45 text-xs">{item.text}</p>
-              </div>
-            ))}
           </div>
 
           <div className="bg-white/5 border border-pink-500/30 rounded-2xl p-8 space-y-6 relative overflow-hidden">
@@ -384,7 +353,7 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "15% off all event tickets",
+                "15% off all event tickets — including Sea Bears",
                 "Early access to new events",
                 "Local partner perks & discounts",
                 "Community feed access",
@@ -412,7 +381,7 @@ export default function Home() {
             )}
 
             <p className="text-center text-white/20 text-xs">
-              Secure checkout via Stripe. Cancel anytime. Events are open to everyone — membership is optional.
+              Secure checkout via Stripe. Cancel anytime. Events open to everyone — membership is optional.
             </p>
           </div>
         </section>
@@ -423,9 +392,6 @@ export default function Home() {
         <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Our Mission</p>
         <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
           ALL ACCESS Winnipeg exists to create safe, engaging, and accessible experiences for youth and young adults — fostering social connection, mental well-being, and cultural growth across our city.
-        </p>
-        <p className="text-white/30 text-sm max-w-xl mx-auto">
-          Community-supported · Mission-driven · Incorporating as a nonprofit organization
         </p>
         <div className="flex flex-wrap gap-3 justify-center pt-2">
           {["Social Connection", "Mental Well-being", "Youth Engagement", "Cultural Experiences", "Safe Spaces", "Open to Everyone"].map((tag) => (

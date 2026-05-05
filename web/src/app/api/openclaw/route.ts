@@ -55,6 +55,15 @@ MEMBERSHIP:
 - How to join: allaccesswinnipeg.ca → "Become a Supporter" → secure Stripe checkout (2 minutes)
 - Membership does NOT gate events — all events are open to the public
 
+FIRST LAUNCH EVENT — CRITICAL (always lead with this when events are asked about):
+- Sea Bears Courtside Experience is ALL ACCESS's OFFICIAL first community launch event
+- Date: June 30, 2026
+- Only 15 tickets available — this is intentionally small and founding-energy focused
+- Core message: "15 people. First launch. Founding energy."
+- This is a premium courtside Sea Bears game experience
+- If someone asks about "the first event" or "what's coming up" — Sea Bears June 30 is the answer
+- The Rooftop Sunset Social has been moved to a later date (TBA) — do NOT present it as the first event
+
 UPCOMING EVENTS:
 ${eventsBlock}
 Tickets & details: allaccesswinnipeg.ca/events

@@ -35,6 +35,7 @@ interface Event {
   isMembersOnly: boolean;
   status: string;
   imageUrl: string;
+  isLaunchEvent?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -103,6 +104,39 @@ function SignInGate() {
   );
 }
 
+// ── Coming Soon card ────────────────────────────────────────────────────────
+function ComingSoonCard({ ev }: { ev: Event }) {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+      {ev.imageUrl && (
+        <div className="relative w-full h-48 overflow-hidden">
+          <img src={ev.imageUrl} alt={ev.title} className="w-full h-full object-cover opacity-30 grayscale" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          <div className="absolute top-4 left-4">
+            <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white/50 text-xs font-bold px-3 py-1.5 rounded-full">
+              Coming Soon
+            </span>
+          </div>
+        </div>
+      )}
+      <div className="p-6 space-y-3">
+        {!ev.imageUrl && (
+          <span className="inline-block bg-white/8 border border-white/10 text-white/40 text-xs font-bold px-3 py-1 rounded-full mb-1">
+            Coming Soon
+          </span>
+        )}
+        <h2 className="text-xl font-bold text-white/40">{ev.title}</h2>
+        {ev.description && (
+          <p className="text-white/25 text-sm leading-relaxed">{ev.description}</p>
+        )}
+        <div className="w-full text-center py-3 rounded-xl border border-white/8 text-white/20 text-sm font-medium cursor-not-allowed">
+          Details dropping soon
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
   ev: Event;
   isSignedIn: boolean;
@@ -162,11 +196,21 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
 
           {/* Status badges */}
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+            {ev.isLaunchEvent && !isSoldOut && (
+              <span className="bg-pink-600/90 backdrop-blur-sm border border-pink-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                🚀 Launching June 30
+              </span>
+            )}
             {isSoldOut && (
               <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full">SOLD OUT</span>
             )}
-            {isCritical && !isSoldOut && (
+            {isCritical && !isSoldOut && !ev.isLaunchEvent && (
               <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">🔥 {ev.ticketsRemaining} Left</span>
+            )}
+            {ev.isLaunchEvent && !isSoldOut && ev.ticketsRemaining <= 15 && (
+              <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/80 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
+                Only {ev.ticketsRemaining} Tickets
+              </span>
             )}
             {!isCritical && isLow && (
               <span className="bg-amber-900/90 backdrop-blur-sm border border-amber-500/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">⚡ Limited Spots</span>
@@ -404,6 +448,14 @@ export default function EventsList() {
     getDocs(query(collection(db, "events"), orderBy("date", "asc")))
       .then((snap) => {
         const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Event)).filter((ev) => ev.status !== "draft");
+        // Sort: active launch event first, then active by date, then coming_soon last
+        all.sort((a, b) => {
+          if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
+          if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
+          if (a.status === "coming_soon" && b.status !== "coming_soon") return 1;
+          if (a.status !== "coming_soon" && b.status === "coming_soon") return -1;
+          return (a.date ?? "").localeCompare(b.date ?? "");
+        });
         setEvents(all);
       })
       .catch((err) => { console.error("Events fetch failed:", err.code, err.message); setError(true); })
@@ -432,9 +484,11 @@ export default function EventsList() {
   return (
     <>
       <div className="space-y-6">
-        {events.map((ev) => (
-          <EventCard key={ev.id} ev={ev} isSignedIn={isSignedIn} isMember={isMember} uid={user?.uid} userEmail={user?.email ?? undefined} />
-        ))}
+        {events.map((ev) =>
+          ev.status === "coming_soon"
+            ? <ComingSoonCard key={ev.id} ev={ev} />
+            : <EventCard key={ev.id} ev={ev} isSignedIn={isSignedIn} isMember={isMember} uid={user?.uid} userEmail={user?.email ?? undefined} />
+        )}
       </div>
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     </>
