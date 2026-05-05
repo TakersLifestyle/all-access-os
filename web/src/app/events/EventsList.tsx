@@ -36,6 +36,7 @@ interface Event {
   status: string;
   imageUrl: string;
   isLaunchEvent?: boolean;
+  noMemberDiscount?: boolean;
 }
 
 function formatDate(dateStr: string) {
@@ -179,6 +180,78 @@ function FutureDropCard({ ev }: { ev: Event }) {
   );
 }
 
+// ── Founding 15 Experience Flow ─────────────────────────────────────────────
+function ExperienceFlow() {
+  const steps = [
+    {
+      num: "01",
+      emoji: "📍",
+      title: "Private Host Meetup",
+      sub: "Winnipeg — Location revealed after booking",
+      bullets: ["Check-in & guest verification", "Wristbands & group photos", "Meet the founders & host", "Social warm-up"],
+    },
+    {
+      num: "02",
+      emoji: "🚐",
+      title: "Group Transportation",
+      sub: "Executive Sprinter / Limo Bus",
+      bullets: ["Unified group arrival", "Premium social content", "VIP arrival moment", "Everyone travels together"],
+    },
+    {
+      num: "03",
+      emoji: "🏀",
+      title: "Sea Bears Courtside",
+      sub: "Canada Life Centre",
+      bullets: ["Premium courtside seats", "Community bonding", "Content capture", "Founding night energy"],
+    },
+    {
+      num: "04",
+      emoji: "🔒",
+      title: "Return Transport",
+      sub: "Safe group closeout",
+      bullets: ["Controlled group return", "Full safety close", "Professional wrap", "The beginning of something real"],
+    },
+  ];
+
+  return (
+    <div className="space-y-4 border-t border-white/8 pt-5 mt-1">
+      <div className="space-y-0.5">
+        <p className="text-pink-400 text-xs font-bold uppercase tracking-widest">Founding 15 Experience Flow</p>
+        <p className="text-white/35 text-xs">This is not just a ticket — it&apos;s the full ALL ACCESS experience.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {steps.map((step) => (
+          <div key={step.num} className="bg-black/40 border border-white/8 rounded-xl p-4 space-y-2 relative overflow-hidden">
+            <div className="absolute top-2 right-3 text-white/[0.04] text-5xl font-black leading-none select-none pointer-events-none">{step.num}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{step.emoji}</span>
+              <span className="text-white/25 text-xs font-bold uppercase tracking-wider">Step {step.num}</span>
+            </div>
+            <p className="text-white font-bold text-sm leading-tight">{step.title}</p>
+            <p className="text-pink-400/60 text-xs">{step.sub}</p>
+            <ul className="space-y-0.5 pt-0.5">
+              {step.bullets.map((b) => (
+                <li key={b} className="text-white/35 text-xs flex items-start gap-1.5">
+                  <span className="text-pink-500/40 shrink-0 mt-0.5">·</span>
+                  {b}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-pink-950/20 border border-pink-500/15 rounded-xl px-4 py-3.5 space-y-1.5">
+        <p className="text-white/70 text-xs leading-relaxed">
+          <span className="font-semibold text-white/90">📍 Exact host meetup location revealed after confirmed booking.</span>
+        </p>
+        <p className="text-white/35 text-xs">Only 15 founding spots available. This is the beginning of the ALL ACCESS experience standard.</p>
+      </div>
+    </div>
+  );
+}
+
 function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
   ev: Event;
   isSignedIn: boolean;
@@ -192,8 +265,9 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
 
   // ── Pricing ─────────────────────────────────────────────
   const generalPrice = Number(ev.generalPrice) || 0;
-  const memberDiscountedPrice = generalPrice > 0 ? calcMemberPrice(generalPrice) : 0;
-  const savingsAmount = generalPrice > 0 ? calcSavings(generalPrice) : 0;
+  // noMemberDiscount = flat founding price — no discount for anyone
+  const memberDiscountedPrice = (generalPrice > 0 && !ev.noMemberDiscount) ? calcMemberPrice(generalPrice) : 0;
+  const savingsAmount = (generalPrice > 0 && !ev.noMemberDiscount) ? calcSavings(generalPrice) : 0;
   const displayPrice = isMember && memberDiscountedPrice > 0 ? memberDiscountedPrice : generalPrice;
 
   const [qty, setQty] = useState(1);
@@ -363,9 +437,12 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
         )}
 
         {/* Description */}
-        {ev.description && (
+        {ev.description && !ev.isLaunchEvent && (
           <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">{ev.description}</p>
         )}
+
+        {/* Launch event: premium experience flow replaces plain description */}
+        {ev.isLaunchEvent && <ExperienceFlow />}
 
         {/* Action section */}
         <div className="pt-1 space-y-3">
@@ -413,7 +490,11 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                   </>
                 ) : (
                   <>
-                    <span>Reserve Spot — {fmt(totalPrice)}</span>
+                    <span>
+                      {ev.isLaunchEvent
+                        ? `Claim Founding Access — ${fmt(totalPrice)}`
+                        : `Reserve Spot — ${fmt(totalPrice)}`}
+                    </span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
                     </svg>

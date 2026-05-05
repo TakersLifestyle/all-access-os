@@ -43,17 +43,6 @@ function useEventTeasers() {
   return events;
 }
 
-function useDaysUntilLaunch() {
-  const [days, setDays] = useState<number | null>(null);
-  useEffect(() => {
-    const target = new Date("2026-06-30T00:00:00");
-    const now = new Date();
-    const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    setDays(diff > 0 ? diff : 0);
-  }, []);
-  return days;
-}
-
 function formatDate(dateStr: string) {
   if (!dateStr) return "";
   try {
@@ -77,7 +66,6 @@ export default function Home() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const events = useEventTeasers();
-  const daysUntilLaunch = useDaysUntilLaunch();
 
   const launchEvent = events.find((e) => e.isLaunchEvent);
   const otherEvents = events.filter((e) => !e.isLaunchEvent);
@@ -113,30 +101,22 @@ export default function Home() {
           Launching June 30 — Only 15 Tickets
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[0.95]">
-          THIS IS THE<br />
-          <span className="text-pink-500">FIRST 15.</span>
+        <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
+          Built for the<br />
+          <span className="text-pink-500">Community</span>
         </h1>
 
         <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed">
-          Sea Bears Courtside Experience launches June 30.<br />
-          <span className="text-white/80">15 spots. First access. Real connection.</span>
+          Safe events. Real connection. Lasting impact.<br />
+          <span className="text-white/80">ALL ACCESS</span> exists to build healthier communities — one experience at a time.
         </p>
-
-        {/* Live countdown */}
-        {daysUntilLaunch !== null && (
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-5 py-2 text-sm text-white/50">
-            <span className="text-pink-400 font-bold tabular-nums">{daysUntilLaunch}</span>
-            <span>days until the June 30 launch</span>
-          </div>
-        )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Link
             href="/events"
             className="bg-pink-600 hover:bg-pink-500 px-8 py-3.5 rounded-xl font-bold text-lg transition"
           >
-            Claim Founding Access →
+            View Events →
           </Link>
           {!user ? (
             <Link
@@ -222,57 +202,19 @@ export default function Home() {
                     ) : (
                       <>
                         <p className="text-white font-bold text-xl">
-                          {isActive
-                            ? fmt(Math.round(launchEvent.generalPrice * 0.85))
-                            : fmt(launchEvent.generalPrice)}
+                          {fmt(launchEvent.generalPrice)}
                         </p>
-                        {isActive && (
-                          <p className="text-emerald-400 text-xs">Member pricing applied — 15% off</p>
-                        )}
+                        <p className="text-white/30 text-xs">Founding access — flat rate</p>
                       </>
                     )}
                   </div>
                   <span className="text-pink-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                    Claim your spot →
+                    Claim founding access →
                   </span>
                 </div>
               </div>
             </div>
           </Link>
-        </section>
-      )}
-
-      {/* ── FOUNDING MEMBER STATUS ────────────────────────── */}
-      {(!user || !isActive) && (
-        <section className="rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-950/20 to-black p-8 space-y-6 relative overflow-hidden">
-          <div className="absolute -top-16 -right-16 w-64 h-64 bg-pink-600/8 rounded-full blur-3xl pointer-events-none" />
-          <div className="space-y-1.5">
-            <p className="text-pink-400 text-xs font-bold uppercase tracking-widest">Founding Member Status</p>
-            <h2 className="text-2xl font-bold">Be Part of What Starts Here</h2>
-            <p className="text-white/50 text-sm max-w-md">
-              The first 100 supporters become founding members — recognized permanently as the people who built this from the beginning.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            {[
-              { icon: "🏅", title: "Founding Recognition", desc: "Permanent founding member status — you were here first." },
-              { icon: "⚡", title: "Priority Access", desc: "First access to every future event before public release." },
-              { icon: "🎟️", title: "15% Off All Tickets", desc: "Member pricing on every event, including Sea Bears." },
-            ].map((p) => (
-              <div key={p.title} className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1.5">
-                <span className="text-xl">{p.icon}</span>
-                <p className="font-semibold text-sm">{p.title}</p>
-                <p className="text-white/40 text-xs leading-relaxed">{p.desc}</p>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={handleCheckout}
-            disabled={checkoutLoading}
-            className="bg-pink-600 hover:bg-pink-500 disabled:opacity-50 px-6 py-3 rounded-xl font-bold text-sm transition"
-          >
-            {checkoutLoading ? "Redirecting..." : "Become a Founding Member — $25/mo"}
-          </button>
         </section>
       )}
 
@@ -306,7 +248,6 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {otherEvents.map((ev) => {
               if (ev.status === "coming_soon") {
-                // Future Drop card — premium and anticipated
                 return (
                   <div key={ev.id} className="bg-white/5 border border-white/15 hover:border-purple-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.07)] rounded-2xl overflow-hidden transition-all duration-300 group">
                     <div className="relative h-40 overflow-hidden">
@@ -440,7 +381,7 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "15% off all event tickets — including Sea Bears",
+                "15% off all event tickets",
                 "Early access to new events",
                 "Local partner perks & discounts",
                 "Community feed access",
