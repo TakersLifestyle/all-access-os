@@ -191,7 +191,7 @@ function FoundingValueStack() {
   const items = [
     { emoji: "🏀", label: "Premium courtside Sea Bears ticket" },
     { emoji: "🍽️", label: "Dinner buffet included" },
-    { emoji: "🥤", label: "Non-alcoholic beverages included" },
+    { emoji: "🥤", label: "Beverages included — alcohol optionally available at venue" },
     { emoji: "📍", label: "Private host meetup location" },
     { emoji: "🪧", label: "Wristband + guest verification" },
     { emoji: "🚐", label: "Group transportation — to & from event" },
@@ -241,7 +241,7 @@ function ExperienceFlow() {
       emoji: "🏀",
       title: "Sea Bears Courtside",
       sub: "Canada Life Centre",
-      bullets: ["Premium courtside ticket + dinner buffet", "Non-alcoholic drinks included", "Community bonding + content capture", "Founding night energy"],
+      bullets: ["Premium courtside ticket", "Dinner buffet included", "Non-alcoholic beverages included", "Alcohol available at venue (optional)", "Community bonding + content capture"],
     },
     {
       num: "04",
@@ -281,11 +281,14 @@ function ExperienceFlow() {
         ))}
       </div>
 
-      <div className="bg-pink-950/20 border border-pink-500/15 rounded-xl px-4 py-3.5 space-y-1.5">
+      <div className="bg-pink-950/20 border border-pink-500/15 rounded-xl px-4 py-3.5 space-y-2">
         <p className="text-white/70 text-xs leading-relaxed">
           <span className="font-semibold text-white/90">📍 Exact host meetup location revealed after confirmed booking.</span>
         </p>
-        <p className="text-white/35 text-xs">Only 15 founding spots available. This is the beginning of the ALL ACCESS experience standard.</p>
+        <p className="text-white/55 text-xs leading-relaxed">
+          Your ticket includes buffet dining, courtside access, transportation, and beverages. Alcohol is optionally available at venue pricing.
+        </p>
+        <p className="text-white/30 text-xs">Only 15 founding spots available. This is the beginning of the ALL ACCESS experience standard.</p>
       </div>
 
       <p className="text-center text-white/30 text-xs font-medium italic">
