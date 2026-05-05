@@ -104,33 +104,75 @@ function SignInGate() {
   );
 }
 
-// ── Coming Soon card ────────────────────────────────────────────────────────
-function ComingSoonCard({ ev }: { ev: Event }) {
+// ── Future Drop card (premium, anticipated — not faded) ─────────────────────
+function FutureDropCard({ ev }: { ev: Event }) {
+  const cleanTitle = ev.title
+    .replace(/\s*—\s*coming soon/i, "")
+    .replace(/coming soon/i, "")
+    .trim();
+
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+    <div className="rounded-2xl overflow-hidden border border-white/15 bg-white/5 hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(168,85,247,0.07)] transition-all duration-300 group">
       {ev.imageUrl && (
-        <div className="relative w-full h-48 overflow-hidden">
-          <img src={ev.imageUrl} alt={ev.title} className="w-full h-full object-cover opacity-30 grayscale" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="relative w-full h-60 overflow-hidden">
+          <img src={ev.imageUrl} alt={cleanTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+          {/* Future Drop badge */}
           <div className="absolute top-4 left-4">
-            <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white/50 text-xs font-bold px-3 py-1.5 rounded-full">
-              Coming Soon
+            <span className="bg-purple-600/90 backdrop-blur-sm border border-purple-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+              Future Drop
             </span>
+          </div>
+
+          {/* TBA price badge */}
+          <div className="absolute bottom-4 right-4">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 text-white/70 text-sm font-bold px-4 py-2 rounded-xl">
+              Date TBA
+            </div>
           </div>
         </div>
       )}
-      <div className="p-6 space-y-3">
+
+      <div className="p-6 space-y-4">
         {!ev.imageUrl && (
-          <span className="inline-block bg-white/8 border border-white/10 text-white/40 text-xs font-bold px-3 py-1 rounded-full mb-1">
-            Coming Soon
+          <span className="inline-block bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-bold px-3 py-1 rounded-full mb-1">
+            Future Drop
           </span>
         )}
-        <h2 className="text-xl font-bold text-white/40">{ev.title}</h2>
-        {ev.description && (
-          <p className="text-white/25 text-sm leading-relaxed">{ev.description}</p>
-        )}
-        <div className="w-full text-center py-3 rounded-xl border border-white/8 text-white/20 text-sm font-medium cursor-not-allowed">
-          Details dropping soon
+
+        <h2 className="text-xl md:text-2xl font-bold leading-tight">{cleanTitle}</h2>
+
+        {/* Date + Location */}
+        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-white/50">
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Date TBA
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Private Rooftop Venue (Location revealed later)
+          </span>
+        </div>
+
+        {/* Description */}
+        <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">
+          An exclusive rooftop social is coming later this season. Sunset views, curated energy, and elevated connection. Full details dropping soon.
+        </p>
+
+        {/* Disabled CTA */}
+        <div className="pt-1 space-y-3">
+          <div className="w-full text-center py-4 rounded-xl border border-purple-500/20 bg-purple-950/20 text-purple-300/60 text-sm font-semibold cursor-not-allowed select-none">
+            Details Coming Soon
+          </div>
+          <p className="text-center text-white/15 text-xs flex items-center justify-center gap-1.5">
+            Stay tuned — this one&apos;s worth the wait
+          </p>
         </div>
       </div>
     </div>
@@ -486,7 +528,7 @@ export default function EventsList() {
       <div className="space-y-6">
         {events.map((ev) =>
           ev.status === "coming_soon"
-            ? <ComingSoonCard key={ev.id} ev={ev} />
+            ? <FutureDropCard key={ev.id} ev={ev} />
             : <EventCard key={ev.id} ev={ev} isSignedIn={isSignedIn} isMember={isMember} uid={user?.uid} userEmail={user?.email ?? undefined} />
         )}
       </div>
