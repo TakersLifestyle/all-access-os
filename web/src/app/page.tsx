@@ -193,6 +193,13 @@ export default function Home() {
                   <p className="text-white/50 text-sm leading-relaxed max-w-md">
                     15 people. One first launch. June 30 decides who was here first.
                   </p>
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {["Courtside", "Buffet", "Private transport", "Real connection"].map((tag) => (
+                      <span key={tag} className="text-[11px] bg-white/5 border border-white/10 rounded-full px-2.5 py-0.5 text-white/35 font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between flex-wrap gap-3">

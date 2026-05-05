@@ -79,7 +79,7 @@ function UrgencyBar({ capacity, remaining }: { capacity: number; remaining: numb
 
 const MAX_QTY = 5;
 
-function SignInGate() {
+function SignInGate({ isLaunchEvent }: { isLaunchEvent?: boolean }) {
   return (
     <div className="border-t border-white/8 pt-4 mt-2 space-y-3">
       <div className="flex items-center gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5">
@@ -89,8 +89,14 @@ function SignInGate() {
           </svg>
         </div>
         <div className="min-w-0">
-          <p className="text-white/70 text-sm font-semibold leading-tight">Sign in to unlock tickets</p>
-          <p className="text-white/30 text-xs mt-0.5">Create your account to view pricing and availability.</p>
+          <p className="text-white/70 text-sm font-semibold leading-tight">
+            {isLaunchEvent ? "Apply for Founding Access" : "Sign in to unlock tickets"}
+          </p>
+          <p className="text-white/30 text-xs mt-0.5">
+            {isLaunchEvent
+              ? "Create your account to secure your founding spot."
+              : "Create your account to view pricing and availability."}
+          </p>
         </div>
       </div>
       <div className="flex gap-2">
@@ -98,7 +104,7 @@ function SignInGate() {
           Log in
         </Link>
         <Link href="/signup" className="flex-1 text-center bg-pink-600 hover:bg-pink-500 py-3 rounded-xl text-sm font-bold transition">
-          Create account
+          {isLaunchEvent ? "Claim Founding Access" : "Create account"}
         </Link>
       </div>
     </div>
@@ -180,6 +186,39 @@ function FutureDropCard({ ev }: { ev: Event }) {
   );
 }
 
+// ── Founding value stack ────────────────────────────────────────────────────
+function FoundingValueStack() {
+  const items = [
+    { emoji: "🏀", label: "Premium courtside Sea Bears ticket" },
+    { emoji: "🍽️", label: "Dinner buffet included" },
+    { emoji: "🥤", label: "Non-alcoholic beverages included" },
+    { emoji: "📍", label: "Private host meetup location" },
+    { emoji: "🪧", label: "Wristband + guest verification" },
+    { emoji: "🚐", label: "Group transportation — to & from event" },
+    { emoji: "📸", label: "Group photos + founder social warm-up" },
+    { emoji: "🏅", label: "Founding 15 recognition" },
+    { emoji: "⚡", label: "Priority future ALL ACCESS opportunities" },
+  ];
+
+  return (
+    <div className="space-y-3 border-t border-white/8 pt-5">
+      <div className="space-y-0.5">
+        <p className="text-white/80 text-sm font-bold">What Your Founding Access Includes</p>
+        <p className="text-white/30 text-xs">Everything covered. Nothing extra to buy.</p>
+      </div>
+      <div className="space-y-1.5">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+            <span className="text-sm shrink-0">{item.emoji}</span>
+            <span className="text-white/65 text-xs font-medium flex-1">{item.label}</span>
+            <span className="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Founding 15 Experience Flow ─────────────────────────────────────────────
 function ExperienceFlow() {
   const steps = [
@@ -194,15 +233,15 @@ function ExperienceFlow() {
       num: "02",
       emoji: "🚐",
       title: "Group Transportation",
-      sub: "Executive Sprinter / Limo Bus",
-      bullets: ["Unified group arrival", "Premium social content", "VIP arrival moment", "Everyone travels together"],
+      sub: "Premium Group Transportation",
+      bullets: ["Executive sprinter / limo bus", "Unified group arrival", "Premium social content", "Everyone travels together"],
     },
     {
       num: "03",
       emoji: "🏀",
       title: "Sea Bears Courtside",
       sub: "Canada Life Centre",
-      bullets: ["Premium courtside seats", "Community bonding", "Content capture", "Founding night energy"],
+      bullets: ["Premium courtside ticket + dinner buffet", "Non-alcoholic drinks included", "Community bonding + content capture", "Founding night energy"],
     },
     {
       num: "04",
@@ -248,6 +287,10 @@ function ExperienceFlow() {
         </p>
         <p className="text-white/35 text-xs">Only 15 founding spots available. This is the beginning of the ALL ACCESS experience standard.</p>
       </div>
+
+      <p className="text-center text-white/30 text-xs font-medium italic">
+        This is not mass entry. This is how ALL ACCESS begins.
+      </p>
     </div>
   );
 }
@@ -348,9 +391,18 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                 <div className="text-white/40 text-xs line-through pr-1">{fmt(generalPrice)}</div>
               </div>
             ) : generalPrice > 0 ? (
-              <div className="bg-white/15 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/20">
-                {fmt(generalPrice)}
-              </div>
+              ev.isLaunchEvent ? (
+                <div className="text-right">
+                  <div className="bg-pink-600/85 backdrop-blur-sm border border-pink-500/40 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-pink-900/40">
+                    {fmt(generalPrice)}
+                  </div>
+                  <div className="text-white/50 text-[10px] font-semibold mt-0.5 pr-0.5 tracking-wide">Founding Access</div>
+                </div>
+              ) : (
+                <div className="bg-white/15 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/20">
+                  {fmt(generalPrice)}
+                </div>
+              )
             ) : null}
           </div>
         </div>
@@ -441,7 +493,8 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
           <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">{ev.description}</p>
         )}
 
-        {/* Launch event: premium experience flow replaces plain description */}
+        {/* Launch event: value stack + experience flow replace plain description */}
+        {ev.isLaunchEvent && <FoundingValueStack />}
         {ev.isLaunchEvent && <ExperienceFlow />}
 
         {/* Action section */}
@@ -451,7 +504,7 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
               Sold Out
             </div>
           ) : !isSignedIn ? (
-            <SignInGate />
+            <SignInGate isLaunchEvent={ev.isLaunchEvent} />
           ) : (
             <>
               {/* Quantity selector */}
@@ -468,12 +521,14 @@ function EventCard({ ev, isSignedIn, isMember, uid, userEmail }: {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-white font-bold text-lg tabular-nums">{fmt(totalPrice)}</div>
-                  {qty > 1 && (
+                  {ev.isLaunchEvent ? (
+                    <div className="text-pink-400/70 text-xs font-semibold">Founding Access</div>
+                  ) : qty > 1 ? (
                     <div className="text-white/30 text-xs">
                       {fmt(displayPrice)} × {qty}
                       {isMember && <span className="text-emerald-400/60 ml-1">· 15% off</span>}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
