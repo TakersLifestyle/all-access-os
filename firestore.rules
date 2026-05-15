@@ -185,6 +185,14 @@ service cloud.firestore {
     }
 
 
+    // ─── config/{docId} ─────────────────────────────────────
+    // Platform sync config, API status, last sync timestamps
+    // Admin-only read/write (written by server-side sync route)
+    match /config/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
