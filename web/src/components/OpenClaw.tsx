@@ -26,7 +26,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce"
+          className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-bounce"
           style={{ animationDelay: `${i * 150}ms` }}
         />
       ))}
@@ -68,8 +68,8 @@ function LeadForm({
   };
 
   return (
-    <div className="mx-3 mb-3 rounded-xl border border-purple-500/30 bg-purple-950/40 p-4">
-      <p className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3">
+    <div className="mx-3 mb-3 rounded-xl border border-pink-500/30 bg-pink-950/40 p-4">
+      <p className="text-xs font-semibold text-pink-300 uppercase tracking-wider mb-3">
         Lock In Your Spot
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
@@ -79,7 +79,7 @@ function LeadForm({
             placeholder="Your name *"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/60 transition"
+            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-pink-500/60 transition"
           />
           {errors.name && <p className="text-red-400 text-xs mt-0.5">{errors.name}</p>}
         </div>
@@ -89,7 +89,7 @@ function LeadForm({
             placeholder="Email address *"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/60 transition"
+            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-pink-500/60 transition"
           />
           {errors.email && <p className="text-red-400 text-xs mt-0.5">{errors.email}</p>}
         </div>
@@ -98,13 +98,13 @@ function LeadForm({
           placeholder="Instagram handle (optional)"
           value={form.instagram}
           onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500/60 transition"
+          className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-pink-500/60 transition"
         />
         <div className="flex gap-2 mt-1">
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 py-2 text-sm font-semibold text-white transition"
+            className="flex-1 rounded-lg bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-2 text-sm font-semibold text-white transition"
           >
             {submitting ? "Sending…" : "Send It"}
           </button>
@@ -262,7 +262,7 @@ export default function OpenClaw() {
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-white/3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center flex-shrink-0">
               <ClawIcon />
             </div>
             <div className="flex-1 min-w-0">
@@ -287,7 +287,7 @@ export default function OpenClaw() {
                 <div
                   className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-purple-700 text-white rounded-tr-sm"
+                      ? "bg-pink-600 text-white rounded-tr-sm"
                       : "bg-white/6 text-white/90 rounded-tl-sm border border-white/5"
                   }`}
                 >
@@ -321,12 +321,12 @@ export default function OpenClaw() {
               onKeyDown={handleKeyDown}
               placeholder="Ask anything…"
               disabled={isStreaming}
-              className="flex-1 bg-white/5 border border-white/8 rounded-xl px-3.5 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-purple-500/50 transition disabled:opacity-50"
+              className="flex-1 bg-white/5 border border-white/8 rounded-xl px-3.5 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-pink-500/50 transition disabled:opacity-50"
             />
             <button
               onClick={sendMessage}
               disabled={isStreaming || !input.trim()}
-              className="w-9 h-9 rounded-xl bg-purple-700 hover:bg-purple-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition flex-shrink-0"
+              className="w-9 h-9 rounded-xl bg-pink-600 hover:bg-pink-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition flex-shrink-0"
               aria-label="Send message"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -340,10 +340,10 @@ export default function OpenClaw() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-purple-900/50 transition-all hover:scale-105 active:scale-95"
+        className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-pink-900/50 transition-all hover:scale-105 active:scale-95"
         style={{
-          background: "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)",
-          boxShadow: "0 0 24px rgba(124, 58, 237, 0.35)",
+          background: "linear-gradient(135deg, #ff007f 0%, #cc0055 100%)",
+          boxShadow: "0 0 24px rgba(255, 0, 127, 0.4)",
         }}
         aria-label={isOpen ? "Close OpenClaw" : "Open OpenClaw"}
       >
