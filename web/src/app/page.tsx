@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import SocialFeedSection from "@/components/SocialFeedSection";
 
 interface EventTeaser {
   id: string;
@@ -421,6 +422,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* ── LIVE SOCIAL FEED ──────────────────────────────── */}
+      <SocialFeedSection maxPosts={8} showHeader={true} showFollowCTAs={true} />
 
       {/* ── MISSION STRIP ─────────────────────────────────── */}
       <section className="text-center space-y-4 border-t border-white/5 pt-16">

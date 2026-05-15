@@ -162,6 +162,16 @@ service cloud.firestore {
     }
 
 
+    // ─── socialFeed/{postId} ────────────────────────────────
+    // PUBLIC READ — anyone can view the social feed
+    // WRITE — admin only (managed via /admin/social-feed)
+    // Phase 2: server-side sync from Instagram/TikTok API will also write here
+    match /socialFeed/{postId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+
     // ─── leads/{leadId} ─────────────────────────────────────
     // OpenClaw widget captures public leads (name, email, instagram)
     // Anyone can submit; only admin can read/manage
