@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import {
@@ -13,7 +13,8 @@ import {
   doc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { InstagramIcon, TikTokIcon, type SocialPost } from "@/components/SocialFeedSection";
 
 function detectPlatform(url: string): "instagram" | "tiktok" | "" {
@@ -40,8 +41,11 @@ export default function AdminSocialFeedPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && !isAdmin) router.push("/");
@@ -61,7 +65,6 @@ export default function AdminSocialFeedPage() {
     const detected = detectPlatform(url);
     setForm((f) => ({ ...f, postUrl: url, platform: detected || f.platform }));
 
-    // Auto-fetch oEmbed if URL looks complete
     if (url.length > 20 && (url.includes("instagram.com/p/") || url.includes("tiktok.com/@"))) {
       setFetching(true);
       try {
@@ -84,6 +87,46 @@ export default function AdminSocialFeedPage() {
     }
   };
 
+  // Handle file upload to Firebase Storage
+  const handleFileUpload = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file (JPG, PNG, WebP, etc.)");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be under 10MB");
+      return;
+    }
+
+    setError(null);
+    setUploadProgress(0);
+
+    const timestamp = Date.now();
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const storageRef = ref(storage, `social-feed/${timestamp}-${safeFileName}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = Math.round(
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        );
+        setUploadProgress(progress);
+      },
+      (err) => {
+        setError(`Upload failed: ${err.message}`);
+        setUploadProgress(null);
+      },
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        setForm((f) => ({ ...f, imageUrl: downloadURL }));
+        setUploadProgress(null);
+      }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -92,6 +135,7 @@ export default function AdminSocialFeedPage() {
     if (!form.platform) { setError("Select a platform"); return; }
     if (!form.postUrl.trim()) { setError("Post URL is required"); return; }
     if (!form.caption.trim()) { setError("Caption is required"); return; }
+    if (uploadProgress !== null) { setError("Wait for image upload to complete"); return; }
 
     setSaving(true);
     try {
@@ -107,6 +151,7 @@ export default function AdminSocialFeedPage() {
         createdAt: serverTimestamp(),
       });
       setForm(emptyForm);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setSuccess("Post added to feed ✓");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -143,7 +188,7 @@ export default function AdminSocialFeedPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
 
-          {/* Post URL (auto-detects platform + auto-fetches metadata) */}
+          {/* Post URL */}
           <div className="space-y-1">
             <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
               Post URL *
@@ -161,7 +206,7 @@ export default function AdminSocialFeedPage() {
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-pink-500/50 transition"
             />
             <p className="text-white/25 text-[10px]">
-              TikTok posts auto-fetch thumbnail. Instagram image URL required manually.
+              TikTok posts auto-fetch thumbnail + caption. Paste the full post URL.
             </p>
           </div>
 
@@ -187,32 +232,148 @@ export default function AdminSocialFeedPage() {
             </div>
           </div>
 
-          {/* Image URL */}
-          <div className="space-y-1">
-            <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
-              Image URL
-              {form.imageUrl && (
-                <span className="ml-2 text-emerald-400 normal-case font-normal">✓ Preview loaded</span>
-              )}
-            </label>
-            <input
-              type="url"
-              placeholder="https://... (direct image link, Firebase Storage, or Canva export URL)"
-              value={form.imageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-pink-500/50 transition"
-            />
-            {form.imageUrl && (
-              <div className="mt-2 w-24 h-24 rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                <img
-                  src={form.imageUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
+          {/* Thumbnail — File Upload or URL */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
+                Thumbnail Image
+                {form.imageUrl && uploadProgress === null && (
+                  <span className="ml-2 text-emerald-400 normal-case font-normal">✓ Ready</span>
+                )}
+              </label>
+              {/* Toggle */}
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setUploadMode("file")}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition ${
+                    uploadMode === "file"
+                      ? "bg-pink-600 text-white"
+                      : "text-white/30 hover:text-white/60"
+                  }`}
+                >
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode("url")}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition ${
+                    uploadMode === "url"
+                      ? "bg-pink-600 text-white"
+                      : "text-white/30 hover:text-white/60"
+                  }`}
+                >
+                  Paste URL
+                </button>
               </div>
+            </div>
+
+            {uploadMode === "file" ? (
+              <div>
+                {/* Drop zone */}
+                <label
+                  htmlFor="thumbnail-upload"
+                  className="flex flex-col items-center justify-center gap-2 w-full h-32 rounded-xl border-2 border-dashed border-white/10 hover:border-pink-500/40 bg-white/[0.02] hover:bg-pink-600/5 cursor-pointer transition group"
+                >
+                  {uploadProgress !== null ? (
+                    <div className="flex flex-col items-center gap-2 w-full px-8">
+                      <div className="w-full bg-white/10 rounded-full h-1.5">
+                        <div
+                          className="bg-pink-500 h-1.5 rounded-full transition-all duration-200"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <span className="text-pink-400 text-xs font-semibold">
+                        Uploading… {uploadProgress}%
+                      </span>
+                    </div>
+                  ) : form.imageUrl && uploadMode === "file" ? (
+                    <>
+                      <div className="w-14 h-14 rounded-lg overflow-hidden border border-white/10">
+                        <img
+                          src={form.imageUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-white/30 text-[10px] group-hover:text-white/50 transition">
+                        Click to replace
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-6 h-6 text-white/20 group-hover:text-pink-400 transition"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                        />
+                      </svg>
+                      <div className="text-center">
+                        <p className="text-white/40 text-xs font-semibold group-hover:text-white/70 transition">
+                          Click to upload thumbnail
+                        </p>
+                        <p className="text-white/20 text-[10px] mt-0.5">
+                          JPG, PNG, WebP · Max 10MB
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <input
+                    id="thumbnail-upload"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="url"
+                  placeholder="https://... (Firebase Storage, CDN, or direct image URL)"
+                  value={form.imageUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-pink-500/50 transition"
+                />
+                {form.imageUrl && (
+                  <div className="mt-2 w-24 h-24 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Clear image button */}
+            {form.imageUrl && uploadProgress === null && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((f) => ({ ...f, imageUrl: "" }));
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-white/25 hover:text-red-400 text-[10px] font-medium transition"
+              >
+                ✕ Clear image
+              </button>
             )}
           </div>
 
@@ -231,9 +392,7 @@ export default function AdminSocialFeedPage() {
           {/* Stats + Date */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
-                Likes
-              </label>
+              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">Likes</label>
               <input
                 type="number"
                 placeholder="0"
@@ -243,9 +402,7 @@ export default function AdminSocialFeedPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
-                Views (TikTok)
-              </label>
+              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">Views (TikTok)</label>
               <input
                 type="number"
                 placeholder="0"
@@ -255,9 +412,7 @@ export default function AdminSocialFeedPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">
-                Posted Date
-              </label>
+              <label className="text-xs text-white/40 font-medium uppercase tracking-wider">Posted Date</label>
               <input
                 type="date"
                 value={form.postedAt}
@@ -293,10 +448,10 @@ export default function AdminSocialFeedPage() {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || uploadProgress !== null}
             className="bg-pink-600 hover:bg-pink-500 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition"
           >
-            {saving ? "Adding…" : "Add to Feed"}
+            {saving ? "Adding…" : uploadProgress !== null ? `Uploading image ${uploadProgress}%…` : "Add to Feed"}
           </button>
         </form>
       </div>

@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// ============================================================
+// ALL ACCESS Winnipeg — Firebase Storage Rules
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── social-feed thumbnails ────────────────────────────
+    // Public read — anyone can load thumbnail images in the feed
+    // Write — admin only (authenticated + admin role in custom claims)
+    match /social-feed/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.role == "admin"
+                   && request.resource.size < 10 * 1024 * 1024  // 10MB max
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // ── Catch-all ──────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

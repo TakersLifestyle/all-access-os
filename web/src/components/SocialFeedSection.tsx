@@ -19,11 +19,11 @@ export interface SocialPost {
   caption: string;
   likes?: number;
   views?: number;
-  postedAt: string; // ISO string
+  postedAt: string;
   featured?: boolean;
 }
 
-// ── Icons ────────────────────────────────────────────────────────────────────
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 export function InstagramIcon({ size = 14 }: { size?: number }) {
   return (
@@ -41,7 +41,62 @@ export function TikTokIcon({ size = 13 }: { size?: number }) {
   );
 }
 
-// ── Card ─────────────────────────────────────────────────────────────────────
+// ── Image with error fallback ─────────────────────────────────────────────────
+
+function PostImage({
+  src,
+  alt,
+  postUrl,
+  platform,
+}: {
+  src: string;
+  alt: string;
+  postUrl: string;
+  platform: "instagram" | "tiktok";
+}) {
+  const [errored, setErrored] = useState(false);
+  const isIG = platform === "instagram";
+
+  if (!src || errored) {
+    return (
+      <a
+        href={postUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex flex-col items-center justify-center gap-3 w-full h-full text-center px-3"
+      >
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+          style={{
+            background: isIG
+              ? "linear-gradient(135deg, #ff007f 0%, #cc0055 100%)"
+              : "linear-gradient(135deg, #333 0%, #555 100%)",
+          }}
+        >
+          {isIG ? <InstagramIcon size={16} /> : <TikTokIcon size={14} />}
+        </div>
+        <p className="text-white/50 text-[10px] leading-tight font-medium">
+          Media preview unavailable
+        </p>
+        <span className="text-pink-400 text-[10px] font-bold border border-pink-500/30 rounded-lg px-2.5 py-1 hover:bg-pink-600/10 transition">
+          View Post →
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+      loading="lazy"
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
 
 function SocialCard({ post }: { post: SocialPost }) {
   const isIG = post.platform === "instagram";
@@ -56,77 +111,79 @@ function SocialCard({ post }: { post: SocialPost }) {
     }
   })();
 
+  const hasImage = Boolean(post.imageUrl);
+
   return (
     <a
       href={post.postUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-2xl overflow-hidden border border-white/8 bg-white/[0.03] hover:border-pink-500/40 transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,0,127,0.12)] hover:-translate-y-0.5"
+      className="group block rounded-2xl overflow-hidden border border-white/10 bg-[#0e0a1a] hover:border-pink-500/40 transition-all duration-300 hover:shadow-[0_0_28px_rgba(255,0,127,0.15)] hover:-translate-y-0.5"
     >
-      {/* Image */}
-      <div className="aspect-square relative overflow-hidden bg-white/5">
-        {post.imageUrl ? (
-          <img
-            src={post.imageUrl}
-            alt={post.caption.slice(0, 60)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-4xl opacity-10">
-              {isIG ? "📷" : "🎵"}
-            </span>
-          </div>
+      {/* Image area */}
+      <div className="aspect-square relative overflow-hidden bg-[#130e24] flex items-center justify-center">
+        <PostImage
+          src={post.imageUrl}
+          alt={post.caption.slice(0, 60) || "Social post"}
+          postUrl={post.postUrl}
+          platform={post.platform}
+        />
+
+        {/* Only overlay things when image loads successfully */}
+        {hasImage && (
+          <>
+            {/* Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent pointer-events-none" />
+
+            {/* Platform badge */}
+            <div className="absolute top-2.5 left-2.5 pointer-events-none">
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-white text-[9px] font-bold uppercase tracking-wider backdrop-blur-md"
+                style={{
+                  background: isIG ? "rgba(255,0,127,0.85)" : "rgba(10,10,10,0.85)",
+                  border: isIG ? "1px solid rgba(255,0,127,0.3)" : "1px solid rgba(255,255,255,0.15)",
+                }}
+              >
+                {isIG ? <InstagramIcon size={10} /> : <TikTokIcon size={10} />}
+                {isIG ? "Instagram" : "TikTok"}
+              </div>
+            </div>
+
+            {/* Stats */}
+            {(post.views || post.likes) && (
+              <div className="absolute bottom-2.5 right-2.5 text-[9px] text-white/70 font-medium bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded-md pointer-events-none">
+                {post.views
+                  ? `${Number(post.views).toLocaleString()} views`
+                  : `${Number(post.likes).toLocaleString()} likes`}
+              </div>
+            )}
+          </>
         )}
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-        {/* Platform badge */}
-        <div className="absolute top-2.5 left-2.5">
-          <div
-            className="flex items-center gap-1.5 px-2 py-1 rounded-full text-white text-[9px] font-bold uppercase tracking-wider backdrop-blur-md"
-            style={{
-              background: isIG
-                ? "rgba(255,0,127,0.85)"
-                : "rgba(10,10,10,0.85)",
-              border: isIG
-                ? "1px solid rgba(255,0,127,0.3)"
-                : "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
-            {isIG ? <InstagramIcon size={10} /> : <TikTokIcon size={10} />}
-            {isIG ? "Instagram" : "TikTok"}
-          </div>
-        </div>
-
-        {/* Stats */}
-        {(post.views || post.likes) && (
-          <div className="absolute bottom-2.5 right-2.5 text-[9px] text-white/60 font-medium bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
-            {post.views
-              ? `${Number(post.views).toLocaleString()} views`
-              : `${Number(post.likes).toLocaleString()} likes`}
+        {/* Platform badge when no image */}
+        {!hasImage && (
+          <div className="absolute top-2.5 left-2.5">
+            <div
+              className="flex items-center gap-1.5 px-2 py-1 rounded-full text-white text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                background: isIG ? "rgba(255,0,127,0.7)" : "rgba(30,30,30,0.9)",
+                border: isIG ? "none" : "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              {isIG ? <InstagramIcon size={10} /> : <TikTokIcon size={10} />}
+              {isIG ? "IG" : "TT"}
+            </div>
           </div>
         )}
-
-        {/* Hover play overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center border border-white/20">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="white">
-              <path d="M3 2l7 4-7 4V2z" />
-            </svg>
-          </div>
-        </div>
       </div>
 
       {/* Caption */}
-      <div className="p-3">
-        <p className="text-white/65 text-[11px] leading-relaxed line-clamp-2 group-hover:text-white/90 transition min-h-[2.5rem]">
-          {post.caption}
+      <div className="p-3 border-t border-white/5">
+        <p className="text-white/70 text-[11px] leading-relaxed line-clamp-2 group-hover:text-white/90 transition min-h-[2.4rem]">
+          {post.caption || <span className="text-white/25 italic">No caption</span>}
         </p>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-white/20 text-[9px]">{dateStr}</span>
+          <span className="text-white/25 text-[9px]">{dateStr}</span>
           <span className="text-pink-400 text-[9px] font-bold uppercase tracking-wide group-hover:translate-x-0.5 transition-transform">
             View →
           </span>
@@ -140,25 +197,30 @@ function SocialCard({ post }: { post: SocialPost }) {
 
 function EmptyFeed() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div
-          key={i}
-          className="aspect-square rounded-2xl border border-white/6 bg-white/[0.02] flex items-center justify-center"
-        >
-          <div className="text-center space-y-2 px-4">
-            <div className="text-white/10 text-2xl">{i % 2 === 0 ? "📸" : "🎬"}</div>
-            <p className="text-white/15 text-[9px] uppercase tracking-wider">
-              {i % 2 === 0 ? "@allaccesswinnipeg" : "@allaccesswinnipeg"}
-            </p>
-          </div>
+    <div className="text-center py-16 px-6 border border-dashed border-white/10 rounded-2xl space-y-4">
+      <div className="flex items-center justify-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-pink-600/15 border border-pink-500/20 flex items-center justify-center">
+          <InstagramIcon size={18} />
         </div>
-      ))}
+        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+          <TikTokIcon size={16} />
+        </div>
+      </div>
+      <div>
+        <p className="text-white/50 text-sm font-semibold">No posts yet</p>
+        <p className="text-white/25 text-xs mt-1 max-w-xs mx-auto">
+          Add posts via{" "}
+          <Link href="/admin/social-feed" className="text-pink-400 hover:text-pink-300 transition">
+            Admin → Social Feed
+          </Link>{" "}
+          and they&apos;ll appear here instantly.
+        </p>
+      </div>
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main export ───────────────────────────────────────────────────────────────
 
 export default function SocialFeedSection({
   maxPosts = 8,
@@ -182,9 +244,7 @@ export default function SocialFeedSection({
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setPosts(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as SocialPost))
-        );
+        setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as SocialPost)));
         setLoading(false);
       },
       () => setLoading(false)
@@ -193,7 +253,18 @@ export default function SocialFeedSection({
     return unsub;
   }, [maxPosts]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {Array.from({ length: Math.min(maxPosts, 4) }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-square rounded-2xl border border-white/8 bg-white/[0.02] animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <section className="space-y-6">
@@ -206,9 +277,7 @@ export default function SocialFeedSection({
                 Live
               </span>
             </div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              LIVE FROM ALL ACCESS
-            </h2>
+            <h2 className="text-2xl font-bold tracking-tight">LIVE FROM ALL ACCESS</h2>
             <p className="text-white/35 text-sm mt-1">
               Real moments. Real community. Real time.
             </p>
@@ -232,16 +301,16 @@ export default function SocialFeedSection({
         </div>
       )}
 
-      {showFollowCTAs && (
+      {showFollowCTAs && posts.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
           <a
             href="https://www.instagram.com/allaccesswinnipeg/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 border border-white/10 hover:border-pink-500/40 hover:bg-pink-600/5 px-4 py-2 rounded-xl text-sm text-white/55 hover:text-white transition group"
+            className="flex items-center gap-2 border border-white/10 hover:border-pink-500/40 hover:bg-pink-600/5 px-4 py-2 rounded-xl text-sm text-white/55 hover:text-white transition"
           >
             <InstagramIcon size={15} />
-            <span>Follow on Instagram</span>
+            Follow on Instagram
           </a>
           <a
             href="https://www.tiktok.com/@allaccesswinnipeg"
@@ -250,7 +319,7 @@ export default function SocialFeedSection({
             className="flex items-center gap-2 border border-white/10 hover:border-pink-500/40 hover:bg-pink-600/5 px-4 py-2 rounded-xl text-sm text-white/55 hover:text-white transition"
           >
             <TikTokIcon size={14} />
-            <span>Follow on TikTok</span>
+            Follow on TikTok
           </a>
         </div>
       )}
