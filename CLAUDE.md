@@ -1,9 +1,63 @@
 # ALL ACCESS by TakersLifestyle — Project Memory
 
 ## What this is
-Premium paid membership platform at **allaccesswinnipeg.ca**  
+**Non-profit community platform** at **allaccesswinnipeg.ca**  
 Stack: Next.js 16 App Router · Firebase Auth + Firestore · Stripe · Resend · Vercel  
 Monorepo: `web/` (Next.js), `functions/` (Cloud Functions), `firestore.rules`
+
+---
+
+## ⚠️ PERMANENT BRAND LAW — READ BEFORE WRITING ANY COPY
+
+**ALL ACCESS Winnipeg is a community-first non-profit organization.**  
+Every word written for this platform — copy, CTAs, emails, social, admin UI labels — must reflect this identity.
+
+### Core Identity
+- **Safe** · **Inclusive** · **Accessible** · **Community-driven** · **Non-profit**
+- Mission: Create safe, engaging, accessible experiences for youth and young adults through events, connection, mental well-being, and real community.
+
+### The Brand Balance
+> Nike-level polish + Community center heart + Non-profit authenticity
+
+Premium visuals are correct and intentional. But messaging must always feel **trustworthy, welcoming, and impact-first** — never luxury-exclusive or ego-driven.
+
+### ALWAYS use
+- "Built for the community."
+- "Open to everyone."
+- "Support the mission."
+- "Real connection. Real people."
+- "Safe spaces. Real experiences."
+- "Winnipeg, together."
+- "Designed for connection."
+- "Community first. Always."
+- "Access with purpose."
+- "Belong here."
+
+### NEVER use
+- "Exclusive" / "Elite only" / "Members only" culture
+- "Take Your Place" (sounds like gatekeeping)
+- "Move differently" / "Not for everyone"
+- Luxury-club language
+- Status-chasing framing
+- Aggressive "TAKE IT." slogans
+
+### Membership framing
+Membership = **supporting the mission + receiving perks as a thank-you**  
+NOT = buying access to an elite club  
+CTA: **"Become a Supporter — $25/mo"** (never "Take Your Place" or "Join the Elite")  
+Events are open to everyone. Membership is how you go deeper and help fund more.
+
+### Brand separation — CRITICAL
+| Brand | Energy | Tone |
+|---|---|---|
+| **TakersLifestyle** | Founder. Ambition. Drive. Personal brand. | Bold, aspirational, "TAKE IT." lives here |
+| **ALL ACCESS Winnipeg** | Community. Safety. Belonging. Impact. | Warm, premium, trustworthy, welcoming |
+
+**"TAKE IT." belongs to TakersLifestyle. It must not appear inside ALL ACCESS product copy.**
+
+### When someone visits allaccesswinnipeg.ca they should feel:
+✅ Trust · Safety · Opportunity · Community · Modern credibility  
+❌ Pressure · Status anxiety · Artificial exclusivity · Intimidation
 
 ---
 

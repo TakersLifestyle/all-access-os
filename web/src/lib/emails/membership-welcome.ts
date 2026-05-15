@@ -11,10 +11,10 @@ export interface MembershipWelcomeData {
 
 export function membershipWelcomeHtml(d: MembershipWelcomeData): string {
   const perks: [string, string, string][] = [
-    ["🎉", "Exclusive Events", "Private rooftop parties, VIP nights, courtside seats, mansion parties."],
-    ["🎁", "Real Perks", "Restaurant discounts, free entry, photoshoots, gym passes — usable immediately."],
-    ["👥", "The Network", "A curated group of people who actually move. Connect, collaborate, level up."],
-    ["⭐", "Founding Member Status", "You locked in the founding rate. That never changes — even when we scale."],
+    ["🎉", "Community Events", "Sports nights, cultural experiences, community socials — 15% off every ticket, automatically."],
+    ["🎁", "Member Perks", "Local partner discounts, promo codes, and community benefits — our way of saying thank you."],
+    ["👥", "Real Community", "A growing network of Winnipeggers building something together. Show up, connect, belong."],
+    ["⭐", "Founding Supporter Status", "You're one of the first. Your support helps fund safe, accessible experiences for Winnipeg."],
   ];
 
   const perksRows = perks.map(([icon, title, desc]) => `
@@ -61,7 +61,7 @@ export function membershipWelcomeHtml(d: MembershipWelcomeData): string {
               </h1>
               <p style="margin:0 0 32px;font-size:17px;color:#ffffff80;line-height:1.5;">
                 Your ALL ACCESS membership is now <span style="color:#86efac;font-weight:600;">active</span>.<br/>
-                Winnipeg&rsquo;s most exclusive network just got one more.
+                Thank you for supporting real community in Winnipeg.
               </p>
               <a href="${d.loginUrl}"
                  style="display:inline-block;background:#ec4899;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;letter-spacing:0.01em;">
