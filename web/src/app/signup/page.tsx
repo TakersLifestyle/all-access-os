@@ -4,11 +4,13 @@ import { useState } from "react";
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,7 @@ export default function SignupPage() {
         status: "inactive",
         createdAt: serverTimestamp(),
       });
-      router.push("/");
+      router.push(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
@@ -56,7 +58,7 @@ export default function SignupPage() {
           createdAt: serverTimestamp(),
         });
       }
-      router.push("/");
+      router.push(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
     } finally {
@@ -131,7 +133,10 @@ export default function SignupPage() {
 
         <p className="text-center text-white/50 text-sm">
           Already have an account?{" "}
-          <Link href="/login" className="text-pink-400 hover:text-pink-300">
+          <Link
+            href={redirectTo !== "/" ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"}
+            className="text-pink-400 hover:text-pink-300"
+          >
             Log in
           </Link>
         </p>
