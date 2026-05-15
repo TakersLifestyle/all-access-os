@@ -108,8 +108,8 @@ export default function Home() {
         </h1>
 
         <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed">
-          Real access. Real community. Real moments.<br />
-          <span className="text-white/80">ALL ACCESS</span> is where Winnipeg shows up, connects, and moves differently.
+          Safe spaces. Real experiences. Genuine connection.<br />
+          <span className="text-white/80">ALL ACCESS</span> is Winnipeg&apos;s community platform — built for youth, young adults, and everyone who wants to belong.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -212,7 +212,7 @@ export default function Home() {
                         <p className="text-white font-bold text-xl">
                           {fmt(launchEvent.generalPrice)}
                         </p>
-                        <p className="text-white/30 text-xs">Founding access · Flat rate · Take your seat.</p>
+                        <p className="text-white/30 text-xs">Founding access · Flat rate · Open to everyone.</p>
                       </>
                     )}
                   </div>
@@ -330,26 +330,26 @@ export default function Home() {
       <section className="space-y-6">
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold">More Than a Night Out</h2>
-          <p className="text-white/40 text-sm">Access elevated. Designed for those who move with purpose.</p>
+          <p className="text-white/40 text-sm">Designed for connection. Built for community.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {[
             {
               icon: "🎉",
-              title: "Access to Experiences",
-              desc: "Curated events — sports nights, cultural experiences, community socials. Open to all, built for those who show up.",
+              title: "Community Experiences",
+              desc: "Safe, curated events — sports nights, cultural experiences, community socials. Open to everyone. Built for real connection.",
               href: "/events",
             },
             {
               icon: "🎁",
-              title: "Built-in Benefits",
-              desc: "Local partner discounts, exclusive promo codes, and member pricing — earned by being part of something real.",
+              title: "Member Perks",
+              desc: "Local partner discounts, promo codes, and member pricing — a small way to give back to the people who support the mission.",
               href: "/perks",
             },
             {
               icon: "👥",
               title: "Real Connections",
-              desc: "A growing network of Winnipeggers who don't just attend — they build. Show up, give back, move differently.",
+              desc: "A growing community of Winnipeggers who show up, give back, and build something together — not just attend.",
               href: "/community",
             },
           ].map((f) => (
@@ -370,9 +370,9 @@ export default function Home() {
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Built for More.</h2>
+            <h2 className="text-2xl font-bold">Support the Mission.</h2>
             <p className="text-white/40 text-sm max-w-sm mx-auto">
-              Membership funds real community impact — and puts more back in your pocket at every event.
+              Membership directly funds safe, accessible experiences for Winnipeg youth and young adults — and saves you money at every event.
             </p>
           </div>
 
@@ -389,12 +389,12 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "15% off all event tickets — automatically",
-                "Early access before public release",
-                "Local partner perks & exclusive discounts",
-                "Community feed and founding member status",
-                "Directly fund safe, accessible Winnipeg experiences",
-                "Step into something that's building toward something bigger",
+                "15% off all event tickets — every time, automatically",
+                "Priority access to new events before public release",
+                "Local partner perks & community discounts",
+                "Access to the community feed + founding supporter status",
+                "Directly fund safe, accessible experiences for Winnipeg youth",
+                "Help us build more — more events, more spaces, more impact",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-white/70">
                   <span className="text-pink-400 shrink-0">✓</span> {item}
@@ -407,7 +407,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
             >
-              {checkoutLoading ? "Redirecting..." : "Take Your Place — $25/mo"}
+              {checkoutLoading ? "Redirecting..." : "Become a Supporter — $25/mo"}
             </button>
 
             {error && (
@@ -417,7 +417,7 @@ export default function Home() {
             )}
 
             <p className="text-center text-white/20 text-xs">
-              Secure checkout via Stripe. Cancel anytime. Events are open to everyone — membership is how you go deeper.
+              Secure checkout via Stripe. Cancel anytime. Events are open to everyone — membership is how you support the community.
             </p>
           </div>
         </section>
