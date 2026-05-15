@@ -229,7 +229,7 @@ export default function SocialFeedSection({
               <span className="text-pink-400 text-[10px] font-bold uppercase tracking-widest">Live</span>
             </div>
             <h2 className="text-2xl font-bold tracking-tight">LIVE FROM ALL ACCESS</h2>
-            <p className="text-white/35 text-sm mt-1">Real moments. Real community. Real time.</p>
+            <p className="text-white/35 text-sm mt-1">Don&apos;t watch the moment. Take it.</p>
           </div>
           <Link href="/connect" className="text-pink-400 hover:text-pink-300 text-xs font-semibold transition shrink-0 mt-1">
             See all →
