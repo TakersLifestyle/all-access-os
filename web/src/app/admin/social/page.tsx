@@ -98,7 +98,7 @@ function PostForm({
   uploadProgress: number | null;
   uploadMode: "file" | "url";
   setUploadMode: (m: "file" | "url") => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileSelect: (f: File) => void;
   isEditing: boolean;
   onCancel: () => void;
