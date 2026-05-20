@@ -39,18 +39,22 @@ interface Event {
   noMemberDiscount?: boolean;
 }
 
-interface TicketOrder {
-  id: string;
-  eventId: string;
+// EventPurchase — mirrors the eventPurchases Firestore collection
+// Written by webhook, queried client-side for ownership detection
+interface EventPurchase {
+  id: string;          // Firestore doc ID (= orderId)
+  orderId: string;
   userId: string;
+  eventId: string;
   eventTitle?: string;
+  isFoundingMember: boolean;
   quantity: number;
   totalPrice: number;
-  unitPrice?: number;
-  paymentStatus: string;
-  paidAt?: string;
-  stripePaymentIntentId?: string;
-  stripeCheckoutSessionId?: string;
+  totalPriceCents?: number;
+  status: string;      // "confirmed"
+  purchasedAt?: string;
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -121,8 +125,8 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
 }
 
 // ── Founding 15 — Confirmed attendee state ───────────────────────────────────
-function FoundingConfirmedState({ ticket, ev }: { ticket: TicketOrder; ev: Event }) {
-  const paidDate = ticket.paidAt ? formatShortDate(ticket.paidAt) : null;
+function FoundingConfirmedState({ ticket, ev }: { ticket: EventPurchase; ev: Event }) {
+  const paidDate = ticket.purchasedAt ? formatShortDate(ticket.purchasedAt) : null;
   const eventTarget = new Date(ev.date + "T19:00:00"); // 7PM local event day
   const shortOrderId = ticket.id.slice(-8).toUpperCase();
 
@@ -255,8 +259,8 @@ function FoundingConfirmedState({ ticket, ev }: { ticket: TicketOrder; ev: Event
 }
 
 // ── Generic event — Confirmed attendee state ─────────────────────────────────
-function GenericConfirmedState({ ticket, ev }: { ticket: TicketOrder; ev: Event }) {
-  const paidDate = ticket.paidAt ? formatShortDate(ticket.paidAt) : null;
+function GenericConfirmedState({ ticket, ev }: { ticket: EventPurchase; ev: Event }) {
+  const paidDate = ticket.purchasedAt ? formatShortDate(ticket.purchasedAt) : null;
   const eventTarget = new Date(ev.date + "T19:00:00");
   const shortOrderId = ticket.id.slice(-8).toUpperCase();
 
@@ -562,7 +566,7 @@ function EventCard({
   isMember: boolean;
   uid?: string;
   userEmail?: string;
-  userTicket?: TicketOrder | null;
+  userTicket?: EventPurchase | null;
 }) {
   const isSoldOut = ev.status === "sold_out" || ev.ticketsRemaining === 0;
   const isCritical = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= 5;
@@ -910,7 +914,7 @@ export default function EventsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
-  const [ticketsByEventId, setTicketsByEventId] = useState<Record<string, TicketOrder>>({});
+  const [ticketsByEventId, setTicketsByEventId] = useState<Record<string, EventPurchase>>({});
   const [ticketFetchKey, setTicketFetchKey] = useState(0);
 
   // Handle ?order=success / ?order=cancel query params
@@ -953,7 +957,8 @@ export default function EventsList() {
       .finally(() => setLoading(false));
   }, [authLoading]);
 
-  // Fetch user's paid ticket orders
+  // Fetch user's confirmed event purchases (ownership registry)
+  // Queries eventPurchases — purpose-built collection written by webhook
   useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
@@ -961,22 +966,21 @@ export default function EventsList() {
       return;
     }
     getDocs(
-      query(collection(db, "ticketOrders"), where("userId", "==", user.uid))
+      query(collection(db, "eventPurchases"), where("userId", "==", user.uid))
     )
       .then((snap) => {
-        const byEvent: Record<string, TicketOrder> = {};
+        const byEvent: Record<string, EventPurchase> = {};
         snap.docs.forEach((d) => {
-          const data = d.data() as Omit<TicketOrder, "id">;
-          // Only track paid orders
-          if (data.eventId && data.paymentStatus === "paid") {
+          const data = d.data() as Omit<EventPurchase, "id">;
+          if (data.eventId && data.status === "confirmed") {
             byEvent[data.eventId] = { id: d.id, ...data };
           }
         });
         setTicketsByEventId(byEvent);
       })
       .catch((err) => {
-        console.error("Ticket orders fetch failed:", err);
-        // Non-fatal — page still works without confirmed state
+        // Non-fatal — page still works, just won't show confirmed state
+        console.error("eventPurchases fetch failed:", err);
       });
   }, [authLoading, user?.uid, ticketFetchKey]);
 

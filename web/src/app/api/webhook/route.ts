@@ -202,17 +202,62 @@ export async function POST(req: NextRequest) {
 
           console.log(`[webhook] event_ticket confirmed — orderId=${orderId} eventId=${eventId} qty=${qty}`);
 
-          // ── Send ticket confirmation email (after transaction, idempotent) ──
+          // ── Post-payment: write eventPurchases + send email ──────────────
           if (!alreadyPaid && savedOrderData) {
-            const toEmail = savedOrderData.userEmail ?? session.customer_details?.email;
-            if (toEmail) {
-              // Fetch event data for details
-              const eventSnap = await db.collection("events").doc(eventId).get();
-              const eventData = eventSnap.data() ?? {};
+            const toEmail = savedOrderData.userEmail ?? session.customer_details?.email ?? null;
 
+            // Fetch event data once — used for both eventPurchases and email
+            const eventSnap = await db.collection("events").doc(eventId).get();
+            const eventData = eventSnap.data() ?? {};
+
+            // ── Resolve userId from multiple sources ─────────────────────────
+            // Handles cases where guest checkout or auth timing left userId null
+            const metaUserId = session.metadata?.userId && session.metadata.userId !== ""
+              ? session.metadata.userId
+              : null;
+            const purchaseUserId = savedOrderData.userId
+              || metaUserId
+              || session.client_reference_id
+              || null;
+
+            // ── Write eventPurchases ownership record (idempotent via merge) ─
+            // This is the source of truth for user → event ownership.
+            // Queried by client to show confirmed attendee state.
+            await db.collection("eventPurchases").doc(orderId).set(
+              {
+                orderId,
+                userId: purchaseUserId,
+                userEmail: toEmail,
+                eventId,
+                eventTitle: savedOrderData.eventTitle ?? (eventData.title as string) ?? "Event",
+                eventDate: (eventData.date as string) ?? "",
+                eventLocation: (eventData.location as string) ?? "",
+                isFoundingMember: eventData.isLaunchEvent === true,
+                quantity: qty,
+                totalPrice: (savedOrderData.totalPrice as number) ?? 0,
+                totalPriceCents: Math.round(((savedOrderData.totalPrice as number) ?? 0) * 100),
+                status: "confirmed",
+                purchasedAt: new Date().toISOString(),
+                stripeSessionId: session.id,
+                stripePaymentIntentId: paymentIntentId ?? null,
+              },
+              { merge: true } // idempotent — safe on webhook retries
+            );
+            console.log(`[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`);
+
+            // Backfill userId on ticketOrder if it was missing at checkout
+            if (!savedOrderData.userId && purchaseUserId) {
+              await db.collection("ticketOrders").doc(orderId).update({
+                userId: purchaseUserId,
+                updatedAt: new Date().toISOString(),
+              }).catch((err) => console.error("[webhook] userId backfill failed:", err));
+            }
+
+            // ── Send ticket confirmation email ───────────────────────────────
+            if (toEmail) {
               // Resolve display name: try Auth first, fall back to session
               let displayName: string | null = null;
-              const buyerUid = savedOrderData.userId || session.client_reference_id;
+              const buyerUid = purchaseUserId;
               if (buyerUid) {
                 try {
                   const auth = adminAuth();
@@ -225,12 +270,12 @@ export async function POST(req: NextRequest) {
                 orderId,
                 toEmail,
                 displayName,
-                eventTitle: savedOrderData.eventTitle ?? eventData.title ?? "Your Event",
-                eventDate: eventData.date ?? "",
-                eventLocation: eventData.location ?? "",
+                eventTitle: savedOrderData.eventTitle ?? (eventData.title as string) ?? "Your Event",
+                eventDate: (eventData.date as string) ?? "",
+                eventLocation: (eventData.location as string) ?? "",
                 quantity: qty,
-                unitPriceCents: Math.round((savedOrderData.unitPrice ?? 0) * 100),
-                totalPaidCents: Math.round((savedOrderData.totalPrice ?? 0) * 100),
+                unitPriceCents: Math.round(((savedOrderData.unitPrice as number) ?? 0) * 100),
+                totalPaidCents: Math.round(((savedOrderData.totalPrice as number) ?? 0) * 100),
                 stripePaymentIntentId: paymentIntentId ?? session.id,
                 paidAt: new Date().toISOString(),
               }).catch((err) =>

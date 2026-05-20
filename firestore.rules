@@ -162,6 +162,18 @@ service cloud.firestore {
     }
 
 
+    // ─── eventPurchases/{purchaseId} ────────────────────────
+    // Purpose-built ownership registry — written by webhook (Admin SDK) only
+    // purchaseId == orderId from ticketOrders (1:1 mapping)
+    // Users can read their own purchases; admins can read all
+    // Enables safe client-side ownership queries without ticketOrders complexity
+    match /eventPurchases/{purchaseId} {
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+
     // ─── socialFeed/{postId} ────────────────────────────────
     // PUBLIC READ — anyone can view the social feed
     // WRITE — admin only (managed via /admin/social-feed)
