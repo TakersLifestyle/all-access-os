@@ -103,7 +103,7 @@ export function membershipWelcomeHtml(d: MembershipWelcomeData): string {
                 </tr>
               </table>
               <p style="margin:20px 0 0;font-size:12px;color:#ffffff30;line-height:1.5;">
-                Then $99/month. Cancel anytime from your dashboard &mdash; no runaround, no fees.
+                $25/month. Cancel anytime from your dashboard &mdash; no runaround, no fees.
               </p>
             </td>
           </tr>
