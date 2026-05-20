@@ -168,8 +168,11 @@ service cloud.firestore {
     // Users can read their own purchases; admins can read all
     // Enables safe client-side ownership queries without ticketOrders complexity
     match /eventPurchases/{purchaseId} {
+      // Primary: user reads their own records by UID
+      // Fallback: by email — covers edge cases where userId was null at write time
       allow read: if isAdmin()
-                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+                  || (isSignedIn() && resource.data.userId == request.auth.uid)
+                  || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow create, update, delete: if false;
     }
 

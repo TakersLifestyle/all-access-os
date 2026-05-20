@@ -299,25 +299,51 @@ export default function ProfilePage() {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
 
-  // Fetch this user's confirmed event purchases
+  // Fetch this user's confirmed event purchases.
+  // Primary: by userId. Email fallback: covers records where userId was null.
   const fetchPurchases = useCallback(async () => {
     if (!user?.uid) return;
     setPurchasesLoading(true);
     try {
-      const snap = await getDocs(
+      const seen = new Set<string>();
+      const confirmed: EventPurchase[] = [];
+
+      // Primary query: by userId
+      const primarySnap = await getDocs(
         query(collection(db, "eventPurchases"), where("userId", "==", user.uid))
       );
-      const confirmed = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() } as EventPurchase))
-        .filter((p) => p.status === "confirmed")
-        .sort((a, b) => (a.eventDate ?? "").localeCompare(b.eventDate ?? ""));
+      primarySnap.docs.forEach((d) => {
+        const p = { id: d.id, ...d.data() } as EventPurchase;
+        if (p.status === "confirmed") {
+          seen.add(d.id);
+          confirmed.push(p);
+        }
+      });
+
+      // Email fallback — only run if primary returned nothing
+      if (confirmed.length === 0 && user.email) {
+        const emailSnap = await getDocs(
+          query(
+            collection(db, "eventPurchases"),
+            where("userEmail", "==", user.email)
+          )
+        );
+        emailSnap.docs.forEach((d) => {
+          if (!seen.has(d.id)) {
+            const p = { id: d.id, ...d.data() } as EventPurchase;
+            if (p.status === "confirmed") confirmed.push(p);
+          }
+        });
+      }
+
+      confirmed.sort((a, b) => (a.eventDate ?? "").localeCompare(b.eventDate ?? ""));
       setPurchases(confirmed);
     } catch (err) {
       console.error("eventPurchases fetch failed:", err);
     } finally {
       setPurchasesLoading(false);
     }
-  }, [user?.uid]);
+  }, [user?.uid, user?.email]);
 
   useEffect(() => {
     if (!loading && user) {

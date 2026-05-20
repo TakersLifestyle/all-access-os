@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
 
     // ── 6. Server-side pricing ──────────────────────────────
     // generalPrice is the single source of truth from Firestore.
-    // Members receive MEMBER_DISCOUNT (15%) off — calculated here, never from frontend.
+    // Members receive MEMBER_DISCOUNT (15%) off UNLESS noMemberDiscount is set
+    // (flat-price events like the Founding 15 $300 launch).
     const generalPrice = Number(event.generalPrice) || 0;
 
     if (!generalPrice || isNaN(generalPrice) || generalPrice <= 0) {
@@ -118,15 +119,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Apply 15% member discount server-side
-    const unitPriceDollars: number = isMember
+    // noMemberDiscount: flat price for all buyers — no member discount applied
+    const noMemberDiscount = event.noMemberDiscount === true;
+    const eligibleForDiscount = isMember && !noMemberDiscount;
+
+    // Apply 15% member discount server-side (only when eligible)
+    const unitPriceDollars: number = eligibleForDiscount
       ? applyMemberDiscount(generalPrice)
       : generalPrice;
 
     // unit_amount must be an integer number of cents
     const unitPriceCents = Math.round(unitPriceDollars * 100);
 
-    const savingsPerTicket = isMember
+    const savingsPerTicket = eligibleForDiscount
       ? Math.round(generalPrice * MEMBER_DISCOUNT * 100) / 100
       : 0;
 
@@ -142,8 +147,8 @@ export async function POST(req: NextRequest) {
       unitPrice: unitPriceDollars,
       unitPriceCents,
       totalPrice: unitPriceDollars * qty,
-      isMemberPrice: isMember,
-      memberDiscountPct: isMember ? MEMBER_DISCOUNT * 100 : 0,
+      isMemberPrice: eligibleForDiscount,
+      memberDiscountPct: eligibleForDiscount ? MEMBER_DISCOUNT * 100 : 0,
       savingsTotal: savingsPerTicket * qty,
       paymentStatus: "pending",
       stripeCheckoutSessionId: null,
@@ -165,7 +170,7 @@ export async function POST(req: NextRequest) {
     const descParts = [
       eventDateStr,
       event.location ?? null,
-      isMember
+      eligibleForDiscount
         ? `Member rate — 15% off (saving $${savingsPerTicket.toFixed(2)}/ticket)`
         : null,
     ].filter(Boolean);
@@ -182,7 +187,7 @@ export async function POST(req: NextRequest) {
     console.log(
       `[event-checkout] Creating session | event="${event.title}" qty=${qty} ` +
       `generalPrice=${generalPrice} unitPriceCents=${unitPriceCents} ` +
-      `isMember=${isMember} discount=${isMember ? "15%" : "none"} imageUrl=${imageUrl ?? "none"}`
+      `isMember=${isMember} noMemberDiscount=${noMemberDiscount} discount=${eligibleForDiscount ? "15%" : "none"} imageUrl=${imageUrl ?? "none"}`
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

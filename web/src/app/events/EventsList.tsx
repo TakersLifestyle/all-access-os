@@ -958,31 +958,54 @@ export default function EventsList() {
   }, [authLoading]);
 
   // Fetch user's confirmed event purchases (ownership registry)
-  // Queries eventPurchases — purpose-built collection written by webhook
+  // Primary query: by userId. Email fallback: catches edge cases where
+  // userId was null at write time (e.g. auth timing issues).
   useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
       setTicketsByEventId({});
       return;
     }
-    getDocs(
-      query(collection(db, "eventPurchases"), where("userId", "==", user.uid))
-    )
-      .then((snap) => {
-        const byEvent: Record<string, EventPurchase> = {};
-        snap.docs.forEach((d) => {
+
+    const fetchOwnership = async () => {
+      const byEvent: Record<string, EventPurchase> = {};
+
+      // Primary: query by userId (fast path — covers 99% of cases)
+      const primarySnap = await getDocs(
+        query(collection(db, "eventPurchases"), where("userId", "==", user.uid))
+      );
+      primarySnap.docs.forEach((d) => {
+        const data = d.data() as Omit<EventPurchase, "id">;
+        if (data.eventId && data.status === "confirmed") {
+          byEvent[data.eventId] = { id: d.id, ...data };
+        }
+      });
+
+      // Email fallback: if nothing found by uid and user has email,
+      // try matching by email (covers records where userId was null at write time)
+      if (Object.keys(byEvent).length === 0 && user.email) {
+        const emailSnap = await getDocs(
+          query(
+            collection(db, "eventPurchases"),
+            where("userEmail", "==", user.email)
+          )
+        );
+        emailSnap.docs.forEach((d) => {
           const data = d.data() as Omit<EventPurchase, "id">;
-          if (data.eventId && data.status === "confirmed") {
+          if (data.eventId && data.status === "confirmed" && !byEvent[data.eventId]) {
             byEvent[data.eventId] = { id: d.id, ...data };
           }
         });
-        setTicketsByEventId(byEvent);
-      })
-      .catch((err) => {
-        // Non-fatal — page still works, just won't show confirmed state
-        console.error("eventPurchases fetch failed:", err);
-      });
-  }, [authLoading, user?.uid, ticketFetchKey]);
+      }
+
+      setTicketsByEventId(byEvent);
+    };
+
+    fetchOwnership().catch((err) => {
+      // Non-fatal — page still works, just won't show confirmed state
+      console.error("eventPurchases fetch failed:", err);
+    });
+  }, [authLoading, user?.uid, user?.email, ticketFetchKey]);
 
   if (loading || authLoading) return (
     <div className="space-y-6">

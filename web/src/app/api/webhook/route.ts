@@ -200,68 +200,92 @@ export async function POST(req: NextRequest) {
             });
           });
 
-          console.log(`[webhook] event_ticket confirmed — orderId=${orderId} eventId=${eventId} qty=${qty}`);
+          console.log(`[webhook] event_ticket confirmed — orderId=${orderId} eventId=${eventId} qty=${qty} retry=${alreadyPaid}`);
 
-          // ── Post-payment: write eventPurchases + send email ──────────────
-          if (!alreadyPaid && savedOrderData) {
-            const toEmail = savedOrderData.userEmail ?? session.customer_details?.email ?? null;
+          // ── Write eventPurchases — runs on EVERY webhook delivery ──────────
+          // Critical: if the write fails on attempt 1, Stripe retries would
+          // see alreadyPaid=true and skip it. By always attempting, we heal
+          // any partial failures automatically. merge:true makes it idempotent.
+          {
+            // Re-fetch order data when this is a retry (savedOrderData is null then)
+            const orderData: FirebaseFirestore.DocumentData =
+              savedOrderData ??
+              (await db.collection("ticketOrders").doc(orderId).get()).data() ??
+              {};
 
-            // Fetch event data once — used for both eventPurchases and email
+            const toEmail =
+              (orderData.userEmail as string | null) ??
+              session.customer_details?.email ??
+              null;
+
+            // Fetch event data — used for eventPurchases payload and confirmation email
             const eventSnap = await db.collection("events").doc(eventId).get();
             const eventData = eventSnap.data() ?? {};
 
-            // ── Resolve userId from multiple sources ─────────────────────────
-            // Handles cases where guest checkout or auth timing left userId null
-            const metaUserId = session.metadata?.userId && session.metadata.userId !== ""
-              ? session.metadata.userId
-              : null;
-            const purchaseUserId = savedOrderData.userId
-              || metaUserId
-              || session.client_reference_id
-              || null;
+            // Resolve userId from 3 fallback sources
+            // 1. ticketOrder.userId (set at checkout time — most reliable)
+            // 2. Stripe session metadata.userId (set by event-checkout route)
+            // 3. session.client_reference_id (uid passed directly to Stripe)
+            const metaUserId =
+              session.metadata?.userId && session.metadata.userId !== ""
+                ? session.metadata.userId
+                : null;
+            const purchaseUserId: string | null =
+              (orderData.userId as string | null) ||
+              metaUserId ||
+              session.client_reference_id ||
+              null;
 
-            // ── Write eventPurchases ownership record (idempotent via merge) ─
-            // This is the source of truth for user → event ownership.
-            // Queried by client to show confirmed attendee state.
+            // Write ownership record — idempotent, safe on retries
             await db.collection("eventPurchases").doc(orderId).set(
               {
                 orderId,
                 userId: purchaseUserId,
                 userEmail: toEmail,
                 eventId,
-                eventTitle: savedOrderData.eventTitle ?? (eventData.title as string) ?? "Event",
+                eventTitle:
+                  (orderData.eventTitle as string) ??
+                  (eventData.title as string) ??
+                  "Event",
                 eventDate: (eventData.date as string) ?? "",
                 eventLocation: (eventData.location as string) ?? "",
                 isFoundingMember: eventData.isLaunchEvent === true,
                 quantity: qty,
-                totalPrice: (savedOrderData.totalPrice as number) ?? 0,
-                totalPriceCents: Math.round(((savedOrderData.totalPrice as number) ?? 0) * 100),
+                totalPrice: (orderData.totalPrice as number) ?? 0,
+                totalPriceCents: Math.round(
+                  ((orderData.totalPrice as number) ?? 0) * 100
+                ),
                 status: "confirmed",
-                purchasedAt: new Date().toISOString(),
+                // Keep original purchasedAt if already set (merge won't overwrite)
+                purchasedAt:
+                  (orderData.paidAt as string) ?? new Date().toISOString(),
                 stripeSessionId: session.id,
                 stripePaymentIntentId: paymentIntentId ?? null,
               },
-              { merge: true } // idempotent — safe on webhook retries
+              { merge: true }
             );
-            console.log(`[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`);
+            console.log(
+              `[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`
+            );
 
-            // Backfill userId on ticketOrder if it was missing at checkout
-            if (!savedOrderData.userId && purchaseUserId) {
-              await db.collection("ticketOrders").doc(orderId).update({
-                userId: purchaseUserId,
-                updatedAt: new Date().toISOString(),
-              }).catch((err) => console.error("[webhook] userId backfill failed:", err));
+            // Backfill userId on ticketOrder if it was missing at checkout time
+            if (!(orderData.userId as string | null) && purchaseUserId) {
+              await db
+                .collection("ticketOrders")
+                .doc(orderId)
+                .update({ userId: purchaseUserId, updatedAt: new Date().toISOString() })
+                .catch((err) =>
+                  console.error("[webhook] userId backfill failed:", err)
+                );
             }
 
-            // ── Send ticket confirmation email ───────────────────────────────
-            if (toEmail) {
-              // Resolve display name: try Auth first, fall back to session
+            // ── Send confirmation email — ONLY on first delivery, not retries ─
+            if (!alreadyPaid && toEmail) {
               let displayName: string | null = null;
-              const buyerUid = purchaseUserId;
-              if (buyerUid) {
+              if (purchaseUserId) {
                 try {
                   const auth = adminAuth();
-                  const userRecord = await auth.getUser(buyerUid);
+                  const userRecord = await auth.getUser(purchaseUserId);
                   displayName = userRecord.displayName ?? null;
                 } catch { /* no-op */ }
               }
@@ -270,19 +294,28 @@ export async function POST(req: NextRequest) {
                 orderId,
                 toEmail,
                 displayName,
-                eventTitle: savedOrderData.eventTitle ?? (eventData.title as string) ?? "Your Event",
+                eventTitle:
+                  (orderData.eventTitle as string) ??
+                  (eventData.title as string) ??
+                  "Your Event",
                 eventDate: (eventData.date as string) ?? "",
                 eventLocation: (eventData.location as string) ?? "",
                 quantity: qty,
-                unitPriceCents: Math.round(((savedOrderData.unitPrice as number) ?? 0) * 100),
-                totalPaidCents: Math.round(((savedOrderData.totalPrice as number) ?? 0) * 100),
+                unitPriceCents: Math.round(
+                  ((orderData.unitPrice as number) ?? 0) * 100
+                ),
+                totalPaidCents: Math.round(
+                  ((orderData.totalPrice as number) ?? 0) * 100
+                ),
                 stripePaymentIntentId: paymentIntentId ?? session.id,
                 paidAt: new Date().toISOString(),
               }).catch((err) =>
                 console.error("[webhook] ticket confirmation email failed:", err)
               );
-            } else {
-              console.warn(`[webhook] event_ticket — no email address for orderId=${orderId}`);
+            } else if (!alreadyPaid) {
+              console.warn(
+                `[webhook] event_ticket — no email for orderId=${orderId}`
+              );
             }
           }
 

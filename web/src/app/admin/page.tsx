@@ -60,6 +60,7 @@ export default function AdminPage() {
           { title: "Manage Events", desc: "Create, edit, and delete events.", href: "/admin/events" },
           { title: "Manage Perks", desc: "Add and update member perks.", href: "/admin/perks" },
           { title: "Manage Users", desc: "View members and manage access.", href: "/admin/users" },
+          { title: "Purchase Records", desc: "View all ticket purchases and ownership status.", href: "/admin/purchases" },
         ].map((item) => (
           <Link
             key={item.title}
