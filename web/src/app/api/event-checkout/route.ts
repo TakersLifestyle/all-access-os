@@ -205,6 +205,7 @@ export async function POST(req: NextRequest) {
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      allow_promotion_codes: true,
       ...(uid ? { client_reference_id: uid } : {}),
       ...(userEmail ? { customer_email: userEmail } : {}),
       metadata: {
