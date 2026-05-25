@@ -306,6 +306,40 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // AI role assignments — RBAC for takers-ai system
+    match /aiRoles/{uid} {
+      allow read, write: if isAdmin();
+    }
+
+    // Audit events — immutable execution history and compliance trail
+    match /auditEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;  // Immutable — never modified after write
+    }
+
+    // Execution checkpoints — enables replay from last completed step
+    match /executionCheckpoints/{checkpointId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Cost events — per-request token + spend tracking
+    match /costEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;  // Immutable ledger
+    }
+
+    // Rate limits — sliding window counters per uid+route
+    match /rateLimits/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Dead-letter queue — failed jobs requiring human intervention
+    match /deadLetterQueue/{itemId} {
+      allow read, write: if isAdmin();
+    }
+
 
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {

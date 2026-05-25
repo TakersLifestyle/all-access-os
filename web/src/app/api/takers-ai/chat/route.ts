@@ -28,6 +28,9 @@ import {
 } from "@/lib/takers-ai/feedback-engine";
 import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/tools";
 import type { ToolName } from "@/lib/takers-ai/tools";
+import { checkRateLimit } from "@/lib/takers-ai/rate-limiter";
+import { createCostEvent, writeCostEvent } from "@/lib/takers-ai/cost";
+import { writeAuditEvent } from "@/lib/takers-ai/audit";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -250,6 +253,27 @@ export async function POST(req: NextRequest) {
     }
 
     const db = adminDb();
+
+    // Rate limit: 30 req/min per user on chat route
+    const rateResult = await checkRateLimit(db, decoded.uid, "chat");
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        {
+          error: `Rate limit exceeded. Retry after ${Math.ceil(rateResult.retryAfterMs / 1000)}s.`,
+          resetAt: rateResult.resetAt,
+          limitType: rateResult.limitType,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rateResult.retryAfterMs / 1000)),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": rateResult.resetAt,
+          },
+        }
+      );
+    }
+
     const requestStartedAt = Date.now();
 
     // 1. Load the requested agent
@@ -508,6 +532,39 @@ export async function POST(req: NextRequest) {
 
           const generationDurationMs = Date.now() - generationStartedAt;
           const totalDurationMs = Date.now() - requestStartedAt;
+
+          // Track cost (fire-and-forget)
+          const costData = createCostEvent(
+            "chat_generation",
+            activeAgentId,
+            activeAgent.role as import("@/lib/takers-ai/types").AgentRole,
+            model,
+            finalMsg.usage.input_tokens,
+            finalMsg.usage.output_tokens,
+            { conversationId: convRef?.id ?? conversationId }
+          );
+          writeCostEvent(db, costData);
+
+          // Write audit event (fire-and-forget)
+          writeAuditEvent(
+            db,
+            "agent_generation",
+            "agent",
+            activeAgentId,
+            { uid: decoded.uid, role: "admin" },
+            {
+              payload: {
+                model,
+                inputTokens: tokenUsage.inputTokens,
+                outputTokens: tokenUsage.outputTokens,
+                totalCostUsd: costData.totalCostUsd,
+                knowledgeChunksInjected,
+                durationMs: generationDurationMs,
+                conversationId: convRef?.id ?? conversationId ?? null,
+                workflowRunId: workflowRunRef?.id ?? null,
+              },
+            }
+          );
 
           // Log generation
           writeAgentLog(db, {

@@ -36,6 +36,7 @@ import { runIngestJob } from "@/lib/takers-ai/ingestion";
 import { executeToolCall } from "@/lib/takers-ai/tools";
 import type { ToolName } from "@/lib/takers-ai/tools";
 import type { JobType, JobPriority } from "@/lib/takers-ai/orchestrator";
+import { canStartJob, MAX_CONCURRENT_JOBS } from "@/lib/takers-ai/rate-limiter";
 
 async function verifyAdmin(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
@@ -215,6 +216,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({
         error: `Job status is "${job.status}" — only "queued" jobs can be run.`,
       }, { status: 400 });
+    }
+
+    // Concurrency check before acquiring a slot
+    const canRun = await canStartJob(db);
+    if (!canRun) {
+      return NextResponse.json(
+        {
+          error: `At max concurrency (${MAX_CONCURRENT_JOBS} running jobs). Retry when a slot opens.`,
+          canStartJob: false,
+        },
+        { status: 429 }
+      );
     }
 
     const startedAt = Date.now();

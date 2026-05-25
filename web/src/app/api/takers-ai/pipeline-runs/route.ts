@@ -33,6 +33,12 @@ import {
   validateOutput,
 } from "@/lib/takers-ai/schemas";
 import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/tools";
+import {
+  canStartPipeline,
+  validateExecutionBoundary,
+} from "@/lib/takers-ai/rate-limiter";
+import { createCostEvent, writeCostEvent } from "@/lib/takers-ai/cost";
+import { writeAuditEvent, writeCheckpoint } from "@/lib/takers-ai/audit";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -92,6 +98,16 @@ export async function POST(req: NextRequest) {
   }
 
   const db = adminDb();
+
+  // Concurrency gate — prevent overloading serverless execution slots
+  const canStart = await canStartPipeline(db);
+  if (!canStart) {
+    return NextResponse.json(
+      { error: "At max pipeline concurrency. Please wait for an active pipeline to complete." },
+      { status: 429 }
+    );
+  }
+
   const defDoc = await db.collection("workflowDefinitions").doc(definitionId).get();
   if (!defDoc.exists) {
     return NextResponse.json({ error: "Workflow definition not found." }, { status: 404 });
@@ -134,6 +150,12 @@ export async function POST(req: NextRequest) {
 
   const runRef = db.collection("pipelineRuns").doc();
   await runRef.set(runData);
+
+  // Audit: pipeline run created
+  writeAuditEvent(db, "pipeline_created", "pipeline_run", runRef.id,
+    { uid: decoded.uid, role: "admin" },
+    { payload: { definitionId, definitionName: definition.name, stepCount: sortedSteps.length } }
+  );
 
   // Auto-advance: pending → queued → processing (execute first step)
   await runRef.update({ state: "queued" as PipelineState });
@@ -322,12 +344,25 @@ async function executeStep(
       systemPrompt += `\n\n## BRAND CONTEXT\n${blocks.join("\n\n")}`;
     }
 
+    const model = (agent.model as string) || "claude-sonnet-4-5";
+    const maxTokens = (agent.maxTokens as number) || 2048;
+
+    // Execution boundary check — validate model + token limits
+    const boundaryCheck = validateExecutionBoundary({
+      model,
+      maxTokens,
+      promptLength: interpolatedPrompt.length + systemPrompt.length,
+    });
+    if (!boundaryCheck.allowed) {
+      throw new Error(`Execution boundary violation: ${boundaryCheck.reason}`);
+    }
+
     const startedAt = Date.now();
 
     // Call Claude (non-streaming)
     const response = await anthropic.messages.create({
-      model: (agent.model as string) || "claude-sonnet-4-5",
-      max_tokens: (agent.maxTokens as number) || 2048,
+      model,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: "user", content: interpolatedPrompt }],
     });
@@ -390,6 +425,40 @@ async function executeStep(
         toolCallIds.push(callRef.id);
       }
     }
+
+    // Track cost per step (fire-and-forget)
+    const costData = createCostEvent(
+      "pipeline_step",
+      agentId,
+      step.agentRole as import("@/lib/takers-ai/types").AgentRole,
+      model,
+      tokenUsage.input,
+      tokenUsage.output,
+      { pipelineRunId: runId, definitionId: (await runRef.get()).data()?.definitionId as string ?? "" }
+    );
+    writeCostEvent(db, costData);
+
+    // Audit: step completed
+    writeAuditEvent(db, "pipeline_step_completed", "pipeline_run", runId,
+      { uid: "system", role: "admin" },
+      { payload: { stepIndex, stepId: step.id, stepName: step.name, agentRole: step.agentRole,
+          inputTokens: tokenUsage.input, outputTokens: tokenUsage.output,
+          totalCostUsd: costData.totalCostUsd, durationMs } }
+    );
+
+    // Write execution checkpoint (enables replay from this step)
+    writeCheckpoint(db, {
+      runId,
+      stepIndex,
+      stepId: step.id,
+      stepName: step.name,
+      stepOutputKey: step.outputKey,
+      outputSnapshot: truncatedOutput,
+      structuredOutputSnapshot: structuredOutput,
+      stepOutputsSnapshot: { ...stepOutputs, [step.outputKey]: truncatedOutput },
+      tokenUsage,
+      createdAt: new Date().toISOString(),
+    }).catch(console.error);
 
     // Update step outputs
     const newStepOutputs = { ...stepOutputs, [step.outputKey]: truncatedOutput };
