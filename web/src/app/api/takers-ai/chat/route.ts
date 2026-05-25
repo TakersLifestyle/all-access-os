@@ -1,15 +1,16 @@
 // Takers AI — Streaming chat route with intelligent agent routing
 // POST /api/takers-ai/chat
 // Auth: Bearer token (admin only)
-// Body: { agentId, messages, conversationId?, saveConversation? }
+// Body: { agentId, messages, conversationId?, saveConversation?, useKnowledge? }
 // Returns: text/event-stream SSE
 //
 // Routing flow (when agentId is the Operator):
 //   1. Fast classification call (Haiku) → role + reason + confidence (0-100)
 //   2. If confidence < THRESHOLD (60), fallback to Operator
 //   3. Load specialist agent + agentInstructions + brand memory (priority-ordered)
-//   4. Stream the specialist's response, capture token usage
-//   5. Log WorkflowRun + AgentLog to Firestore (fire-and-forget)
+//   4. If useKnowledge=true: semantic search knowledge base, inject top-K relevant chunks
+//   5. Stream the specialist's response, capture token usage
+//   6. Log WorkflowRun + AgentLog to Firestore (fire-and-forget)
 //
 // SSE event types: routing | text | done | error
 
@@ -18,6 +19,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import type { AgentRole, TokenUsage } from "@/lib/takers-ai/types";
 import { ROUTING_CONFIDENCE_THRESHOLD } from "@/lib/takers-ai/types";
+import { semanticSearch, formatRetrievedContext } from "@/lib/takers-ai/knowledge";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -129,12 +131,22 @@ async function classifyIntent(userMessage: string): Promise<ClassificationResult
 
 // ── System prompt builder ─────────────────────────────────────────────────────
 // Composes: base systemPrompt + agentInstructions + brand memory (priority-ordered)
+//           + optional knowledge retrieval context (semantic search)
 // Only active memory blocks are injected. Higher priority blocks inject first.
 async function buildSystemPrompt(
   db: FirebaseFirestore.Firestore,
   agentId: string,
-  basePrompt: string
-): Promise<{ prompt: string; memoryBlockCount: number; memoryTokenEstimate: number }> {
+  basePrompt: string,
+  options: {
+    userMessage?: string;
+    useKnowledge?: boolean;
+  } = {}
+): Promise<{
+  prompt: string;
+  memoryBlockCount: number;
+  memoryTokenEstimate: number;
+  knowledgeChunksInjected: number;
+}> {
   const [memorySnap, instructionsDoc] = await Promise.all([
     db
       .collection("brandMemory")
@@ -167,10 +179,26 @@ async function buildSystemPrompt(
     prompt += `\n\n---\n\n## BRAND MEMORY CONTEXT\nThe following is your live brand knowledge base, ordered by priority. Use it to inform every response.\n\n${memoryBlocks.join("\n\n")}`;
   }
 
+  // Inject relevant knowledge base chunks via semantic search
+  let knowledgeChunksInjected = 0;
+  if (options.useKnowledge && options.userMessage) {
+    try {
+      const chunks = await semanticSearch(db, options.userMessage, { k: 5 });
+      if (chunks.length > 0) {
+        const context = formatRetrievedContext(chunks);
+        prompt += context;
+        knowledgeChunksInjected = chunks.length;
+      }
+    } catch (err) {
+      console.warn("[chat/route] Knowledge retrieval failed:", err);
+    }
+  }
+
   return {
     prompt,
     memoryBlockCount: memorySnap.size,
     memoryTokenEstimate,
+    knowledgeChunksInjected,
   };
 }
 
@@ -194,11 +222,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { agentId, messages, conversationId, saveConversation } = body as {
+    const { agentId, messages, conversationId, saveConversation, useKnowledge } = body as {
       agentId: string;
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       conversationId?: string;
       saveConversation?: boolean;
+      useKnowledge?: boolean;
     };
 
     if (!agentId || !messages?.length) {
@@ -303,11 +332,12 @@ export async function POST(req: NextRequest) {
         .catch(console.error);
     }
 
-    // 3. Build enriched system prompt (priority-ordered, active-only memory)
-    const { prompt: systemPrompt, memoryBlockCount } = await buildSystemPrompt(
+    // 3. Build enriched system prompt (priority-ordered memory + optional knowledge retrieval)
+    const { prompt: systemPrompt, memoryBlockCount, knowledgeChunksInjected } = await buildSystemPrompt(
       db,
       activeAgentId,
-      activeAgent.systemPrompt as string
+      activeAgent.systemPrompt as string,
+      { userMessage, useKnowledge }
     );
 
     // 4. Save conversation metadata if requested
@@ -423,6 +453,8 @@ export async function POST(req: NextRequest) {
               model,
               maxTokens,
               memoryBlockCount,
+              knowledgeChunksInjected,
+              useKnowledge: useKnowledge ?? false,
               totalDurationMs,
             },
           });

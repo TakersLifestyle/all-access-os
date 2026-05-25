@@ -222,6 +222,9 @@ service cloud.firestore {
 
     match /brandMemory/{memoryId} {
       allow read, write: if isAdmin();
+      match /versions/{versionId} {
+        allow read, write: if isAdmin();
+      }
     }
 
     match /promptTemplates/{templateId} {
@@ -265,6 +268,21 @@ service cloud.firestore {
 
     // Feedback logs — admin ratings on agent responses
     match /feedbackLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Knowledge base — source documents for semantic retrieval
+    match /knowledgeBase/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Knowledge chunks — embedded chunks from knowledgeBase documents
+    match /knowledgeChunks/{chunkId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Pipeline runs — multi-step workflow execution with 9-state machine
+    match /pipelineRuns/{runId} {
       allow read, write: if isAdmin();
     }
 
