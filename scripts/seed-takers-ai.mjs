@@ -1,15 +1,20 @@
 // Seed script: Takers AI Command Center
-// Run from functions/ folder: node ../scripts/seed-takers-ai.mjs
-// Or from project root: cd functions && node ../scripts/seed-takers-ai.mjs
+// Run: cd ~/all-access-platform/functions && node ../scripts/seed-takers-ai.mjs
 
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { readFileSync } from "fs";
+// Node ESM resolves imports from the script's location, not CWD.
+// firebase-admin is only installed in functions/node_modules, so we
+// use createRequire with the functions/ package.json as the base.
+import { createRequire } from "module";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import * as dotenv from "dotenv";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Resolve all deps from functions/node_modules (firebase-admin, dotenv live there)
+const _require = createRequire(resolve(__dirname, "../functions/package.json"));
+const { initializeApp, cert } = _require("firebase-admin/app");
+const { getFirestore } = _require("firebase-admin/firestore");
+const dotenv = _require("dotenv");
 
 // Load env from web/.env.local
 dotenv.config({ path: resolve(__dirname, "../web/.env.local") });
