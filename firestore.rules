@@ -286,6 +286,26 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Ingest jobs — knowledge base embedding pipeline tracking
+    match /ingestJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Tool calls — approval-gated external tool invocations
+    match /toolCalls/{callId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Feedback signals — learning signals from admin interactions
+    match /feedbackSignals/{signalId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Orchestration jobs — async job queue with retry + scheduling
+    match /orchestrationJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
 
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {

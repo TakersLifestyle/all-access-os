@@ -27,6 +27,12 @@ import {
   type PipelineState,
 } from "@/lib/takers-ai/workflow-engine";
 import type { WorkflowDefinition, WorkflowStepDefinition } from "@/lib/takers-ai/types";
+import {
+  getSchemaForRole,
+  parseStructuredOutput,
+  validateOutput,
+} from "@/lib/takers-ai/schemas";
+import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/tools";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -287,7 +293,13 @@ async function executeStep(
     const agentId = agentsSnap.docs[0].id;
 
     // Build prompt: interpolate variables + previous step outputs
-    const interpolatedPrompt = interpolateTemplate(step.promptTemplate, variables, stepOutputs);
+    let interpolatedPrompt = interpolateTemplate(step.promptTemplate, variables, stepOutputs);
+
+    // Inject structured schema suffix if this agent role has a schema
+    const schema = getSchemaForRole(step.agentRole);
+    if (schema) {
+      interpolatedPrompt += schema.promptSuffix;
+    }
 
     // Load agent instructions
     const instrDoc = await db.collection("agentInstructions").doc(agentId).get();
@@ -324,8 +336,60 @@ async function executeStep(
     const durationMs = Date.now() - startedAt;
     const tokenUsage = { input: response.usage.input_tokens, output: response.usage.output_tokens };
 
+    // Structured output validation — parse JSON if schema exists for this role
+    const outputSchema = getSchemaForRole(step.agentRole);
+    let structuredOutput: Record<string, unknown> | null = null;
+    let validationResult: { valid: boolean; errors: string[]; warnings: string[] } | null = null;
+
+    if (outputSchema) {
+      structuredOutput = parseStructuredOutput(output);
+      if (structuredOutput) {
+        validationResult = validateOutput(outputSchema, structuredOutput);
+      }
+    }
+
     // Truncate for storage (full output may be large)
     const truncatedOutput = output.slice(0, 3000);
+
+    // Detect embedded tool requests in output
+    const toolRequests = parseToolRequests(output);
+    const toolCallIds: string[] = [];
+    if (toolRequests.length > 0) {
+      const now = new Date().toISOString();
+      for (const toolReq of toolRequests) {
+        const approvalContent = formatToolCallForApproval(toolReq.tool, toolReq.inputs);
+        const approvalRef = db.collection("approvalQueue").doc();
+        const callRef = db.collection("toolCalls").doc();
+        await callRef.set({
+          tool: toolReq.tool,
+          label: toolReq.tool,
+          inputs: toolReq.inputs,
+          status: "pending_approval",
+          agentId,
+          agentRole: step.agentRole,
+          agentName: agent.name,
+          conversationId: null,
+          workflowRunId: null,
+          pipelineRunId: runId,
+          approvalItemId: approvalRef.id,
+          output: null, outputSummary: null, errorMessage: null,
+          requestedAt: now, approvedAt: null, executedAt: null, approvedBy: null,
+        });
+        await approvalRef.set({
+          type: "workflow_step",
+          title: `Tool Request: ${toolReq.tool}`,
+          description: `Pipeline step "${step.name}" requested tool invocation`,
+          content: approvalContent,
+          context: { toolCallId: callRef.id, tool: toolReq.tool, runId, stepId: step.id },
+          requestedBy: `agent:${agentId}`,
+          agentId, agentRole: step.agentRole, agentName: agent.name,
+          workflowRunId: null, status: "pending", priority: "medium",
+          reviewedBy: null, reviewedAt: null, reviewNote: null,
+          createdAt: now, expiresAt: null,
+        });
+        toolCallIds.push(callRef.id);
+      }
+    }
 
     // Update step outputs
     const newStepOutputs = { ...stepOutputs, [step.outputKey]: truncatedOutput };
@@ -356,6 +420,7 @@ async function executeStep(
         expiresAt: null,
       });
 
+      const runSnap = await runRef.get();
       await runRef.update({
         state: "awaiting_approval" as PipelineState,
         stepOutputs: newStepOutputs,
@@ -364,15 +429,19 @@ async function executeStep(
         [`steps.${stepIndex}.approvalItemId`]: approvalRef.id,
         [`steps.${stepIndex}.tokenUsage`]: tokenUsage,
         [`steps.${stepIndex}.completedAt`]: now,
-        approvalItemIds: [...((await runRef.get()).data()?.approvalItemIds as string[] ?? []), approvalRef.id],
-        totalInputTokens: (((await runRef.get()).data()?.totalInputTokens as number) ?? 0) + tokenUsage.input,
-        totalOutputTokens: (((await runRef.get()).data()?.totalOutputTokens as number) ?? 0) + tokenUsage.output,
+        [`steps.${stepIndex}.structuredOutput`]: structuredOutput ?? null,
+        [`steps.${stepIndex}.validationResult`]: validationResult ?? null,
+        [`steps.${stepIndex}.toolCallIds`]: toolCallIds.length > 0 ? toolCallIds : null,
+        approvalItemIds: [...((runSnap.data()?.approvalItemIds as string[]) ?? []), approvalRef.id],
+        totalInputTokens: ((runSnap.data()?.totalInputTokens as number) ?? 0) + tokenUsage.input,
+        totalOutputTokens: ((runSnap.data()?.totalOutputTokens as number) ?? 0) + tokenUsage.output,
       });
 
       return { success: true };
     }
 
     // No approval needed — mark complete and advance
+    const runSnapFinal = await runRef.get();
     await runRef.update({
       stepOutputs: newStepOutputs,
       [`steps.${stepIndex}.state`]: "completed",
@@ -380,8 +449,11 @@ async function executeStep(
       [`steps.${stepIndex}.tokenUsage`]: tokenUsage,
       [`steps.${stepIndex}.completedAt`]: now,
       [`steps.${stepIndex}.errorMessage`]: null,
-      totalInputTokens: (((await runRef.get()).data()?.totalInputTokens as number) ?? 0) + tokenUsage.input,
-      totalOutputTokens: (((await runRef.get()).data()?.totalOutputTokens as number) ?? 0) + tokenUsage.output,
+      [`steps.${stepIndex}.structuredOutput`]: structuredOutput ?? null,
+      [`steps.${stepIndex}.validationResult`]: validationResult ?? null,
+      [`steps.${stepIndex}.toolCallIds`]: toolCallIds.length > 0 ? toolCallIds : null,
+      totalInputTokens: ((runSnapFinal.data()?.totalInputTokens as number) ?? 0) + tokenUsage.input,
+      totalOutputTokens: ((runSnapFinal.data()?.totalOutputTokens as number) ?? 0) + tokenUsage.output,
     });
 
     // Advance to next step or complete

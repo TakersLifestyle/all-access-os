@@ -20,6 +20,14 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import type { AgentRole, TokenUsage } from "@/lib/takers-ai/types";
 import { ROUTING_CONFIDENCE_THRESHOLD } from "@/lib/takers-ai/types";
 import { semanticSearch, formatRetrievedContext } from "@/lib/takers-ai/knowledge";
+import {
+  getRoutingHints,
+  getFormatPreferences,
+  buildRoutingFeedbackSuffix,
+  buildFormatPreferenceSuffix,
+} from "@/lib/takers-ai/feedback-engine";
+import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/tools";
+import type { ToolName } from "@/lib/takers-ai/tools";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -70,15 +78,22 @@ interface ClassificationResult {
   fallback: boolean;
 }
 
-async function classifyIntent(userMessage: string): Promise<ClassificationResult> {
+async function classifyIntent(
+  userMessage: string,
+  feedbackSuffix = ""
+): Promise<ClassificationResult> {
   const startedAt = Date.now();
   let routingTokens = { input: 0, output: 0 };
 
   try {
+    const systemPrompt = feedbackSuffix
+      ? ROUTING_SYSTEM_PROMPT + feedbackSuffix
+      : ROUTING_SYSTEM_PROMPT;
+
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 150,
-      system: ROUTING_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: "user", content: userMessage.slice(0, 500) }],
     });
 
@@ -256,7 +271,10 @@ export async function POST(req: NextRequest) {
     let workflowRunRef: FirebaseFirestore.DocumentReference | null = null;
 
     if (requestedAgent.isDefault) {
-      classification = await classifyIntent(userMessage);
+      // Load routing feedback hints to improve classifier accuracy
+      const routingHints = await getRoutingHints(db, 5).catch(() => []);
+      const feedbackSuffix = buildRoutingFeedbackSuffix(routingHints);
+      classification = await classifyIntent(userMessage, feedbackSuffix);
 
       // Find the specialist agent by role
       if (classification.role !== "operator") {
@@ -333,12 +351,16 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Build enriched system prompt (priority-ordered memory + optional knowledge retrieval)
-    const { prompt: systemPrompt, memoryBlockCount, knowledgeChunksInjected } = await buildSystemPrompt(
+    // Also inject format preferences learned from feedback signals
+    const formatPref = await getFormatPreferences(db, activeAgent.role as AgentRole).catch(() => null);
+    const formatPrefSuffix = buildFormatPreferenceSuffix(formatPref);
+    const { prompt: systemPromptBase, memoryBlockCount, knowledgeChunksInjected } = await buildSystemPrompt(
       db,
       activeAgentId,
       activeAgent.systemPrompt as string,
       { userMessage, useKnowledge }
     );
+    const systemPrompt = formatPrefSuffix ? systemPromptBase + formatPrefSuffix : systemPromptBase;
 
     // 4. Save conversation metadata if requested
     let convRef: FirebaseFirestore.DocumentReference | null = null;
@@ -435,6 +457,55 @@ export async function POST(req: NextRequest) {
             tokenUsage.totalTokens += routingTokens.input + routingTokens.output;
           }
 
+          // Scan response for embedded tool requests — queue them for approval
+          const toolRequests = parseToolRequests(fullResponse);
+          const toolCallIds: string[] = [];
+          if (toolRequests.length > 0) {
+            const now = new Date().toISOString();
+            for (const req of toolRequests) {
+              const approvalContent = formatToolCallForApproval(req.tool, req.inputs);
+              const approvalRef = db.collection("approvalQueue").doc();
+              const callRef = db.collection("toolCalls").doc();
+              await callRef.set({
+                tool: req.tool,
+                label: req.tool,
+                inputs: req.inputs,
+                status: "pending_approval",
+                agentId: activeAgentId,
+                agentRole: activeAgent.role,
+                agentName: activeAgent.name,
+                conversationId: convRef?.id ?? conversationId ?? null,
+                workflowRunId: workflowRunRef?.id ?? null,
+                pipelineRunId: null,
+                approvalItemId: approvalRef.id,
+                output: null,
+                outputSummary: null,
+                errorMessage: null,
+                requestedAt: now,
+                approvedAt: null,
+                executedAt: null,
+                approvedBy: null,
+              });
+              await approvalRef.set({
+                type: "workflow_step",
+                title: `Tool Request: ${req.tool}`,
+                description: `Agent requested tool: ${req.tool}`,
+                content: approvalContent,
+                context: { toolCallId: callRef.id, tool: req.tool },
+                requestedBy: `agent:${activeAgentId}`,
+                agentId: activeAgentId,
+                agentRole: activeAgent.role,
+                agentName: activeAgent.name,
+                workflowRunId: workflowRunRef?.id ?? null,
+                status: "pending",
+                priority: "medium",
+                reviewedBy: null, reviewedAt: null, reviewNote: null,
+                createdAt: now, expiresAt: null,
+              });
+              toolCallIds.push(callRef.id);
+            }
+          }
+
           const generationDurationMs = Date.now() - generationStartedAt;
           const totalDurationMs = Date.now() - requestStartedAt;
 
@@ -491,6 +562,7 @@ export async function POST(req: NextRequest) {
             conversationId: convRef?.id ?? null,
             workflowRunId: workflowRunRef?.id ?? null,
             tokenUsage,
+            toolCallIds: toolCallIds.length > 0 ? toolCallIds : undefined,
           });
           controller.close();
         } catch (err) {
