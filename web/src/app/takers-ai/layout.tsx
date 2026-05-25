@@ -8,11 +8,14 @@ import Link from "next/link";
 const NAV_ITEMS = [
   { href: "/takers-ai", label: "Dashboard", icon: "⌂", exact: true },
   { href: "/takers-ai/chat", label: "Chat", icon: "◎" },
+  { href: "/takers-ai/agents", label: "Agents", icon: "✦" },
+  { href: "/takers-ai/workflows", label: "Workflows", icon: "⟳" },
   { href: "/takers-ai/memory", label: "Brand Memory", icon: "◈" },
   { href: "/takers-ai/templates", label: "Templates", icon: "◧" },
   { href: "/takers-ai/outputs", label: "Saved Outputs", icon: "◫" },
+  { href: "/takers-ai/feedback", label: "Feedback Log", icon: "◉" },
   { href: "/takers-ai/tasks", label: "Task Board", icon: "◱" },
-  { href: "/takers-ai/settings", label: "Agent Settings", icon: "◳" },
+  { href: "/takers-ai/settings", label: "Settings", icon: "◳" },
 ];
 
 export default function TakersAILayout({ children }: { children: React.ReactNode }) {

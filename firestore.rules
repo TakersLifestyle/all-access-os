@@ -215,6 +215,11 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Agent Instructions — separately editable instructions per agent
+    match /agentInstructions/{agentId} {
+      allow read, write: if isAdmin();
+    }
+
     match /brandMemory/{memoryId} {
       allow read, write: if isAdmin();
     }
@@ -235,6 +240,16 @@ service cloud.firestore {
     }
 
     match /aiTasks/{taskId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Workflow run tracking — written by chat route, read-only via API
+    match /workflowRuns/{runId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Feedback logs — admin ratings on agent responses
+    match /feedbackLogs/{logId} {
       allow read, write: if isAdmin();
     }
 
