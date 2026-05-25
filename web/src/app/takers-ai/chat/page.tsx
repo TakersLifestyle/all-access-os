@@ -423,7 +423,18 @@ function ChatInner() {
         }),
       });
 
-      if (!res.ok || !res.body) throw new Error("Stream failed");
+      if (!res.ok) {
+        // Read the error body so we surface the actual server-side message
+        let serverError = `HTTP ${res.status}`;
+        try {
+          const errBody = await res.json();
+          serverError = errBody.detail ?? errBody.error ?? serverError;
+        } catch {
+          try { serverError = await res.text() || serverError; } catch { /* ignore */ }
+        }
+        throw new Error(serverError);
+      }
+      if (!res.body) throw new Error("Stream body is null — check server runtime config");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -469,8 +480,14 @@ function ChatInner() {
               }
             }
 
-            if (parsed.type === "error") throw new Error(parsed.error);
-          } catch { /* ignore individual parse errors */ }
+            if (parsed.type === "error") {
+              throw new Error(`[${parsed.stage ?? "stream"}] ${parsed.error ?? "Unknown stream error"}`);
+            }
+          } catch (parseErr) {
+            // Only re-throw real errors (not JSON parse failures on partial lines)
+            if (parseErr instanceof Error && parseErr.message.startsWith("[")) throw parseErr;
+            /* ignore JSON parse noise on partial SSE lines */
+          }
         }
       }
 

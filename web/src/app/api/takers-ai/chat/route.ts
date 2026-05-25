@@ -1,18 +1,26 @@
-// Takers AI — Streaming chat route with intelligent agent routing
+// Takers AI — Streaming chat route (hardened)
 // POST /api/takers-ai/chat
 // Auth: Bearer token (admin only)
 // Body: { agentId, messages, conversationId?, saveConversation?, useKnowledge? }
 // Returns: text/event-stream SSE
 //
-// Routing flow (when agentId is the Operator):
-//   1. Fast classification call (Haiku) → role + reason + confidence (0-100)
-//   2. If confidence < THRESHOLD (60), fallback to Operator
-//   3. Load specialist agent + agentInstructions + brand memory (priority-ordered)
-//   4. If useKnowledge=true: semantic search knowledge base, inject top-K relevant chunks
-//   5. Stream the specialist's response, capture token usage
-//   6. Log WorkflowRun + AgentLog to Firestore (fire-and-forget)
+// SSE event types: routing | text | done | error | stage (debug)
 //
-// SSE event types: routing | text | done | error
+// Stage execution order (each wrapped in try/catch — failures degrade gracefully):
+//   STAGE 1  — request parse + auth
+//   STAGE 2  — rate limit check (Firestore)
+//   STAGE 3  — agent document fetch
+//   STAGE 4  — routing classification (haiku) [Operator only]
+//   STAGE 5  — specialist lookup [Operator only]
+//   STAGE 6  — memory + instructions fetch (Firestore) [with fallback]
+//   STAGE 7  — knowledge retrieval (Voyage) [with fallback]
+//   STAGE 8  — format preference fetch [with fallback]
+//   STAGE 9  — conversation create (Firestore) [fire-and-forget]
+//   STAGE 10 — Claude stream
+//   STAGE 11 — post-stream writes (cost, audit, agentLog) [fire-and-forget]
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
@@ -27,12 +35,42 @@ import {
   buildFormatPreferenceSuffix,
 } from "@/lib/takers-ai/feedback-engine";
 import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/tools";
-import type { ToolName } from "@/lib/takers-ai/tools";
 import { checkRateLimit } from "@/lib/takers-ai/rate-limiter";
 import { createCostEvent, writeCostEvent } from "@/lib/takers-ai/cost";
 import { writeAuditEvent } from "@/lib/takers-ai/audit";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const IS_DEV = process.env.NODE_ENV === "development";
+
+// ── Structured logger ─────────────────────────────────────────────────────────
+function log(
+  stage: string,
+  status: "start" | "ok" | "warn" | "error",
+  detail?: Record<string, unknown>
+) {
+  const line = `[chat/${stage}] ${status}${detail ? " " + JSON.stringify(detail) : ""}`;
+  if (status === "error") console.error(line);
+  else if (status === "warn") console.warn(line);
+  else console.log(line);
+}
+
+// ── Env validation ────────────────────────────────────────────────────────────
+function checkEnv(): { ok: boolean; issues: string[] } {
+  const issues: string[] = [];
+  if (!process.env.ANTHROPIC_API_KEY) issues.push("ANTHROPIC_API_KEY not set");
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON)
+    issues.push("FIREBASE_SERVICE_ACCOUNT_KEY not set");
+  return { ok: issues.length === 0, issues };
+}
+
+// ── Anthropic client (lazy, validates key exists) ────────────────────────────
+let _anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (_anthropic) return _anthropic;
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY environment variable is not set.");
+  _anthropic = new Anthropic({ apiKey: key });
+  return _anthropic;
+}
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 async function verifyAdmin(req: NextRequest) {
@@ -42,14 +80,13 @@ async function verifyAdmin(req: NextRequest) {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7));
     if (decoded.role !== "admin") return null;
     return decoded;
-  } catch {
+  } catch (err) {
+    log("auth", "warn", { err: String(err) });
     return null;
   }
 }
 
 // ── Routing classifier ────────────────────────────────────────────────────────
-// Returns role, reason, confidence (0-100), and up to 2 alternative roles.
-// Confidence < ROUTING_CONFIDENCE_THRESHOLD → caller should fallback to Operator.
 const ROUTING_SYSTEM_PROMPT = `You are a routing classifier for a multi-agent AI system for TakersLifestyle and ALL ACCESS Winnipeg.
 Given a user message, determine which specialist agent should handle it.
 
@@ -70,8 +107,7 @@ Confidence scoring:
 - 0-49: unclear — should fallback to Operator
 
 Respond ONLY with valid JSON:
-{"role":"<role>","reason":"<one sentence why>","confidence":<0-100>,"alternatives":["<role2>","<role3>"]}
-alternatives array should contain 0-2 other plausible roles (omit if none).`;
+{"role":"<role>","reason":"<one sentence why>","confidence":<0-100>,"alternatives":["<role2>","<role3>"]}`;
 
 interface ClassificationResult {
   role: AgentRole;
@@ -79,6 +115,8 @@ interface ClassificationResult {
   confidence: number;
   alternativeRoles: AgentRole[];
   fallback: boolean;
+  _routingTokens?: { input: number; output: number };
+  _durationMs?: number;
 }
 
 async function classifyIntent(
@@ -89,6 +127,8 @@ async function classifyIntent(
   let routingTokens = { input: 0, output: 0 };
 
   try {
+    log("routing", "start", { msgLen: userMessage.length });
+    const anthropic = getAnthropic();
     const systemPrompt = feedbackSuffix
       ? ROUTING_SYSTEM_PROMPT + feedbackSuffix
       : ROUTING_SYSTEM_PROMPT;
@@ -117,7 +157,9 @@ async function classifyIntent(
         ? (parsed.alternatives as AgentRole[]).slice(0, 2)
         : [];
       const fallback = confidence < ROUTING_CONFIDENCE_THRESHOLD;
+      const durationMs = Date.now() - startedAt;
 
+      log("routing", "ok", { role, confidence, fallback, durationMs });
       return {
         role: fallback ? "operator" : role,
         reason: fallback
@@ -126,13 +168,13 @@ async function classifyIntent(
         confidence,
         alternativeRoles: alternatives,
         fallback,
-        // @ts-expect-error — attaching to result for logging
         _routingTokens: routingTokens,
-        _durationMs: Date.now() - startedAt,
+        _durationMs: durationMs,
       };
     }
+    log("routing", "warn", { msg: "Failed to parse routing JSON", text: text.slice(0, 200) });
   } catch (err) {
-    console.warn("[chat/route] Routing classification failed:", err);
+    log("routing", "error", { err: String(err) });
   }
 
   return {
@@ -141,86 +183,114 @@ async function classifyIntent(
     confidence: 0,
     alternativeRoles: [],
     fallback: true,
-    // @ts-expect-error — attaching to result for logging
     _routingTokens: routingTokens,
     _durationMs: Date.now() - startedAt,
   };
 }
 
 // ── System prompt builder ─────────────────────────────────────────────────────
-// Composes: base systemPrompt + agentInstructions + brand memory (priority-ordered)
-//           + optional knowledge retrieval context (semantic search)
-// Only active memory blocks are injected. Higher priority blocks inject first.
+// Every Firestore read is individually try/caught — partial failures return what's available.
 async function buildSystemPrompt(
   db: FirebaseFirestore.Firestore,
   agentId: string,
   basePrompt: string,
-  options: {
-    userMessage?: string;
-    useKnowledge?: boolean;
-  } = {}
+  options: { userMessage?: string; useKnowledge?: boolean } = {}
 ): Promise<{
   prompt: string;
   memoryBlockCount: number;
   memoryTokenEstimate: number;
   knowledgeChunksInjected: number;
+  stageErrors: string[];
 }> {
-  const [memorySnap, instructionsDoc] = await Promise.all([
-    db
-      .collection("brandMemory")
-      .where("isActive", "==", true)
-      .orderBy("priority", "desc")
-      .get(),
-    db.collection("agentInstructions").doc(agentId).get(),
-  ]);
-
+  const stageErrors: string[] = [];
   let prompt = basePrompt;
-
-  // Append admin-editable instructions block
-  if (instructionsDoc.exists) {
-    const instr = instructionsDoc.data()!.instructions as string;
-    if (instr?.trim()) {
-      prompt += `\n\n---\n\n## CUSTOM INSTRUCTIONS\n${instr}`;
-    }
-  }
-
+  let memoryBlockCount = 0;
   let memoryTokenEstimate = 0;
+  let knowledgeChunksInjected = 0;
 
-  // Append active brand memory blocks, priority-ordered
-  if (!memorySnap.empty) {
-    const memoryBlocks = memorySnap.docs.map((d) => {
-      const data = d.data();
-      const block = `### [P${data.priority ?? 5}] ${data.title} (${data.category})\n${data.content}`;
-      memoryTokenEstimate += Math.round(block.length / 4);
-      return block;
-    });
-    prompt += `\n\n---\n\n## BRAND MEMORY CONTEXT\nThe following is your live brand knowledge base, ordered by priority. Use it to inform every response.\n\n${memoryBlocks.join("\n\n")}`;
+  // STAGE 6a — agent instructions
+  try {
+    log("instructions", "start", { agentId });
+    const instructionsDoc = await db.collection("agentInstructions").doc(agentId).get();
+    if (instructionsDoc.exists) {
+      const instr = instructionsDoc.data()!.instructions as string;
+      if (instr?.trim()) {
+        prompt += `\n\n---\n\n## CUSTOM INSTRUCTIONS\n${instr}`;
+      }
+    }
+    log("instructions", "ok", { exists: instructionsDoc.exists });
+  } catch (err) {
+    const msg = `agentInstructions fetch failed: ${String(err)}`;
+    stageErrors.push(msg);
+    log("instructions", "warn", { err: String(err) });
+    // Fallback: continue without custom instructions
   }
 
-  // Inject relevant knowledge base chunks via semantic search
-  let knowledgeChunksInjected = 0;
+  // STAGE 6b — brand memory
+  // NOTE: brandMemory query uses .where("isActive","==",true).orderBy("priority","desc")
+  // which requires a composite index. Falls back to unordered query if that index is missing.
+  try {
+    log("memory", "start");
+    let memorySnap: FirebaseFirestore.QuerySnapshot;
+    try {
+      memorySnap = await db
+        .collection("brandMemory")
+        .where("isActive", "==", true)
+        .orderBy("priority", "desc")
+        .get();
+    } catch (indexErr) {
+      // Likely missing composite index — fall back to unordered query
+      log("memory", "warn", {
+        msg: "Composite index missing, falling back to unordered memory fetch",
+        err: String(indexErr),
+      });
+      memorySnap = await db
+        .collection("brandMemory")
+        .where("isActive", "==", true)
+        .get();
+    }
+
+    if (!memorySnap.empty) {
+      const memoryBlocks = memorySnap.docs.map((d) => {
+        const data = d.data();
+        const block = `### [P${data.priority ?? 5}] ${data.title} (${data.category})\n${data.content}`;
+        memoryTokenEstimate += Math.round(block.length / 4);
+        return block;
+      });
+      prompt += `\n\n---\n\n## BRAND MEMORY CONTEXT\nThe following is your live brand knowledge base, ordered by priority. Use it to inform every response.\n\n${memoryBlocks.join("\n\n")}`;
+      memoryBlockCount = memorySnap.size;
+    }
+    log("memory", "ok", { blocks: memoryBlockCount, tokenEstimate: memoryTokenEstimate });
+  } catch (err) {
+    const msg = `brandMemory fetch failed: ${String(err)}`;
+    stageErrors.push(msg);
+    log("memory", "error", { err: String(err) });
+    // Fallback: continue without memory
+  }
+
+  // STAGE 7 — knowledge retrieval (Voyage)
   if (options.useKnowledge && options.userMessage) {
     try {
+      log("knowledge", "start", { query: options.userMessage.slice(0, 80) });
       const chunks = await semanticSearch(db, options.userMessage, { k: 5 });
       if (chunks.length > 0) {
         const context = formatRetrievedContext(chunks);
         prompt += context;
         knowledgeChunksInjected = chunks.length;
       }
+      log("knowledge", "ok", { chunks: knowledgeChunksInjected });
     } catch (err) {
-      console.warn("[chat/route] Knowledge retrieval failed:", err);
+      const msg = `Knowledge retrieval failed: ${String(err)}`;
+      stageErrors.push(msg);
+      log("knowledge", "warn", { err: String(err) });
+      // Fallback: continue without knowledge chunks
     }
   }
 
-  return {
-    prompt,
-    memoryBlockCount: memorySnap.size,
-    memoryTokenEstimate,
-    knowledgeChunksInjected,
-  };
+  return { prompt, memoryBlockCount, memoryTokenEstimate, knowledgeChunksInjected, stageErrors };
 }
 
-// ── Observability: write agent log ────────────────────────────────────────────
+// ── Agent log writer ──────────────────────────────────────────────────────────
 function writeAgentLog(
   db: FirebaseFirestore.Firestore,
   data: Record<string, unknown>
@@ -228,35 +298,77 @@ function writeAgentLog(
   db.collection("agentLogs")
     .doc()
     .set({ ...data, createdAt: new Date().toISOString() })
-    .catch((err) => console.error("[agentLog write]", err));
+    .catch((err) => log("agentLog", "error", { err: String(err) }));
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const handlerStart = Date.now();
+
+  // STAGE 1 — env + auth
+  log("handler", "start");
+
+  const envCheck = checkEnv();
+  if (!envCheck.ok) {
+    log("env", "error", { issues: envCheck.issues });
+    return NextResponse.json(
+      { error: "Server configuration error", issues: IS_DEV ? envCheck.issues : undefined },
+      { status: 503 }
+    );
+  }
+
   const decoded = await verifyAdmin(req);
   if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // STAGE 1 — parse body
+  let body: {
+    agentId: string;
+    messages: Array<{ role: "user" | "assistant"; content: string }>;
+    conversationId?: string;
+    saveConversation?: boolean;
+    useKnowledge?: boolean;
+  };
+
   try {
-    const body = await req.json();
-    const { agentId, messages, conversationId, saveConversation, useKnowledge } = body as {
-      agentId: string;
-      messages: Array<{ role: "user" | "assistant"; content: string }>;
-      conversationId?: string;
-      saveConversation?: boolean;
-      useKnowledge?: boolean;
-    };
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-    if (!agentId || !messages?.length) {
-      return NextResponse.json({ error: "agentId and messages are required." }, { status: 400 });
-    }
+  const { agentId, messages, conversationId, saveConversation, useKnowledge } = body;
 
-    const db = adminDb();
+  if (!agentId || !messages?.length) {
+    return NextResponse.json({ error: "agentId and messages are required." }, { status: 400 });
+  }
 
-    // Rate limit: 30 req/min per user on chat route
+  log("parse", "ok", {
+    agentId,
+    messageCount: messages.length,
+    saveConversation,
+    useKnowledge,
+    conversationId: conversationId ?? null,
+  });
+
+  // STAGE 2 — rate limit
+  let db: FirebaseFirestore.Firestore;
+  try {
+    db = adminDb();
+    log("db-init", "ok");
+  } catch (err) {
+    log("db-init", "error", { err: String(err) });
+    return NextResponse.json(
+      { error: "Database initialization failed", detail: IS_DEV ? String(err) : undefined },
+      { status: 503 }
+    );
+  }
+
+  try {
+    log("rate-limit", "start", { uid: decoded.uid });
     const rateResult = await checkRateLimit(db, decoded.uid, "chat");
     if (!rateResult.allowed) {
+      log("rate-limit", "warn", { limitType: rateResult.limitType, retryAfterMs: rateResult.retryAfterMs });
       return NextResponse.json(
         {
           error: `Rate limit exceeded. Retry after ${Math.ceil(rateResult.retryAfterMs / 1000)}s.`,
@@ -273,165 +385,82 @@ export async function POST(req: NextRequest) {
         }
       );
     }
+    log("rate-limit", "ok", { remaining: rateResult.remaining });
+  } catch (err) {
+    // Rate limiter failure — fail open (don't block chat)
+    log("rate-limit", "warn", { err: String(err), msg: "Rate limit check failed — continuing" });
+  }
 
-    const requestStartedAt = Date.now();
-
-    // 1. Load the requested agent
+  // STAGE 3 — load agent
+  let requestedAgent: FirebaseFirestore.DocumentData;
+  try {
+    log("agent-fetch", "start", { agentId });
     const agentDoc = await db.collection("agents").doc(agentId).get();
     if (!agentDoc.exists) {
-      return NextResponse.json({ error: "Agent not found." }, { status: 404 });
+      return NextResponse.json({ error: "Agent not found.", agentId }, { status: 404 });
     }
-    const requestedAgent = agentDoc.data()!;
+    requestedAgent = agentDoc.data()!;
     if (!requestedAgent.isActive) {
-      return NextResponse.json({ error: "Agent is not active." }, { status: 400 });
+      return NextResponse.json({ error: "Agent is not active.", agentId }, { status: 400 });
     }
-
-    const userMessage = messages[messages.length - 1]?.content ?? "";
-
-    // 2. Routing: if the Operator receives a message, classify and route to specialist
-    let activeAgent = requestedAgent;
-    let activeAgentId = agentId;
-    let classification: ClassificationResult | null = null;
-    let workflowRunRef: FirebaseFirestore.DocumentReference | null = null;
-
-    if (requestedAgent.isDefault) {
-      // Load routing feedback hints to improve classifier accuracy
-      const routingHints = await getRoutingHints(db, 5).catch(() => []);
-      const feedbackSuffix = buildRoutingFeedbackSuffix(routingHints);
-      classification = await classifyIntent(userMessage, feedbackSuffix);
-
-      // Find the specialist agent by role
-      if (classification.role !== "operator") {
-        const agentsSnap = await db
-          .collection("agents")
-          .where("role", "==", classification.role)
-          .where("isActive", "==", true)
-          .limit(1)
-          .get();
-
-        if (!agentsSnap.empty) {
-          activeAgent = agentsSnap.docs[0].data();
-          activeAgentId = agentsSnap.docs[0].id;
-        } else {
-          // Specialist not found — fallback
-          classification.role = "operator";
-          classification.reason += " (specialist not found — using Operator)";
-          classification.fallback = true;
-          activeAgent = requestedAgent;
-          activeAgentId = agentId;
-        }
-      }
-
-      // Log routing decision as an agent log
-      const routingTokens = (classification as unknown as Record<string, unknown>)._routingTokens as { input: number; output: number } | undefined;
-      const routingDuration = (classification as unknown as Record<string, unknown>)._durationMs as number | undefined;
-
-      writeAgentLog(db, {
-        agentId,
-        agentRole: "operator",
-        agentName: requestedAgent.name,
-        conversationId: conversationId ?? null,
-        type: classification.fallback ? "fallback" : "routing",
-        userMessage: userMessage.slice(0, 200),
-        routingDecision: {
-          role: classification.role,
-          reason: classification.reason,
-          confidence: classification.confidence,
-          fallback: classification.fallback,
-          alternativeRoles: classification.alternativeRoles,
-        },
-        tokenUsage: routingTokens
-          ? {
-              inputTokens: routingTokens.input,
-              outputTokens: routingTokens.output,
-              totalTokens: routingTokens.input + routingTokens.output,
-            }
-          : null,
-        durationMs: routingDuration ?? null,
-      });
-
-      // Create workflow run document
-      const now = new Date().toISOString();
-      workflowRunRef = db.collection("workflowRuns").doc();
-      workflowRunRef
-        .set({
-          conversationId: conversationId ?? null,
-          userMessage: userMessage.slice(0, 200),
-          originAgentId: agentId,
-          routedToAgentId: activeAgentId,
-          routedToRole: classification.role,
-          routingReason: classification.reason,
-          routingConfidence: classification.confidence,
-          alternativeRoles: classification.alternativeRoles,
-          status: "processing",
-          outputSaved: false,
-          tokenUsage: null,
-          workflowDefinitionId: null,
-          startedAt: now,
-          completedAt: null,
-          errorMessage: null,
-        })
-        .catch(console.error);
-    }
-
-    // 3. Build enriched system prompt (priority-ordered memory + optional knowledge retrieval)
-    // Also inject format preferences learned from feedback signals
-    const formatPref = await getFormatPreferences(db, activeAgent.role as AgentRole).catch(() => null);
-    const formatPrefSuffix = buildFormatPreferenceSuffix(formatPref);
-    const { prompt: systemPromptBase, memoryBlockCount, knowledgeChunksInjected } = await buildSystemPrompt(
-      db,
-      activeAgentId,
-      activeAgent.systemPrompt as string,
-      { userMessage, useKnowledge }
+    log("agent-fetch", "ok", { role: requestedAgent.role, model: requestedAgent.model });
+  } catch (err) {
+    log("agent-fetch", "error", { err: String(err) });
+    return NextResponse.json(
+      { error: "Failed to load agent", detail: IS_DEV ? String(err) : undefined },
+      { status: 500 }
     );
-    const systemPrompt = formatPrefSuffix ? systemPromptBase + formatPrefSuffix : systemPromptBase;
+  }
 
-    // 4. Save conversation metadata if requested
-    let convRef: FirebaseFirestore.DocumentReference | null = null;
-    if (saveConversation) {
-      if (conversationId) {
-        convRef = db.collection("conversations").doc(conversationId);
-      } else {
-        convRef = db.collection("conversations").doc();
-        const batch = db.batch();
-        batch.set(convRef, {
-          conversationId: convRef.id,
-          agentId: activeAgentId,
-          agentRole: activeAgent.role,
-          title: userMessage.slice(0, 60) + (userMessage.length > 60 ? "…" : ""),
-          messageCount: messages.length,
-          lastMessage: userMessage.slice(0, 120),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        for (const msg of messages) {
-          const msgRef = convRef.collection("messages").doc();
-          batch.set(msgRef, {
-            ...msg,
-            agentId: msg.role === "assistant" ? activeAgentId : null,
-            agentRole: msg.role === "assistant" ? activeAgent.role : null,
-            createdAt: new Date().toISOString(),
-          });
-        }
-        await batch.commit();
-      }
-    }
+  const userMessage = messages[messages.length - 1]?.content ?? "";
+  const requestStartedAt = Date.now();
 
-    // 5. Stream from Claude — capture full response + token usage
-    const model = (activeAgent.model as string) || "claude-sonnet-4-5";
-    const maxTokens = (activeAgent.maxTokens as number) || 2048;
-    let fullResponse = "";
-    const generationStartedAt = Date.now();
+  // STAGES 4-11 — everything inside the stream so failures emit SSE error events
+  // rather than returning a non-2xx HTTP response that kills the stream before it opens.
+  const readable = new ReadableStream({
+    async start(controller) {
+      const enc = new TextEncoder();
 
-    const readable = new ReadableStream({
-      async start(controller) {
-        const enc = new TextEncoder();
-        const send = (data: Record<string, unknown>) =>
-          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
-
+      function send(data: Record<string, unknown>) {
         try {
-          // Emit routing metadata first (client shows routing indicator immediately)
-          if (classification) {
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          // Controller already closed — ignore
+        }
+      }
+
+      function sendStage(stage: string, durationMs: number, detail?: Record<string, unknown>) {
+        if (IS_DEV) {
+          send({ type: "stage", stage, durationMs, ...(detail ?? {}) });
+        }
+      }
+
+      function fatal(stage: string, err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        log(stage, "error", { err: msg });
+        send({ type: "error", stage, error: msg, detail: IS_DEV ? msg : "An error occurred" });
+        try { controller.close(); } catch { /* already closed */ }
+      }
+
+      try {
+        // ── STAGE 4: Routing (Operator only) ──────────────────────────────────
+        let activeAgent = requestedAgent;
+        let activeAgentId = agentId;
+        let classification: ClassificationResult | null = null;
+        let workflowRunRef: FirebaseFirestore.DocumentReference | null = null;
+
+        const stage4Start = Date.now();
+        if (requestedAgent.isDefault) {
+          try {
+            // STAGE 4a — routing hints
+            const routingHints = await getRoutingHints(db, 5).catch((err) => {
+              log("routing-hints", "warn", { err: String(err) });
+              return [];
+            });
+            const feedbackSuffix = buildRoutingFeedbackSuffix(routingHints);
+            classification = await classifyIntent(userMessage, feedbackSuffix);
+
+            // Emit routing event immediately so client shows indicator
             send({
               type: "routing",
               routedToRole: classification.role,
@@ -441,10 +470,208 @@ export async function POST(req: NextRequest) {
               routingConfidence: classification.confidence,
               routingFallback: classification.fallback,
               alternativeRoles: classification.alternativeRoles,
-              workflowRunId: workflowRunRef?.id ?? null,
+              workflowRunId: null, // will be updated after run doc created
             });
+          } catch (err) {
+            log("routing", "warn", { err: String(err), msg: "Routing failed — staying with Operator" });
+            classification = {
+              role: "operator",
+              reason: "Routing classification failed — using Operator",
+              confidence: 0,
+              alternativeRoles: [],
+              fallback: true,
+            };
           }
 
+          // STAGE 5 — specialist lookup
+          if (classification.role !== "operator") {
+            try {
+              log("specialist-lookup", "start", { role: classification.role });
+              const agentsSnap = await db
+                .collection("agents")
+                .where("role", "==", classification.role)
+                .where("isActive", "==", true)
+                .limit(1)
+                .get();
+
+              if (!agentsSnap.empty) {
+                activeAgent = agentsSnap.docs[0].data();
+                activeAgentId = agentsSnap.docs[0].id;
+                log("specialist-lookup", "ok", { agentId: activeAgentId, name: activeAgent.name });
+                // Re-emit routing now that we have the real agentId
+                send({
+                  type: "routing",
+                  routedToRole: classification.role,
+                  routedToAgentId: activeAgentId,
+                  routedToName: activeAgent.name,
+                  routingReason: classification.reason,
+                  routingConfidence: classification.confidence,
+                  routingFallback: classification.fallback,
+                  alternativeRoles: classification.alternativeRoles,
+                  workflowRunId: null,
+                });
+              } else {
+                log("specialist-lookup", "warn", { msg: "Specialist not found, using Operator", role: classification.role });
+                classification.role = "operator";
+                classification.reason += " (specialist agent not found — using Operator)";
+                classification.fallback = true;
+              }
+            } catch (err) {
+              log("specialist-lookup", "error", { err: String(err) });
+              // Fallback to operator — don't kill the stream
+              classification.role = "operator";
+              classification.reason += " (specialist lookup failed — using Operator)";
+              classification.fallback = true;
+            }
+          }
+
+          // Create workflow run doc (fire-and-forget — don't block stream)
+          const now = new Date().toISOString();
+          try {
+            workflowRunRef = db.collection("workflowRuns").doc();
+            workflowRunRef
+              .set({
+                conversationId: conversationId ?? null,
+                userMessage: userMessage.slice(0, 200),
+                originAgentId: agentId,
+                routedToAgentId: activeAgentId,
+                routedToRole: classification.role,
+                routingReason: classification.reason,
+                routingConfidence: classification.confidence,
+                alternativeRoles: classification.alternativeRoles,
+                status: "processing",
+                outputSaved: false,
+                tokenUsage: null,
+                workflowDefinitionId: null,
+                startedAt: now,
+                completedAt: null,
+                errorMessage: null,
+              })
+              .catch((err) => log("workflowRun-create", "warn", { err: String(err) }));
+          } catch (err) {
+            log("workflowRun-create", "warn", { err: String(err) });
+          }
+
+          // Log routing decision (fire-and-forget)
+          writeAgentLog(db, {
+            agentId,
+            agentRole: "operator",
+            agentName: requestedAgent.name,
+            conversationId: conversationId ?? null,
+            type: classification.fallback ? "fallback" : "routing",
+            userMessage: userMessage.slice(0, 200),
+            routingDecision: {
+              role: classification.role,
+              reason: classification.reason,
+              confidence: classification.confidence,
+              fallback: classification.fallback,
+              alternativeRoles: classification.alternativeRoles,
+            },
+            tokenUsage: classification._routingTokens
+              ? {
+                  inputTokens: classification._routingTokens.input,
+                  outputTokens: classification._routingTokens.output,
+                  totalTokens: classification._routingTokens.input + classification._routingTokens.output,
+                }
+              : null,
+            durationMs: classification._durationMs ?? null,
+          });
+        }
+
+        sendStage("routing", Date.now() - stage4Start, { role: classification?.role ?? activeAgent.role });
+
+        // ── STAGE 8: Format preference fetch ─────────────────────────────────
+        const stage8Start = Date.now();
+        let formatPrefSuffix = "";
+        try {
+          const formatPref = await getFormatPreferences(db, activeAgent.role as AgentRole);
+          formatPrefSuffix = buildFormatPreferenceSuffix(formatPref);
+          log("format-pref", "ok");
+        } catch (err) {
+          log("format-pref", "warn", { err: String(err) });
+        }
+        sendStage("format-pref", Date.now() - stage8Start);
+
+        // ── STAGES 6+7: Build system prompt (memory + knowledge) ─────────────
+        const stage6Start = Date.now();
+        const {
+          prompt: systemPromptBase,
+          memoryBlockCount,
+          knowledgeChunksInjected,
+          stageErrors: promptErrors,
+        } = await buildSystemPrompt(db, activeAgentId, activeAgent.systemPrompt as string, {
+          userMessage,
+          useKnowledge,
+        });
+
+        if (promptErrors.length > 0) {
+          log("system-prompt", "warn", { errors: promptErrors });
+        }
+
+        const systemPrompt = formatPrefSuffix
+          ? systemPromptBase + formatPrefSuffix
+          : systemPromptBase;
+
+        sendStage("system-prompt", Date.now() - stage6Start, {
+          memoryBlockCount,
+          knowledgeChunksInjected,
+          promptLen: systemPrompt.length,
+          stageErrors: promptErrors.length,
+        });
+        log("system-prompt", "ok", {
+          promptLen: systemPrompt.length,
+          memoryBlocks: memoryBlockCount,
+          knowledgeChunks: knowledgeChunksInjected,
+        });
+
+        // ── STAGE 9: Conversation create (fire-and-forget) ────────────────────
+        let convRef: FirebaseFirestore.DocumentReference | null = null;
+        if (saveConversation) {
+          try {
+            if (conversationId) {
+              convRef = db.collection("conversations").doc(conversationId);
+            } else {
+              convRef = db.collection("conversations").doc();
+              const batch = db.batch();
+              batch.set(convRef, {
+                conversationId: convRef.id,
+                agentId: activeAgentId,
+                agentRole: activeAgent.role,
+                title: userMessage.slice(0, 60) + (userMessage.length > 60 ? "…" : ""),
+                messageCount: messages.length,
+                lastMessage: userMessage.slice(0, 120),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              for (const msg of messages) {
+                const msgRef = convRef.collection("messages").doc();
+                batch.set(msgRef, {
+                  ...msg,
+                  agentId: msg.role === "assistant" ? activeAgentId : null,
+                  agentRole: msg.role === "assistant" ? activeAgent.role : null,
+                  createdAt: new Date().toISOString(),
+                });
+              }
+              // Fire-and-forget — don't block stream on Firestore write
+              batch.commit().catch((err) => log("conv-create", "warn", { err: String(err) }));
+            }
+            log("conv-create", "ok", { convId: convRef.id });
+          } catch (err) {
+            log("conv-create", "warn", { err: String(err) });
+            convRef = null; // don't block on failure
+          }
+        }
+
+        // ── STAGE 10: Claude stream ────────────────────────────────────────────
+        const model = (activeAgent.model as string) || "claude-sonnet-4-5";
+        const maxTokens = Math.min((activeAgent.maxTokens as number) || 2048, 8192);
+        let fullResponse = "";
+        const generationStartedAt = Date.now();
+
+        log("stream", "start", { model, maxTokens, systemPromptLen: systemPrompt.length });
+
+        try {
+          const anthropic = getAnthropic();
           const stream = anthropic.messages.stream({
             model,
             max_tokens: maxTokens,
@@ -463,110 +690,125 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Capture token usage after stream completes
           const finalMsg = await stream.finalMessage();
+          const generationDurationMs = Date.now() - generationStartedAt;
+          log("stream", "ok", {
+            inputTokens: finalMsg.usage.input_tokens,
+            outputTokens: finalMsg.usage.output_tokens,
+            durationMs: generationDurationMs,
+            responseLen: fullResponse.length,
+          });
+
           const tokenUsage: TokenUsage = {
             inputTokens: finalMsg.usage.input_tokens,
             outputTokens: finalMsg.usage.output_tokens,
             totalTokens: finalMsg.usage.input_tokens + finalMsg.usage.output_tokens,
           };
 
-          // Add routing tokens if applicable
-          const routingTokens = classification
-            ? (classification as unknown as Record<string, unknown>)._routingTokens as { input: number; output: number } | undefined
-            : undefined;
-          if (routingTokens) {
-            tokenUsage.routingInputTokens = routingTokens.input;
-            tokenUsage.routingOutputTokens = routingTokens.output;
-            tokenUsage.totalTokens += routingTokens.input + routingTokens.output;
+          if (classification?._routingTokens) {
+            tokenUsage.routingInputTokens = classification._routingTokens.input;
+            tokenUsage.routingOutputTokens = classification._routingTokens.output;
+            tokenUsage.totalTokens += classification._routingTokens.input + classification._routingTokens.output;
           }
 
-          // Scan response for embedded tool requests — queue them for approval
+          // ── STAGE 11: Post-stream writes (all fire-and-forget) ────────────
+
+          // Tool requests
           const toolRequests = parseToolRequests(fullResponse);
           const toolCallIds: string[] = [];
           if (toolRequests.length > 0) {
             const now = new Date().toISOString();
-            for (const req of toolRequests) {
-              const approvalContent = formatToolCallForApproval(req.tool, req.inputs);
-              const approvalRef = db.collection("approvalQueue").doc();
-              const callRef = db.collection("toolCalls").doc();
-              await callRef.set({
-                tool: req.tool,
-                label: req.tool,
-                inputs: req.inputs,
-                status: "pending_approval",
-                agentId: activeAgentId,
-                agentRole: activeAgent.role,
-                agentName: activeAgent.name,
-                conversationId: convRef?.id ?? conversationId ?? null,
-                workflowRunId: workflowRunRef?.id ?? null,
-                pipelineRunId: null,
-                approvalItemId: approvalRef.id,
-                output: null,
-                outputSummary: null,
-                errorMessage: null,
-                requestedAt: now,
-                approvedAt: null,
-                executedAt: null,
-                approvedBy: null,
-              });
-              await approvalRef.set({
-                type: "workflow_step",
-                title: `Tool Request: ${req.tool}`,
-                description: `Agent requested tool: ${req.tool}`,
-                content: approvalContent,
-                context: { toolCallId: callRef.id, tool: req.tool },
-                requestedBy: `agent:${activeAgentId}`,
-                agentId: activeAgentId,
-                agentRole: activeAgent.role,
-                agentName: activeAgent.name,
-                workflowRunId: workflowRunRef?.id ?? null,
-                status: "pending",
-                priority: "medium",
-                reviewedBy: null, reviewedAt: null, reviewNote: null,
-                createdAt: now, expiresAt: null,
-              });
-              toolCallIds.push(callRef.id);
+            for (const toolReq of toolRequests) {
+              try {
+                const approvalContent = formatToolCallForApproval(toolReq.tool, toolReq.inputs);
+                const approvalRef = db.collection("approvalQueue").doc();
+                const callRef = db.collection("toolCalls").doc();
+                await Promise.all([
+                  callRef.set({
+                    tool: toolReq.tool,
+                    label: toolReq.tool,
+                    inputs: toolReq.inputs,
+                    status: "pending_approval",
+                    agentId: activeAgentId,
+                    agentRole: activeAgent.role,
+                    agentName: activeAgent.name,
+                    conversationId: convRef?.id ?? conversationId ?? null,
+                    workflowRunId: workflowRunRef?.id ?? null,
+                    pipelineRunId: null,
+                    approvalItemId: approvalRef.id,
+                    output: null,
+                    outputSummary: null,
+                    errorMessage: null,
+                    requestedAt: now,
+                    approvedAt: null,
+                    executedAt: null,
+                    approvedBy: null,
+                  }),
+                  approvalRef.set({
+                    type: "workflow_step",
+                    title: `Tool Request: ${toolReq.tool}`,
+                    description: `Agent requested tool: ${toolReq.tool}`,
+                    content: approvalContent,
+                    context: { toolCallId: callRef.id, tool: toolReq.tool },
+                    requestedBy: `agent:${activeAgentId}`,
+                    agentId: activeAgentId,
+                    agentRole: activeAgent.role,
+                    agentName: activeAgent.name,
+                    workflowRunId: workflowRunRef?.id ?? null,
+                    status: "pending",
+                    priority: "medium",
+                    reviewedBy: null, reviewedAt: null, reviewNote: null,
+                    createdAt: now, expiresAt: null,
+                  }),
+                ]);
+                toolCallIds.push(callRef.id);
+              } catch (err) {
+                log("tool-queue", "warn", { tool: toolReq.tool, err: String(err) });
+              }
             }
           }
 
-          const generationDurationMs = Date.now() - generationStartedAt;
-          const totalDurationMs = Date.now() - requestStartedAt;
+          // Cost tracking
+          try {
+            const costData = createCostEvent(
+              "chat_generation",
+              activeAgentId,
+              activeAgent.role as AgentRole,
+              model,
+              finalMsg.usage.input_tokens,
+              finalMsg.usage.output_tokens,
+              { conversationId: convRef?.id ?? conversationId }
+            );
+            writeCostEvent(db, costData);
+          } catch (err) {
+            log("cost-event", "warn", { err: String(err) });
+          }
 
-          // Track cost (fire-and-forget)
-          const costData = createCostEvent(
-            "chat_generation",
-            activeAgentId,
-            activeAgent.role as import("@/lib/takers-ai/types").AgentRole,
-            model,
-            finalMsg.usage.input_tokens,
-            finalMsg.usage.output_tokens,
-            { conversationId: convRef?.id ?? conversationId }
-          );
-          writeCostEvent(db, costData);
+          // Audit event
+          try {
+            writeAuditEvent(
+              db,
+              "agent_generation",
+              "agent",
+              activeAgentId,
+              { uid: decoded.uid, role: "admin" },
+              {
+                payload: {
+                  model,
+                  inputTokens: tokenUsage.inputTokens,
+                  outputTokens: tokenUsage.outputTokens,
+                  knowledgeChunksInjected,
+                  durationMs: generationDurationMs,
+                  conversationId: convRef?.id ?? conversationId ?? null,
+                  workflowRunId: workflowRunRef?.id ?? null,
+                },
+              }
+            );
+          } catch (err) {
+            log("audit-event", "warn", { err: String(err) });
+          }
 
-          // Write audit event (fire-and-forget)
-          writeAuditEvent(
-            db,
-            "agent_generation",
-            "agent",
-            activeAgentId,
-            { uid: decoded.uid, role: "admin" },
-            {
-              payload: {
-                model,
-                inputTokens: tokenUsage.inputTokens,
-                outputTokens: tokenUsage.outputTokens,
-                totalCostUsd: costData.totalCostUsd,
-                knowledgeChunksInjected,
-                durationMs: generationDurationMs,
-                conversationId: convRef?.id ?? conversationId ?? null,
-                workflowRunId: workflowRunRef?.id ?? null,
-              },
-            }
-          );
-
-          // Log generation
+          // Agent log
           writeAgentLog(db, {
             agentId: activeAgentId,
             agentRole: activeAgent.role,
@@ -583,49 +825,51 @@ export async function POST(req: NextRequest) {
               memoryBlockCount,
               knowledgeChunksInjected,
               useKnowledge: useKnowledge ?? false,
-              totalDurationMs,
+              totalDurationMs: Date.now() - requestStartedAt,
             },
           });
 
           // Save assistant response to conversation
           if (convRef && fullResponse) {
-            const msgRef = convRef.collection("messages").doc();
-            await msgRef.set({
+            convRef.collection("messages").doc().set({
               role: "assistant",
               content: fullResponse,
               agentId: activeAgentId,
               agentRole: activeAgent.role,
               workflowRunId: workflowRunRef?.id ?? null,
               createdAt: new Date().toISOString(),
-            });
-            await convRef.update({
+            }).catch((err) => log("conv-msg-save", "warn", { err: String(err) }));
+
+            convRef.update({
               messageCount: messages.length + 1,
               lastMessage: fullResponse.slice(0, 120),
               updatedAt: new Date().toISOString(),
-            });
+            }).catch((err) => log("conv-update", "warn", { err: String(err) }));
           }
 
-          // Update workflow run to complete with token usage
+          // Update workflow run
           if (workflowRunRef) {
             workflowRunRef.update({
               status: "complete",
               completedAt: new Date().toISOString(),
               tokenUsage,
-            }).catch(console.error);
+            }).catch((err) => log("workflowRun-update", "warn", { err: String(err) }));
           }
 
+          // Done event
           send({
             type: "done",
             conversationId: convRef?.id ?? null,
             workflowRunId: workflowRunRef?.id ?? null,
             tokenUsage,
             toolCallIds: toolCallIds.length > 0 ? toolCallIds : undefined,
+            totalDurationMs: Date.now() - handlerStart,
           });
-          controller.close();
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Stream error";
 
-          // Log error
+        } catch (streamErr) {
+          // Claude API failure — report in stream
+          fatal("claude-stream", streamErr);
+
           writeAgentLog(db, {
             agentId: activeAgentId,
             agentRole: activeAgent.role,
@@ -634,33 +878,37 @@ export async function POST(req: NextRequest) {
             workflowRunId: workflowRunRef?.id ?? null,
             type: "error",
             userMessage: userMessage.slice(0, 200),
-            error: msg,
+            error: streamErr instanceof Error ? streamErr.message : String(streamErr),
             durationMs: Date.now() - generationStartedAt,
           });
 
           if (workflowRunRef) {
             workflowRunRef
-              .update({ status: "failed", errorMessage: msg })
-              .catch(console.error);
+              .update({
+                status: "failed",
+                errorMessage: streamErr instanceof Error ? streamErr.message : String(streamErr),
+              })
+              .catch(() => {});
           }
-
-          send({ type: "error", error: msg });
-          controller.close();
+          return; // controller already closed in fatal()
         }
-      },
-    });
 
-    return new Response(readable, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[takers-ai/chat]", message);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+        controller.close();
+
+      } catch (outerErr) {
+        // Catch-all for any unhandled error in stream orchestration
+        fatal("orchestration", outerErr);
+      }
+    },
+  });
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
