@@ -248,6 +248,21 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Workflow definitions — reusable multi-step pipelines
+    match /workflowDefinitions/{defId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Approval queue — pending/approved/rejected admin actions
+    match /approvalQueue/{itemId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Observability — granular per-request agent logs with token usage
+    match /agentLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
     // Feedback logs — admin ratings on agent responses
     match /feedbackLogs/{logId} {
       allow read, write: if isAdmin();

@@ -1,11 +1,12 @@
-// Seed script: Takers AI Command Center — v2 (full agent team)
+// Seed script: Takers AI Command Center — v3 (Phase 3 architecture)
 // Run: cd ~/all-access-platform/functions && node ../scripts/seed-takers-ai.mjs
 //
-// Seeds:
-//   agents           — Operator + 7 specialist agents
-//   agentInstructions — editable instructions per agent
-//   brandMemory       — 9 brand memory blocks
-//   promptTemplates   — 14 starter templates
+// Seeds / migrates:
+//   agents              — Operator + 7 specialist agents
+//   agentInstructions   — editable instructions per agent
+//   brandMemory         — migrates to 8 new categories + adds priority/version/isActive
+//   promptTemplates     — 14 starter templates
+//   workflowDefinitions — 4 reusable multi-step pipelines
 
 import { createRequire } from "module";
 import { resolve, dirname } from "path";
@@ -400,10 +401,34 @@ Review all SOPs quarterly — what worked, what needs updating.`,
 // BRAND MEMORY (unchanged from v1)
 // ════════════════════════════════════════════════════════════════════════════
 
+// Legacy category → new category map (for migration)
+const LEGACY_CATEGORY_MAP = {
+  brand_voice:    "brandVoice",
+  audience:       "audienceProfiles",
+  events:         "eventStandards",
+  platform_rules: "communityRules",
+  content:        "contentFrameworks",
+  business:       "pricingStrategy",
+};
+
+// Priority key: brandVoice=10 (always first), bannedPhrases=9, eventStandards=8,
+// communityRules=8, pricingStrategy=7, audienceProfiles=7, contentFrameworks=6, operationalSOPs=5
+const CATEGORY_DEFAULT_PRIORITY = {
+  brandVoice:        10,
+  bannedPhrases:      9,
+  eventStandards:     8,
+  communityRules:     8,
+  pricingStrategy:    7,
+  audienceProfiles:   7,
+  contentFrameworks:  6,
+  operationalSOPs:    5,
+};
+
 const BRAND_MEMORY = [
   {
     key: "takers_lifestyle_brand",
-    category: "brand_voice",
+    category: "brandVoice",
+    priority: 10,
     title: "TakersLifestyle Brand Voice",
     content: `TakersLifestyle is the personal brand of the founder.
 Energy: Ambition, drive, relentless execution.
@@ -415,7 +440,8 @@ Visual: Panda mascot, black/white/red, high-contrast premium aesthetic.`,
   },
   {
     key: "all_access_winnipeg_brand",
-    category: "brand_voice",
+    category: "brandVoice",
+    priority: 10,
     title: "ALL ACCESS Winnipeg Brand Voice",
     content: `ALL ACCESS Winnipeg is a non-profit community platform.
 Mission: Safe, inclusive, accessible experiences for youth and young adults.
@@ -433,7 +459,8 @@ Production URL: allaccesswinnipeg.ca`,
   },
   {
     key: "brand_separation",
-    category: "brand_voice",
+    category: "brandVoice",
+    priority: 10,
     title: "Brand Separation Rule (Critical)",
     content: `CRITICAL: Two brands, two completely different voices.
 TakersLifestyle → Founder personal brand → "TAKE IT." → Bold, status, ambition.
@@ -442,7 +469,8 @@ Never mix these. Always ask: which brand is this for? Then match the voice preci
   },
   {
     key: "target_audience",
-    category: "audience",
+    category: "audienceProfiles",
+    priority: 7,
     title: "Target Audience",
     content: `ALL ACCESS Winnipeg primary audience:
 - Age: 19-35, Winnipeg-based
@@ -460,7 +488,8 @@ TakersLifestyle audience:
   },
   {
     key: "current_events_2026",
-    category: "events",
+    category: "eventStandards",
+    priority: 8,
     title: "Active Events (2026)",
     content: `Current ALL ACCESS Winnipeg events:
 1. VIP Launch Night — Members only, $45, June 14 2026
@@ -473,7 +502,8 @@ Max 5 tickets per purchase. All payments in CAD via Stripe.`,
   },
   {
     key: "membership_model",
-    category: "platform_rules",
+    category: "communityRules",
+    priority: 8,
     title: "Membership Model",
     content: `ALL ACCESS membership: $25/month CAD flat rate.
 Members receive: 15% off general ticket prices (server-side enforced) + perks (promo codes, partner discounts) + community feed access + early access to events.
@@ -482,25 +512,318 @@ Custom claims: { role: "admin"|"member", status: "active"|"inactive"|"past_due"|
   },
   {
     key: "content_pillars",
-    category: "content",
+    category: "contentFrameworks",
+    priority: 6,
     title: "Content Pillars",
     content: `TakersLifestyle: (1) Execution mindset (2) Brand building (3) Winnipeg story (4) Behind-the-scenes (5) Motivation / "TAKE IT."
 ALL ACCESS: (1) Event highlights (2) Community stories (3) Safety & inclusion (4) Winnipeg culture (5) Behind the scenes / non-profit mission`,
   },
   {
     key: "tech_stack",
-    category: "business",
-    title: "Tech Stack",
+    category: "operationalSOPs",
+    priority: 5,
+    title: "Tech Stack & Architecture",
     content: `Next.js 16 App Router, TypeScript, Tailwind CSS, Firebase Auth + Firestore, Stripe, Resend, Vercel, Anthropic Claude API.
-Takers AI collections: agents, agentInstructions, brandMemory, promptTemplates, conversations, savedOutputs, aiTasks, workflowRuns, feedbackLogs.
+Takers AI collections: agents, agentInstructions, brandMemory, promptTemplates, conversations, savedOutputs, aiTasks, workflowRuns, feedbackLogs, agentLogs, approvalQueue, workflowDefinitions.
 Production: allaccesswinnipeg.ca | GitHub: TakersLifestyle/all-access-os`,
   },
   {
     key: "revenue_model",
-    category: "business",
-    title: "Revenue Model",
+    category: "pricingStrategy",
+    priority: 7,
+    title: "Revenue Model & Pricing",
     content: `Revenue: (1) Memberships $25/mo (2) Event tickets $50-$80 general (3) Founding 15 at $300 flat (4) Future: sponsorships, grants, partnerships, merch.
-Non-profit — revenue reinvested into community. Grant targets: Manitoba arts/culture/youth development funds.`,
+Non-profit — revenue reinvested into community. Grant targets: Manitoba arts/culture/youth development funds.
+Pricing principles: Members always pay less. Never price events above $100 general without board approval. CAD only.`,
+  },
+  {
+    key: "event_standards",
+    category: "eventStandards",
+    priority: 8,
+    title: "Event Standards & Requirements",
+    content: `ALL ACCESS event standards:
+- Safety: Licensed venue, capacity limits enforced, 1 staff per 25 guests minimum
+- Inclusivity: Accessible venue required. No dress code discrimination.
+- Alcohol: Must have non-alcoholic options. Never market events as "open bar."
+- Photography: Announce photo consent at entrance. No photos of minors without guardian consent.
+- Pricing: Members 15% off enforced server-side. No exceptions.
+- Capacity: Max 5 tickets per purchase. No bulk sales without admin approval.
+- Communications: All event emails must go through Resend. Copy requires admin review.`,
+  },
+  {
+    key: "community_rules",
+    category: "communityRules",
+    priority: 8,
+    title: "Community Guidelines (Critical)",
+    content: `ALL ACCESS Winnipeg community rules — must be upheld in all content and communications:
+1. Safe space: Zero tolerance for harassment, discrimination, hate speech
+2. Inclusive: Welcome all backgrounds, ages 19+, abilities
+3. Non-profit mission: Never profit-first language. Community and impact first.
+4. Accessibility: Events must be physically and financially accessible where possible
+5. Consent: Explicit consent required for photos, data use, communications
+6. Moderation: Admins can remove content that violates safety guidelines without notice
+7. Members: Membership is support for the mission, not purchase of exclusivity`,
+  },
+  {
+    key: "operational_sops",
+    category: "operationalSOPs",
+    priority: 5,
+    title: "Operational SOPs",
+    content: `Key operational procedures:
+- Event creation: Admin creates in Firestore → Event appears on site → Ticket sales go live automatically
+- Ticket refunds: Contact hello@allaccesswinnipeg.ca within 48 hours of purchase for full refund
+- Member cancellations: Cancel via profile page. Access continues to period end. No prorating.
+- Social media posts: Draft in Takers AI → Save output → Admin reviews → Publish manually
+- Email sends: Draft via Marketing/Support agent → Submit to approval queue → Admin approves → Send via Resend
+- Incident response: Safety incidents at events → Document → Review within 24h → Update SOPs`,
+  },
+  {
+    key: "banned_phrases",
+    category: "bannedPhrases",
+    priority: 9,
+    title: "Banned Language & Phrases",
+    content: `NEVER use these phrases or concepts in ALL ACCESS Winnipeg copy or communications:
+BANNED PHRASES: "Exclusive" | "Elite only" | "Members only culture" | "Not for everyone" | "Move differently" | "Take Your Place" | "TAKE IT." | "VIPs only" | "Luxury experience" | "Premium access" | "Select few"
+BANNED CONCEPTS: Status-chasing language | Artificial scarcity without real capacity limits | Gatekeeping community based on anything other than age (19+) | Pressure-selling tactics | Fear of missing out framing that implies inferiority
+APPROVED ALTERNATIVES: "Open to everyone" | "Built for the community" | "Support the mission" | "Belong here" | "Safe spaces" | "Real connection"
+Note: "TAKE IT." and status-driven language belong exclusively to TakersLifestyle personal brand. Never on ALL ACCESS.`,
+  },
+];
+
+// ════════════════════════════════════════════════════════════════════════════
+// WORKFLOW DEFINITIONS — 4 reusable multi-step pipelines
+// ════════════════════════════════════════════════════════════════════════════
+
+const WORKFLOW_DEFINITIONS = [
+  {
+    name: "Event Launch Workflow",
+    description: "End-to-end pipeline from event concept to live promotion. Covers logistics, copy, social, and email.",
+    icon: "🎟",
+    category: "events",
+    estimatedMinutes: 25,
+    isActive: true,
+    steps: [
+      {
+        id: "event_brief",
+        name: "Event Brief",
+        description: "Capture event details and objectives",
+        agentRole: "events",
+        promptTemplate: `Create a structured event brief for "{{event_name}}" on {{event_date}} at {{venue}}.
+Include: overview, target audience, ticket pricing (member / general), capacity, key attractions, safety considerations, staffing needs.`,
+        requiresApproval: false,
+        outputKey: "event_brief",
+        order: 0,
+      },
+      {
+        id: "logistics_checklist",
+        name: "Logistics Checklist",
+        description: "Full run-of-show and pre-event checklist",
+        agentRole: "events",
+        promptTemplate: `Using this event brief: {{event_brief}}
+Generate a complete logistics checklist organized by: 30 days before / 14 days / 7 days / 48 hours / day of / day after.
+Include venue, safety, staffing, ticketing, guest experience, contingency plan.`,
+        requiresApproval: false,
+        outputKey: "logistics_checklist",
+        order: 1,
+      },
+      {
+        id: "promo_copy",
+        name: "Promotional Copy",
+        description: "Event page copy, social captions, and email",
+        agentRole: "content",
+        promptTemplate: `Using this event brief: {{event_brief}}
+Create: (1) Event page hero copy (headline + subheadline + 3 bullet highlights + CTA)
+(2) 3 Instagram captions (hype / community-first / urgency)
+(3) Email announcement subject line + preview text + body
+All copy: warm, inclusive, community-first. No exclusivity language.`,
+        requiresApproval: false,
+        outputKey: "promo_copy",
+        order: 2,
+      },
+      {
+        id: "launch_email",
+        name: "Launch Email — Approval Required",
+        description: "Draft launch email ready to send via Resend",
+        agentRole: "marketing",
+        promptTemplate: `Using this copy: {{promo_copy}}
+Format a final launch email for ALL ACCESS Winnipeg members.
+Subject line, preview text, HTML-friendly body with clear CTA button text.
+This email will be sent to all members. Ensure brand compliance and no banned phrases.`,
+        requiresApproval: true,
+        approvalType: "email_send",
+        outputKey: "launch_email",
+        order: 3,
+      },
+    ],
+  },
+  {
+    name: "Content Production Workflow",
+    description: "From topic idea to platform-ready content. Brief → draft → review → schedule.",
+    icon: "✏️",
+    category: "content",
+    estimatedMinutes: 20,
+    isActive: true,
+    steps: [
+      {
+        id: "content_brief",
+        name: "Content Brief",
+        description: "Define topic, angle, platform, and goal",
+        agentRole: "content",
+        promptTemplate: `Create a content brief for: {{topic}}
+Platform: {{platform}} | Goal: {{goal}} | Brand: {{brand}}
+Include: hook options (3), key message, supporting points (3-5), CTA, hashtag strategy.`,
+        requiresApproval: false,
+        outputKey: "content_brief",
+        order: 0,
+      },
+      {
+        id: "draft_content",
+        name: "Draft Content",
+        description: "Full content draft based on brief",
+        agentRole: "content",
+        promptTemplate: `Using this brief: {{content_brief}}
+Write the full content piece. Platform: {{platform}}.
+For video: script with timestamps. For post: caption + carousel copy. For blog: full article.
+Optimize for engagement. Follow ALL ACCESS brand voice if brand = ALL ACCESS.`,
+        requiresApproval: false,
+        outputKey: "draft_content",
+        order: 1,
+      },
+      {
+        id: "seo_and_hashtags",
+        name: "SEO & Hashtags",
+        description: "SEO title, description, and hashtag research",
+        agentRole: "marketing",
+        promptTemplate: `For this content: {{draft_content}}
+Platform: {{platform}}. Brand: {{brand}}.
+Provide: (1) SEO title options (3) (2) Meta description (3) 20 hashtags ranked by reach (4) Alt text if image-based (5) Best posting times.`,
+        requiresApproval: false,
+        outputKey: "seo_data",
+        order: 2,
+      },
+      {
+        id: "publish_approval",
+        name: "Publish Approval",
+        description: "Admin review before scheduling goes live",
+        agentRole: "operations",
+        promptTemplate: `Prepare a publish-ready summary for: {{draft_content}}
+Include: final copy, hashtags from {{seo_data}}, recommended posting time, any compliance flags.
+This is the final review checkpoint before publishing.`,
+        requiresApproval: true,
+        approvalType: "content_publish",
+        outputKey: "publish_ready",
+        order: 3,
+      },
+    ],
+  },
+  {
+    name: "YouTube Workflow",
+    description: "Full YouTube video pipeline: script, SEO, thumbnail brief, upload checklist.",
+    icon: "▶",
+    category: "content",
+    estimatedMinutes: 30,
+    isActive: true,
+    steps: [
+      {
+        id: "video_concept",
+        name: "Video Concept",
+        description: "Hook, angle, structure, and target outcome",
+        agentRole: "content",
+        promptTemplate: `Create a YouTube video concept for: {{topic}}
+Brand: {{brand}} (TakersLifestyle or ALL ACCESS). Target: {{target_audience}}.
+Deliver: (1) 5 title options (2) Hook (first 10 seconds script) (3) Video structure outline (4) Why this will perform (5) Call to action.`,
+        requiresApproval: false,
+        outputKey: "video_concept",
+        order: 0,
+      },
+      {
+        id: "full_script",
+        name: "Full Script",
+        description: "Word-for-word script with timestamps",
+        agentRole: "content",
+        promptTemplate: `Write a full YouTube script based on: {{video_concept}}
+Include: [HOOK 0:00-0:10] [INTRO 0:10-0:30] [MAIN CONTENT with timestamps] [CTA 2 mins before end] [OUTRO].
+Target length: {{target_length}} minutes.
+Write conversational, energetic. Match brand voice exactly.`,
+        requiresApproval: false,
+        outputKey: "full_script",
+        order: 1,
+      },
+      {
+        id: "youtube_seo",
+        name: "YouTube SEO Package",
+        description: "Title, description, tags, chapters",
+        agentRole: "marketing",
+        promptTemplate: `Create a complete YouTube SEO package for: {{video_concept}}
+Script summary: {{full_script}}
+Deliver: (1) Final title (A/B test 2 options) (2) Description (hook first, keywords, chapters, links) (3) Tags (25 tags) (4) Chapters with timestamps (5) Thumbnail text options (3).`,
+        requiresApproval: false,
+        outputKey: "youtube_seo",
+        order: 2,
+      },
+      {
+        id: "thumbnail_brief",
+        name: "Thumbnail Design Brief",
+        description: "Visual brief for thumbnail creation",
+        agentRole: "content",
+        promptTemplate: `Create a thumbnail design brief for: {{video_concept}}
+Options from SEO: {{youtube_seo}}
+Deliver: (1) Concept (what's in the image) (2) Text overlay (3) Color scheme + brand alignment (4) Emotion/expression direction (5) Reference style (5) What to AVOID.`,
+        requiresApproval: false,
+        outputKey: "thumbnail_brief",
+        order: 3,
+      },
+    ],
+  },
+  {
+    name: "Member Support Workflow",
+    description: "Triage and resolve member support issues. Classify → draft response → escalate or close.",
+    icon: "💬",
+    category: "support",
+    estimatedMinutes: 10,
+    isActive: true,
+    steps: [
+      {
+        id: "classify_issue",
+        name: "Classify Issue",
+        description: "Determine issue type, priority, and response path",
+        agentRole: "support",
+        promptTemplate: `Classify this member support issue: {{issue_description}}
+Member: {{member_name}} | Plan: {{membership_status}} | Issue date: {{issue_date}}.
+Deliver: (1) Issue category (billing/ticket/access/community/technical/other) (2) Priority (low/medium/high/critical) (3) Recommended resolution path (4) Escalation needed? (yes/no + why).`,
+        requiresApproval: false,
+        outputKey: "issue_classification",
+        order: 0,
+      },
+      {
+        id: "draft_response",
+        name: "Draft Response",
+        description: "Empathetic, brand-aligned response",
+        agentRole: "support",
+        promptTemplate: `Using classification: {{issue_classification}}
+Issue: {{issue_description}}
+Draft a member response. Tone: warm, empathetic, solution-focused. Non-profit community voice.
+Include: acknowledgment, explanation if applicable, resolution or next steps, CTA if needed.
+If refund/billing issue: follow platform policy (48h refund window for tickets, no prorating on memberships).`,
+        requiresApproval: false,
+        outputKey: "draft_response",
+        order: 1,
+      },
+      {
+        id: "review_and_send",
+        name: "Review & Send Approval",
+        description: "Admin reviews before sending to member",
+        agentRole: "support",
+        promptTemplate: `Final review of this support response: {{draft_response}}
+Issue: {{issue_description}} | Classification: {{issue_classification}}
+Check: brand voice compliance, policy accuracy, empathy tone, clear next steps.
+Flag any issues. Mark ready or flag for revision.`,
+        requiresApproval: true,
+        approvalType: "email_send",
+        outputKey: "final_response",
+        order: 2,
+      },
+    ],
   },
 ];
 
@@ -671,17 +994,109 @@ async function seedBrandMemory() {
   console.log("\n🧠 Seeding brand memory…");
   const memRef = db.collection("brandMemory");
   const existing = await memRef.get();
+  const now = new Date().toISOString();
+
   if (!existing.empty) {
-    console.log(`   ⚠ ${existing.size} blocks already exist — skipping.`);
+    // Phase 3 migration: update existing docs to new schema
+    // Add priority, version, isActive fields; migrate old category names
+    console.log(`   🔄 Migrating ${existing.size} existing blocks to Phase 3 schema…`);
+    const batch = db.batch();
+    let migrated = 0;
+
+    for (const doc of existing.docs) {
+      const data = doc.data();
+      const updates = {};
+
+      // Migrate old category names
+      if (data.category && LEGACY_CATEGORY_MAP[data.category]) {
+        updates.category = LEGACY_CATEGORY_MAP[data.category];
+        migrated++;
+      }
+
+      // Add missing fields with defaults
+      if (data.priority == null) {
+        const cat = updates.category ?? data.category;
+        updates.priority = CATEGORY_DEFAULT_PRIORITY[cat] ?? 5;
+      }
+      if (data.version == null) updates.version = 1;
+      if (data.isActive == null) updates.isActive = true;
+      if (data.updatedBy == null) updates.updatedBy = "seed-v3";
+
+      if (Object.keys(updates).length > 0) {
+        batch.update(doc.ref, updates);
+      }
+    }
+
+    await batch.commit();
+    console.log(`   ✅ Migrated ${migrated} category names + added priority/version/isActive fields`);
+
+    // Add new memory blocks that don't exist yet (by key)
+    const existingKeys = new Set(existing.docs.map((d) => d.data().key));
+    const newBlocks = BRAND_MEMORY.filter((m) => !existingKeys.has(m.key));
+
+    if (newBlocks.length > 0) {
+      const addBatch = db.batch();
+      for (const mem of newBlocks) {
+        addBatch.set(memRef.doc(), {
+          ...mem,
+          version: 1,
+          isActive: true,
+          updatedAt: now,
+          updatedBy: "seed-v3",
+        });
+      }
+      await addBatch.commit();
+      console.log(`   ✅ Added ${newBlocks.length} new memory blocks (${newBlocks.map((m) => m.key).join(", ")})`);
+    } else {
+      console.log("   ✓ No new memory blocks to add.");
+    }
     return;
   }
-  const now = new Date().toISOString();
+
+  // Fresh seed
   const batch = db.batch();
   for (const mem of BRAND_MEMORY) {
-    batch.set(memRef.doc(), { ...mem, updatedAt: now });
+    batch.set(memRef.doc(), {
+      ...mem,
+      version: 1,
+      isActive: true,
+      updatedAt: now,
+      updatedBy: "seed-v3",
+    });
   }
   await batch.commit();
   console.log(`   ✅ ${BRAND_MEMORY.length} brand memory blocks created`);
+}
+
+async function seedWorkflowDefinitions() {
+  console.log("\n⟳  Seeding workflow definitions…");
+  const defsRef = db.collection("workflowDefinitions");
+  const existing = await defsRef.get();
+  const now = new Date().toISOString();
+
+  if (!existing.empty) {
+    const existingNames = new Set(existing.docs.map((d) => d.data().name));
+    const newDefs = WORKFLOW_DEFINITIONS.filter((d) => !existingNames.has(d.name));
+    if (newDefs.length === 0) {
+      console.log(`   ✓ All ${existing.size} workflow definitions already seeded — skipping.`);
+      return;
+    }
+    console.log(`   ➕ Adding ${newDefs.length} missing workflow definition(s)…`);
+    for (const def of newDefs) {
+      const approvalCount = def.steps.filter((s) => s.requiresApproval).length;
+      await defsRef.doc().set({ ...def, approvalCount, createdAt: now, updatedAt: now });
+      console.log(`   ✅ ${def.name}`);
+    }
+    return;
+  }
+
+  const batch = db.batch();
+  for (const def of WORKFLOW_DEFINITIONS) {
+    const approvalCount = def.steps.filter((s) => s.requiresApproval).length;
+    batch.set(defsRef.doc(), { ...def, approvalCount, createdAt: now, updatedAt: now });
+  }
+  await batch.commit();
+  console.log(`   ✅ ${WORKFLOW_DEFINITIONS.length} workflow definitions created`);
 }
 
 async function seedTemplates() {
@@ -705,18 +1120,22 @@ async function seedTemplates() {
 // RUN
 // ════════════════════════════════════════════════════════════════════════════
 
-console.log("🚀 Takers AI Command Center — Seed v2");
+console.log("🚀 Takers AI Command Center — Seed v3 (Phase 3 Architecture)");
 console.log("   Firebase project:", JSON.parse(serviceAccountRaw).project_id);
 
 try {
   await seedAgents();
   await seedAgentInstructions();
   await seedBrandMemory();
+  await seedWorkflowDefinitions();
   await seedTemplates();
 
   console.log("\n✅ Seed complete!");
-  console.log("   Open /takers-ai/agents to see the full agent roster.");
-  console.log("   Open /takers-ai/chat and use the Takers Operator to test routing.\n");
+  console.log("   Open /takers-ai/agents      → full agent roster with 4-pillar editor");
+  console.log("   Open /takers-ai/workflows   → workflow definitions + run history");
+  console.log("   Open /takers-ai/memory      → 8-category brand memory with priorities");
+  console.log("   Open /takers-ai/approvals   → approval queue");
+  console.log("   Open /takers-ai/logs        → observability dashboard\n");
 } catch (err) {
   console.error("\n❌ Seed failed:", err);
   process.exit(1);
