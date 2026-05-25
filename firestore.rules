@@ -208,6 +208,37 @@ service cloud.firestore {
     }
 
 
+    // ─── Takers AI Command Center ────────────────────────────
+    // All collections admin-only. API routes double-verify via adminAuth().
+
+    match /agents/{agentId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /brandMemory/{memoryId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /promptTemplates/{templateId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /conversations/{conversationId} {
+      allow read, write: if isAdmin();
+      match /messages/{messageId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    match /savedOutputs/{outputId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /aiTasks/{taskId} {
+      allow read, write: if isAdmin();
+    }
+
+
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
