@@ -166,6 +166,167 @@ async function authFetch(path: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+// ── Conversation sidebar types + component ───────────────────────────────────
+
+interface ConvSummary {
+  id: string;
+  title: string;
+  lastMessage?: string;
+  agentRole?: string;
+  agentName?: string;
+  messageCount?: number;
+  updatedAt?: string;
+  createdAt?: string;
+}
+
+function relativeTime(iso?: string): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+function ConversationSidebar({
+  conversations,
+  activeConvId,
+  search,
+  loading,
+  onSearch,
+  onSelect,
+  onNewChat,
+  onDelete,
+}: {
+  conversations: ConvSummary[];
+  activeConvId: string;
+  search: string;
+  loading: boolean;
+  onSearch: (q: string) => void;
+  onSelect: (id: string) => void;
+  onNewChat: () => void;
+  onDelete: (id: string) => void;
+}) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const filtered = search.trim()
+    ? conversations.filter(
+        (c) =>
+          c.title.toLowerCase().includes(search.toLowerCase()) ||
+          (c.lastMessage ?? "").toLowerCase().includes(search.toLowerCase())
+      )
+    : conversations;
+
+  async function handleDelete(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if (!confirm("Delete this conversation?")) return;
+    setDeletingId(id);
+    try {
+      await authFetch(`/api/takers-ai/conversations?id=${id}`, { method: "DELETE" });
+      onDelete(id);
+    } catch {
+      /* ignore */
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col w-64 shrink-0 border-r border-white/[0.07] bg-[#0a0a12] h-full">
+      {/* Header */}
+      <div className="h-14 flex items-center gap-2 px-3 border-b border-white/[0.07] shrink-0">
+        <button
+          onClick={onNewChat}
+          className="flex-1 flex items-center gap-2 text-xs text-white/40 hover:text-white/80 px-2 py-1.5 rounded-lg hover:bg-white/5 transition border border-transparent hover:border-white/10"
+        >
+          <span className="text-sm">+</span>
+          <span>New chat</span>
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2 border-b border-white/[0.05] shrink-0">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Search chats…"
+          className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-white/20 transition"
+        />
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto py-1">
+        {loading && filtered.length === 0 && (
+          <div className="space-y-1 px-2 pt-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-12 rounded-lg bg-white/[0.03] animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+            <span className="text-2xl mb-2 opacity-30">◎</span>
+            <p className="text-white/20 text-xs">
+              {search ? "No matching chats" : "No conversations yet"}
+            </p>
+            {!search && (
+              <p className="text-white/15 text-[11px] mt-1">Start chatting to save history</p>
+            )}
+          </div>
+        )}
+
+        {filtered.map((conv) => {
+          const isActive = conv.id === activeConvId;
+          return (
+            <button
+              key={conv.id}
+              onClick={() => onSelect(conv.id)}
+              className={`w-full text-left px-3 py-2.5 rounded-lg mx-1 group relative transition ${
+                isActive
+                  ? "bg-red-600/15 border border-red-600/20"
+                  : "hover:bg-white/[0.04] border border-transparent"
+              }`}
+              style={{ width: "calc(100% - 8px)" }}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <p className={`text-xs font-medium truncate leading-tight ${isActive ? "text-white/90" : "text-white/55 group-hover:text-white/75"}`}>
+                  {conv.title || "Untitled chat"}
+                </p>
+                <span className="text-[10px] text-white/20 shrink-0 mt-0.5">
+                  {relativeTime(conv.updatedAt)}
+                </span>
+              </div>
+              {conv.lastMessage && (
+                <p className="text-[11px] text-white/20 truncate mt-0.5 leading-tight">
+                  {conv.lastMessage}
+                </p>
+              )}
+              {conv.agentName && (
+                <p className="text-[10px] text-white/15 mt-0.5">{conv.agentName}</p>
+              )}
+              {/* Delete button */}
+              <button
+                onClick={(e) => handleDelete(e, conv.id)}
+                disabled={deletingId === conv.id}
+                className="absolute right-2 top-2.5 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition text-xs"
+                title="Delete conversation"
+              >
+                {deletingId === conv.id ? "…" : "×"}
+              </button>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Routing indicator ─────────────────────────────────────────────────────────
 function RoutingBadge({ role, name, reason }: { role: AgentRole; name: string; reason: string }) {
   const [showReason, setShowReason] = useState(false);
@@ -498,6 +659,12 @@ function ChatInner() {
   const [savedToast, setSavedToast] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
 
+  // ── Conversation sidebar state ──────────────────────────────────────────────
+  const [showConvSidebar, setShowConvSidebar] = useState(true);
+  const [recentConvs, setRecentConvs] = useState<ConvSummary[]>([]);
+  const [convSearch, setConvSearch] = useState("");
+  const [convsLoading, setConvsLoading] = useState(false);
+
   // ── Attachment state ────────────────────────────────────────────────────────
   const [attachments, setAttachments] = useState<AttachmentUpload[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -697,6 +864,40 @@ function ChatInner() {
   }
 
   // Load agents + templates
+  // ── Conversation helpers ────────────────────────────────────────────────────
+
+  const fetchConversations = useCallback(async () => {
+    setConvsLoading(true);
+    try {
+      const data = await authFetch("/api/takers-ai/conversations?limit=40");
+      setRecentConvs(data.conversations ?? []);
+    } catch {
+      // fail silently — sidebar just shows empty
+    } finally {
+      setConvsLoading(false);
+    }
+  }, []);
+
+  async function loadConversation(id: string) {
+    if (id === conversationId) return; // already loaded
+    setLoadingConv(true);
+    setShowConvSidebar(false); // close on mobile after selection
+    try {
+      const { conversation, messages: msgs } = await authFetch(
+        `/api/takers-ai/conversations/${id}`
+      );
+      setConversationId(id);
+      setSelectedAgentId(conversation.agentId);
+      setMessages((msgs ?? []).map((m: ChatMessage) => ({ ...m })));
+      setInput("");
+      clearAllAttachments();
+    } catch {
+      // fail silently — conversation stays as is
+    } finally {
+      setLoadingConv(false);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
       authFetch("/api/takers-ai/agents"),
@@ -712,18 +913,17 @@ function ChatInner() {
     }).catch(() => {});
   }, []);
 
-  // Load existing conversation
+  // Fetch recent conversations on mount + when convSearch changes
   useEffect(() => {
-    if (!conversationId) return;
-    setLoadingConv(true);
-    authFetch(`/api/takers-ai/conversations/${conversationId}`)
-      .then(({ conversation, messages: msgs }) => {
-        setSelectedAgentId(conversation.agentId);
-        setMessages((msgs ?? []).map((m: ChatMessage) => ({ ...m })));
-      })
-      .catch(() => {})
-      .finally(() => setLoadingConv(false));
-  }, [conversationId]);
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Load existing conversation (from URL param — deep-link support)
+  useEffect(() => {
+    if (!initialConvId || conversationId) return;
+    loadConversation(initialConvId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConvId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -821,6 +1021,8 @@ function ChatInner() {
               if (parsed.conversationId) {
                 newConvId = parsed.conversationId;
                 setConversationId(parsed.conversationId);
+                // Refresh sidebar after server confirms conversation ID
+                fetchConversations();
               }
             }
 
@@ -867,8 +1069,14 @@ function ChatInner() {
   }
 
   function handleNewChat() {
-    setMessages([]); setConversationId(""); setStreamingText(""); setInput("");
-    setStreamingAgent(null); clearAllAttachments(); setAttachError(null);
+    setMessages([]);
+    setConversationId("");
+    setStreamingText("");
+    setInput("");
+    setStreamingAgent(null);
+    clearAllAttachments();
+    setAttachError(null);
+    setShowConvSidebar(false); // close mobile overlay
     inputRef.current?.focus();
   }
 
@@ -879,35 +1087,85 @@ function ChatInner() {
     ? AGENT_ROLE_COLORS[streamingAgent.role] ?? "bg-red-600"
     : AGENT_ROLE_COLORS[selectedAgent?.role as AgentRole] ?? "bg-red-600";
 
+  const convTitle = recentConvs.find((c) => c.id === conversationId)?.title;
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full overflow-hidden">
+
+      {/* ── Mobile sidebar overlay backdrop ── */}
+      {showConvSidebar && (
+        <div
+          className="md:hidden fixed inset-0 z-20 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowConvSidebar(false)}
+        />
+      )}
+
+      {/* ── Conversation sidebar ── */}
+      <div className={`
+        ${showConvSidebar ? "flex" : "hidden md:flex"}
+        absolute md:relative inset-y-0 left-0 z-30 md:z-auto
+        flex-col w-64 shrink-0
+      `}>
+        <ConversationSidebar
+          conversations={recentConvs}
+          activeConvId={conversationId}
+          search={convSearch}
+          loading={convsLoading}
+          onSearch={setConvSearch}
+          onSelect={loadConversation}
+          onNewChat={handleNewChat}
+          onDelete={(id) => {
+            setRecentConvs((prev) => prev.filter((c) => c.id !== id));
+            if (id === conversationId) handleNewChat();
+          }}
+        />
+      </div>
+
+      {/* ── Main chat area ── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
       {/* ── Top bar ── */}
-      <div className="h-14 shrink-0 border-b border-white/[0.07] flex items-center gap-4 px-5">
-        <div className="flex items-center gap-2">
+      <div className="h-14 shrink-0 border-b border-white/[0.07] flex items-center gap-3 px-4">
+        {/* Mobile: sidebar toggle */}
+        <button
+          onClick={() => setShowConvSidebar((v) => !v)}
+          className="md:hidden w-8 h-8 flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/5 rounded-lg transition shrink-0"
+          title="Conversations"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/>
+          </svg>
+        </button>
+
+        <div className="flex items-center gap-2 min-w-0">
           {selectedAgent && (
-            <div className={`w-7 h-7 rounded-lg ${selectedAgent.color} bg-opacity-20 border border-white/10 flex items-center justify-center text-base`}>
+            <div className={`w-7 h-7 rounded-lg ${selectedAgent.color} bg-opacity-20 border border-white/10 flex items-center justify-center text-base shrink-0`}>
               {selectedAgent.icon}
             </div>
           )}
           <select value={selectedAgentId} onChange={(e) => setSelectedAgentId(e.target.value)}
-            className="bg-transparent text-white/70 text-sm font-medium focus:outline-none cursor-pointer hover:text-white transition">
+            className="bg-transparent text-white/70 text-sm font-medium focus:outline-none cursor-pointer hover:text-white transition max-w-[130px] truncate">
             {agents.filter((a) => a.isActive).map((a) => (
               <option key={a.id} value={a.id} className="bg-[#13131f]">{a.name}</option>
             ))}
           </select>
         </div>
+
         {isOperator && (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-red-600/30 bg-red-600/10 text-red-400 font-bold hidden sm:block">
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-red-600/30 bg-red-600/10 text-red-400 font-bold hidden sm:block shrink-0">
             AUTO-ROUTES
           </span>
         )}
-        {selectedAgent && !isOperator && (
-          <span className="text-white/20 text-xs hidden sm:block">{selectedAgent.description}</span>
+
+        {/* Conversation title (center) */}
+        {convTitle && (
+          <span className="flex-1 text-white/30 text-xs truncate text-center hidden sm:block px-2">
+            {convTitle}
+          </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
-          {conversationId && (
-            <span className="text-white/20 text-[11px] font-mono hidden sm:block">{conversationId.slice(0, 8)}…</span>
-          )}
+        {!convTitle && <div className="flex-1" />}
+
+        <div className="flex items-center gap-2 shrink-0">
           <button onClick={handleNewChat}
             className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/25 text-white/40 hover:text-white transition">
             New chat
@@ -1162,6 +1420,7 @@ function ChatInner() {
           ✓ Output saved
         </div>
       )}
+      </div>
     </div>
   );
 }

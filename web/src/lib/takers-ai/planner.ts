@@ -153,6 +153,7 @@ AVAILABLE AGENT ROLES:
 - strategy: business strategy, SWOT, revenue planning, partnerships, competitive analysis
 - developer: Next.js, Firebase, TypeScript, API design, code architecture
 - operations: SOPs, weekly planning, task delegation, team coordination, reporting
+- creative: flyer copy, creative briefs, image prompts, Canva direction, campaign assets, visual concepts
 - operator: general coordination, multi-topic synthesis, routing decisions
 
 PLAN STRATEGIES:

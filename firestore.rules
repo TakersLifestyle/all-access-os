@@ -367,6 +367,49 @@ service cloud.firestore {
     }
 
 
+    // ── Creative & Event Intelligence ─────────────────────────
+
+    // Creative briefs — AI-generated flyer/campaign briefs
+    match /creativeBriefs/{briefId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Image prompts — AI-generated image generation prompts
+    match /imagePrompts/{promptId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Generated assets — saved AI-generated content (copy, prompts, briefs)
+    match /generatedAssets/{assetId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Event facts — verified event data extracted from uploads or manually set
+    match /eventFacts/{factId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // Event knowledge — structured event intelligence records
+    match /eventKnowledge/{knowledgeId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Fact checks — hallucination validation logs per agent output
+    match /factChecks/{checkId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;  // Immutable audit record
+    }
+
+    // Brand memory versions (nested under brandMemory — already covered above)
+    // Explicitly covered here for new /versions subcollection queries
+    match /brandMemory/{memoryId}/versions/{versionId} {
+      allow read, write: if isAdmin();
+    }
+
+
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

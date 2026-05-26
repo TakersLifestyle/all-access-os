@@ -50,6 +50,10 @@ import {
   buildMultimodalSystemContext,
   writeMultimodalAnalytics,
 } from "@/lib/takers-ai/multimodal";
+import {
+  buildEventKnowledgeContext,
+  agentNeedsEventKnowledge,
+} from "@/lib/takers-ai/event-knowledge";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -110,6 +114,7 @@ Agents:
 - strategy: business strategy, SWOT, revenue planning, partnerships, grants, sponsorships, competitive analysis
 - developer: Next.js, Firebase, Firestore rules, TypeScript, API design, implementation prompts, bug analysis
 - operations: SOPs, weekly planning, task delegation, moderation workflows, reporting, team coordination
+- creative: flyer design, creative briefs, image generation prompts, Canva prompts, poster copy, campaign assets, visual direction
 - operator: general questions, multi-topic, unclear request, meta questions about the system
 
 Confidence scoring:
@@ -650,6 +655,23 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // ── Event knowledge injection (content/marketing/events/operator) ──────
+        // Injects live event data from Firestore to prevent hallucinated event details.
+        let eventKnowledgeCount = 0;
+        if (agentNeedsEventKnowledge(activeAgent.role as string)) {
+          try {
+            log("event-knowledge", "start", { role: activeAgent.role });
+            const { block, eventCount } = await buildEventKnowledgeContext(db);
+            if (block) {
+              systemPrompt = systemPrompt + block;
+              eventKnowledgeCount = eventCount;
+            }
+            log("event-knowledge", "ok", { eventCount });
+          } catch (evtErr) {
+            log("event-knowledge", "warn", { err: String(evtErr) });
+          }
+        }
+
         sendStage("system-prompt", Date.now() - stage6Start, {
           memoryBlockCount,
           knowledgeChunksInjected,
@@ -673,11 +695,14 @@ export async function POST(req: NextRequest) {
               const batch = db.batch();
               batch.set(convRef, {
                 conversationId: convRef.id,
+                userId: decoded.uid,              // ← cross-device continuity
                 agentId: activeAgentId,
                 agentRole: activeAgent.role,
-                title: userMessage.slice(0, 60) + (userMessage.length > 60 ? "…" : ""),
+                agentName: activeAgent.name,
+                title: userMessage.slice(0, 80) + (userMessage.length > 80 ? "…" : ""),
                 messageCount: messages.length,
                 lastMessage: userMessage.slice(0, 120),
+                deviceSource: req.headers.get("user-agent")?.slice(0, 80) ?? null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
@@ -896,6 +921,7 @@ export async function POST(req: NextRequest) {
               maxTokens,
               memoryBlockCount,
               knowledgeChunksInjected,
+              eventKnowledgeCount,
               useKnowledge: useKnowledge ?? false,
               attachmentCount: attachments.length,
               totalDurationMs: Date.now() - requestStartedAt,
