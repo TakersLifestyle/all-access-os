@@ -7,6 +7,22 @@ const nextConfig: NextConfig = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Expose image provider type to the client bundle at build time.
+  // Reads server-side env vars during the Vercel build and bakes the result
+  // into process.env.NEXT_PUBLIC_IMAGE_PROVIDER — no runtime API call needed.
+  // Values: "openai" | "replicate" | "stability" | "none"
+  // ─────────────────────────────────────────────────────────────────────────
+  env: {
+    NEXT_PUBLIC_IMAGE_PROVIDER: process.env.OPENAI_API_KEY
+      ? "openai"
+      : process.env.REPLICATE_API_KEY
+      ? "replicate"
+      : process.env.STABILITY_API_KEY
+      ? "stability"
+      : "none",
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
   // 301 Permanent redirects — SEO-safe, HTTPS-enforced
   //
   // allaccesswinnipeg.com  →  allaccesswinnipeg.ca  (all paths preserved)

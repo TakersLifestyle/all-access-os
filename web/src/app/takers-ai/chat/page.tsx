@@ -553,6 +553,17 @@ interface UIMessage extends ChatMessage {
 // Detects creative output (canva prompts, image prompts, flyer concepts)
 // and surfaces copy + save buttons for each actionable section.
 
+// ── Image provider detection (baked at build time via next.config env) ────────
+// "openai" | "replicate" | "stability" | "none"
+const IMAGE_PROVIDER = (process.env.NEXT_PUBLIC_IMAGE_PROVIDER ?? "none") as
+  | "openai" | "replicate" | "stability" | "none";
+const HAS_IMAGE_PROVIDER = IMAGE_PROVIDER !== "none";
+const IMAGE_PROVIDER_LABEL: Record<string, string> = {
+  openai:    "OpenAI DALL-E 3",
+  replicate: "Flux via Replicate",
+  stability: "Stability AI Ultra",
+};
+
 const CANVA_PROMPT_RE = /(?:\*{1,2}CANVA(?:[- ]READY)?(?:\s+DESIGN)?\s*PROMPT\*{0,2}|Canva(?:[- ]ready)?\s+(?:Design\s+)?Prompt)[\s:*]+([^\n*]{20,})/i;
 const IMAGE_PROMPT_RE = /(?:\*{1,2}IMAGE(?:\s+GEN(?:ERATION)?)?\s*PROMPT\*{0,2}|(?:DALL-?E|Midjourney|Flux|Stable\s+Diffusion)\s+Prompt|Image\s+Gen(?:eration)?\s+Prompt)[\s:*]+([^\n*]{20,})/i;
 const CREATIVE_ROLES = new Set(["creative", "content", "marketing", "image"]);
@@ -702,8 +713,14 @@ function CreativeActionBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 mt-2 px-1">
-      {/* Render buttons — generate actual images */}
-      {imagePrompt && (
+      {/*
+        When a provider is connected, the ImageRenderWidget above handles rendering
+        automatically. Hide Bing fallback and raw prompt copy buttons — users
+        should never need to manually copy and paste prompts.
+
+        When no provider: show full fallback set so they can still render externally.
+      */}
+      {!HAS_IMAGE_PROVIDER && imagePrompt && (
         <button
           onClick={openInBing}
           className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:text-violet-100 hover:border-violet-400/50 hover:bg-violet-500/20 transition font-medium"
@@ -712,17 +729,20 @@ function CreativeActionBar({
           <span>Render in Bing</span>
         </button>
       )}
+
+      {/* Open Canva — always useful for layout editing even when provider renders */}
       {canvaPrompt && (
         <button
           onClick={openInCanva}
           className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-purple-500/25 bg-purple-500/[0.08] text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40 hover:bg-purple-500/15 transition"
         >
           <span>🎨</span>
-          <span>Open Canva</span>
+          <span>Open in Canva</span>
         </button>
       )}
-      {/* Copy buttons */}
-      {canvaPrompt && (
+
+      {/* Copy buttons — only shown when no provider (manual workflow fallback) */}
+      {!HAS_IMAGE_PROVIDER && canvaPrompt && (
         <button
           onClick={copyCanva}
           className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 hover:border-white/20 transition"
@@ -731,7 +751,7 @@ function CreativeActionBar({
           <span>{canvaCopied ? "Canva Copied!" : "Copy Canva Prompt"}</span>
         </button>
       )}
-      {imagePrompt && (
+      {!HAS_IMAGE_PROVIDER && imagePrompt && (
         <button
           onClick={copyImage}
           className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 hover:border-white/20 transition"
@@ -740,6 +760,8 @@ function CreativeActionBar({
           <span>{imgCopied ? "Prompt Copied!" : "Copy Image Prompt"}</span>
         </button>
       )}
+
+      {/* Save Asset — always available */}
       <button
         onClick={saveAsset}
         disabled={saving || saved}
@@ -895,50 +917,78 @@ function ImageRenderWidget({
 
   const statusInfo = RENDER_STATUS_LABELS[state];
 
-  // Status pill — always shown at the top of the widget
-  const StatusPill = (
-    <div className="flex items-center gap-1.5 mb-1.5">
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.dot}`} />
-      <span className="text-[10px] text-white/30 font-medium tracking-wide uppercase">
-        {statusInfo.label}
-      </span>
+  // ── Provider badge — shown in header of every widget state ──
+  const ProviderBadge = (
+    <div className="flex items-center gap-2 mb-2">
+      {/* Render status pill */}
+      <div className="flex items-center gap-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.dot}`} />
+        <span className="text-[10px] text-white/30 font-medium tracking-wide uppercase">
+          {statusInfo.label}
+        </span>
+      </div>
+
+      <span className="text-white/10">·</span>
+
+      {/* Provider connected/missing badge */}
+      {HAS_IMAGE_PROVIDER ? (
+        <div className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400/80">
+          <span>🟢</span>
+          <span>{IMAGE_PROVIDER_LABEL[IMAGE_PROVIDER] ?? "Provider"} Connected</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400/70">
+          <span>🔴</span>
+          <span>No Image Provider</span>
+        </div>
+      )}
     </div>
   );
 
-  // ── Detected (brief flash before idle/auto-render kicks in) ──
+  // ── Detected (brief flash before auto-render kicks in) ──
   if (state === "detected") {
     return (
       <div className="mt-2 px-1 space-y-1">
-        {StatusPill}
+        {ProviderBadge}
         <div className="flex items-center gap-1.5 text-[11px] text-violet-300/50">
           <span className="animate-pulse">◎</span>
-          <span>Image prompt found — preparing render…</span>
+          <span>
+            {HAS_IMAGE_PROVIDER
+              ? "Image prompt detected — auto-rendering…"
+              : "Image prompt detected — ready to render."}
+          </span>
         </div>
       </div>
     );
   }
 
-  // ── Idle (manual trigger — history messages or no autoRender) ──
+  // ── Idle (history messages: show generate button, Bing only if no provider) ──
   if (state === "idle") {
     return (
       <div className="mt-2 px-1 space-y-1.5">
-        {StatusPill}
-        <div className="flex items-center gap-2">
+        {ProviderBadge}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={generate}
             className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 text-violet-200 hover:bg-violet-600/25 hover:border-violet-400/60 transition font-medium"
           >
             <span>⚡</span>
-            <span>Generate Image Now</span>
+            <span>Generate Image</span>
           </button>
-          <span className="text-white/15 text-[10px]">or</span>
-          <button
-            onClick={openInBingDirect}
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
-          >
-            <span>🖼</span>
-            <span>Render in Bing</span>
-          </button>
+
+          {/* Bing fallback only shown when no provider is connected */}
+          {!HAS_IMAGE_PROVIDER && (
+            <>
+              <span className="text-white/15 text-[10px]">or</span>
+              <button
+                onClick={openInBingDirect}
+                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+              >
+                <span>🖼</span>
+                <span>Render in Bing (Free)</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -948,12 +998,11 @@ function ImageRenderWidget({
   if (state === "loading") {
     return (
       <div className="mt-2 px-1 space-y-1.5">
-        {StatusPill}
+        {ProviderBadge}
         <div className="flex items-center gap-2 text-[11px] text-white/40">
           <span className="animate-spin inline-block">⟳</span>
           <span>{stageMsg}</span>
         </div>
-        {/* Progress track */}
         <div className="h-0.5 w-48 rounded-full bg-white/[0.05] overflow-hidden">
           <div className="h-full bg-violet-500/60 rounded-full animate-[pulse_1.5s_ease-in-out_infinite] w-1/2" />
         </div>
@@ -965,7 +1014,7 @@ function ImageRenderWidget({
   if (state === "rendered" && imageUrl) {
     return (
       <div className="mt-2 space-y-2 px-1">
-        {StatusPill}
+        {ProviderBadge}
         <div className="rounded-xl overflow-hidden border border-white/10 max-w-sm shadow-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt="Generated image" className="w-full" />
@@ -993,32 +1042,53 @@ function ImageRenderWidget({
     );
   }
 
-  // ── No provider / Error ──
+  // ── No provider — full fallback (Bing + instructions) ──
+  if (state === "no_provider") {
+    return (
+      <div className="mt-2 px-1 space-y-2">
+        {ProviderBadge}
+        <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/15 space-y-1.5">
+          <p className="text-[10px] text-amber-400/80 font-semibold">
+            OPENAI_API_KEY missing in Vercel environment.
+          </p>
+          <p className="text-[10px] text-white/30 leading-relaxed">
+            Add <code className="text-amber-300/60 bg-amber-500/10 px-1 py-0.5 rounded">OPENAI_API_KEY</code> to{" "}
+            <strong className="text-white/40">Vercel → Settings → Environment Variables</strong>{" "}
+            → redeploy. Images will render automatically after that.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generate}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+          >
+            <span>↺</span>
+            <span>Retry</span>
+          </button>
+          <button
+            onClick={openInBingDirect}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 transition font-medium"
+          >
+            <span>🖼</span>
+            <span>Render Free in Bing Image Creator</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error (provider exists but call failed — no Bing, just retry) ──
   return (
     <div className="mt-2 px-1 space-y-1.5">
-      {StatusPill}
-      <p className="text-[10px] text-amber-400/80 font-semibold">
-        {state === "error" ? stageMsg : "OPENAI_API_KEY missing in Vercel environment."}
-      </p>
-      <p className="text-[10px] text-white/25">
-        Add <code className="text-amber-300/60">OPENAI_API_KEY</code> to Vercel project settings → redeploy → images render automatically.
-      </p>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={generate}
-          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
-        >
-          <span>↺</span>
-          <span>Retry</span>
-        </button>
-        <button
-          onClick={openInBingDirect}
-          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 transition"
-        >
-          <span>🖼</span>
-          <span>Render Free in Bing</span>
-        </button>
-      </div>
+      {ProviderBadge}
+      <p className="text-[10px] text-red-400/70 font-medium">{stageMsg}</p>
+      <button
+        onClick={generate}
+        className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+      >
+        <span>↺</span>
+        <span>Retry</span>
+      </button>
     </div>
   );
 }
@@ -1065,14 +1135,25 @@ function ImageGenerationPanel({
           <span>Use Reference Image</span>
         </button>
       </div>
-      {/* Provider status notice */}
-      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15 text-[10px] text-amber-400/60">
-        <span>⚡</span>
-        <span>
-          <strong>Render images:</strong> After generating, click &ldquo;Render in Bing&rdquo; button on the response — or add{" "}
-          <code className="text-amber-300/70">OPENAI_API_KEY</code> to Vercel for in-platform DALL-E rendering.
-        </span>
-      </div>
+      {/* Provider connection badge — green when connected, red with instructions when not */}
+      {HAS_IMAGE_PROVIDER ? (
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15 text-[10px] text-emerald-400/70">
+          <span>🟢</span>
+          <span>
+            <strong>{IMAGE_PROVIDER_LABEL[IMAGE_PROVIDER] ?? "Image provider"} connected</strong>
+            {" — images render automatically after generation. No copying required."}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-red-500/[0.05] border border-red-500/15 text-[10px] text-red-400/60">
+          <span>🔴</span>
+          <span>
+            <strong>No image provider.</strong>{" "}
+            Add <code className="text-amber-300/70">OPENAI_API_KEY</code> to Vercel → redeploy → images render in-platform.{" "}
+            Until then, use the &ldquo;Render in Bing&rdquo; button on each response.
+          </span>
+        </div>
+      )}
     </div>
   );
 }
