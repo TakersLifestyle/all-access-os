@@ -1,7 +1,7 @@
 // Takers AI — Streaming chat route (hardened)
 // POST /api/takers-ai/chat
 // Auth: Bearer token (admin only)
-// Body: { agentId, messages, conversationId?, saveConversation?, useKnowledge? }
+// Body: { agentId, messages, conversationId?, saveConversation?, useKnowledge?, attachments? }
 // Returns: text/event-stream SSE
 //
 // SSE event types: routing | text | done | error | stage (debug)
@@ -38,6 +38,12 @@ import { parseToolRequests, formatToolCallForApproval } from "@/lib/takers-ai/to
 import { checkRateLimit } from "@/lib/takers-ai/rate-limiter";
 import { createCostEvent, writeCostEvent } from "@/lib/takers-ai/cost";
 import { writeAuditEvent } from "@/lib/takers-ai/audit";
+import {
+  buildMessagesWithAttachments,
+  type AttachmentMeta,
+  MAX_FILES_PER_MESSAGE,
+  MAX_FILE_SIZE_BYTES,
+} from "@/lib/takers-ai/attachments";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -329,6 +335,7 @@ export async function POST(req: NextRequest) {
     conversationId?: string;
     saveConversation?: boolean;
     useKnowledge?: boolean;
+    attachments?: AttachmentMeta[];
   };
 
   try {
@@ -338,16 +345,25 @@ export async function POST(req: NextRequest) {
   }
 
   const { agentId, messages, conversationId, saveConversation, useKnowledge } = body;
+  const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
 
   if (!agentId || !messages?.length) {
     return NextResponse.json({ error: "agentId and messages are required." }, { status: 400 });
   }
+
+  // Server-side attachment validation (belt-and-suspenders — client validates too)
+  const attachments = rawAttachments.filter((a): a is AttachmentMeta => {
+    if (!a?.id || !a.downloadUrl || !a.storagePath) return false;
+    if (a.size > MAX_FILE_SIZE_BYTES) return false;
+    return true;
+  }).slice(0, MAX_FILES_PER_MESSAGE);
 
   log("parse", "ok", {
     agentId,
     messageCount: messages.length,
     saveConversation,
     useKnowledge,
+    attachmentCount: attachments.length,
     conversationId: conversationId ?? null,
   });
 
@@ -643,12 +659,18 @@ export async function POST(req: NextRequest) {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
-              for (const msg of messages) {
+              for (let mi = 0; mi < messages.length; mi++) {
+                const msg = messages[mi];
+                const isLastMsg = mi === messages.length - 1;
                 const msgRef = convRef.collection("messages").doc();
                 batch.set(msgRef, {
                   ...msg,
                   agentId: msg.role === "assistant" ? activeAgentId : null,
                   agentRole: msg.role === "assistant" ? activeAgent.role : null,
+                  // Attach metadata to the last user message only
+                  attachments: (isLastMsg && msg.role === "user" && attachments.length > 0)
+                    ? attachments
+                    : [],
                   createdAt: new Date().toISOString(),
                 });
               }
@@ -672,11 +694,39 @@ export async function POST(req: NextRequest) {
 
         try {
           const anthropic = getAnthropic();
+
+          // Build messages — last user message gets attachment content blocks injected
+          const attachmentLogger = (msg: string, err?: string) =>
+            log("attachment", "warn", { msg, err });
+
+          let claudeMessages: Anthropic.Messages.MessageParam[];
+          if (attachments.length > 0) {
+            log("attachment-build", "start", { count: attachments.length });
+            try {
+              claudeMessages = await buildMessagesWithAttachments(
+                messages,
+                attachments,
+                attachmentLogger
+              );
+              log("attachment-build", "ok", {
+                blocks: Array.isArray(claudeMessages[claudeMessages.length - 1]?.content)
+                  ? (claudeMessages[claudeMessages.length - 1].content as unknown[]).length
+                  : 1,
+              });
+            } catch (attErr) {
+              // Fail-open: if attachment processing errors, fall back to plain messages
+              log("attachment-build", "error", { err: String(attErr) });
+              claudeMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+            }
+          } else {
+            claudeMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+          }
+
           const stream = anthropic.messages.stream({
             model,
             max_tokens: maxTokens,
             system: systemPrompt,
-            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            messages: claudeMessages,
           });
 
           for await (const chunk of stream) {
@@ -825,6 +875,7 @@ export async function POST(req: NextRequest) {
               memoryBlockCount,
               knowledgeChunksInjected,
               useKnowledge: useKnowledge ?? false,
+              attachmentCount: attachments.length,
               totalDurationMs: Date.now() - requestStartedAt,
             },
           });
@@ -837,6 +888,7 @@ export async function POST(req: NextRequest) {
               agentId: activeAgentId,
               agentRole: activeAgent.role,
               workflowRunId: workflowRunRef?.id ?? null,
+              attachments: [],
               createdAt: new Date().toISOString(),
             }).catch((err) => log("conv-msg-save", "warn", { err: String(err) }));
 

@@ -3,11 +3,155 @@
 import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAuth } from "firebase/auth";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 import type {
   Agent, PromptTemplate, ChatMessage, OutputType, AgentRole,
   FeedbackRating,
 } from "@/lib/takers-ai/types";
 import { OUTPUT_TYPE_LABELS, AGENT_ROLE_LABELS, AGENT_ROLE_COLORS, AGENT_ROLE_ICONS } from "@/lib/takers-ai/types";
+import {
+  classifyFile,
+  validateFile,
+  formatFileSize,
+  buildStoragePath,
+  type AttachmentMeta,
+  type AttachmentFileType,
+} from "@/lib/takers-ai/attachments";
+
+// ── Attachment upload state ───────────────────────────────────────────────────
+
+interface AttachmentUpload {
+  id: string;
+  file: File;
+  name: string;
+  mimeType: string;
+  size: number;
+  fileType: AttachmentFileType;
+  status: "pending" | "uploading" | "ready" | "error";
+  progress: number;        // 0–100
+  previewUrl?: string;     // object URL for image thumbnails
+  meta?: AttachmentMeta;   // populated on successful upload
+  errorMsg?: string;
+}
+
+// ── File type icons (no external deps) ───────────────────────────────────────
+
+const FILE_TYPE_ICON: Record<AttachmentFileType, string> = {
+  image:    "🖼",
+  pdf:      "📄",
+  document: "📝",
+  text:     "📋",
+};
+
+// ── Attachment preview row ────────────────────────────────────────────────────
+
+function AttachmentChip({
+  upload,
+  onRemove,
+}: {
+  upload: AttachmentUpload;
+  onRemove: (id: string) => void;
+}) {
+  const isImage = upload.fileType === "image";
+
+  return (
+    <div className="relative group flex-shrink-0">
+      <div
+        className={`flex items-center gap-2 rounded-xl border text-xs transition-colors ${
+          upload.status === "error"
+            ? "border-red-500/40 bg-red-500/10"
+            : upload.status === "ready"
+            ? "border-white/15 bg-white/[0.06]"
+            : "border-white/10 bg-white/[0.03]"
+        }`}
+        style={{ maxWidth: 180 }}
+      >
+        {/* Thumbnail or icon */}
+        {isImage && upload.previewUrl ? (
+          <div className="w-10 h-10 rounded-l-xl overflow-hidden flex-shrink-0 bg-white/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={upload.previewUrl}
+              alt={upload.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-l-xl flex items-center justify-center flex-shrink-0 bg-white/5 text-base">
+            {FILE_TYPE_ICON[upload.fileType]}
+          </div>
+        )}
+
+        {/* Name + size */}
+        <div className="flex-1 min-w-0 py-2 pr-1">
+          <p className="text-white/70 truncate font-medium leading-tight" style={{ maxWidth: 100 }}>
+            {upload.name}
+          </p>
+          <p className="text-white/30 leading-tight mt-0.5">
+            {upload.status === "uploading"
+              ? `${Math.round(upload.progress)}%`
+              : upload.status === "error"
+              ? upload.errorMsg ?? "Upload failed"
+              : formatFileSize(upload.size)}
+          </p>
+        </div>
+
+        {/* Remove button */}
+        <button
+          onClick={() => onRemove(upload.id)}
+          className="w-5 h-5 mr-1.5 rounded-full flex items-center justify-center text-white/20 hover:text-white/70 hover:bg-white/10 transition flex-shrink-0"
+          title="Remove attachment"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Upload progress bar */}
+      {upload.status === "uploading" && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl overflow-hidden bg-white/10">
+          <div
+            className="h-full bg-red-500 transition-all duration-200"
+            style={{ width: `${upload.progress}%` }}
+          />
+        </div>
+      )}
+
+      {/* Ready checkmark */}
+      {upload.status === "ready" && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-[#13131f] flex items-center justify-center">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M1.5 4L3 5.5L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      )}
+
+      {/* Error dot */}
+      {upload.status === "error" && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 border border-[#13131f] flex items-center justify-center text-white text-[8px] font-bold">
+          !
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AttachmentPreviewRow({
+  uploads,
+  onRemove,
+}: {
+  uploads: AttachmentUpload[];
+  onRemove: (id: string) => void;
+}) {
+  if (uploads.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
+      {uploads.map((u) => (
+        <AttachmentChip key={u.id} upload={u} onRemove={onRemove} />
+      ))}
+    </div>
+  );
+}
 
 async function getToken() {
   return (await getAuth().currentUser?.getIdToken()) ?? "";
@@ -354,8 +498,177 @@ function ChatInner() {
   const [savedToast, setSavedToast] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
 
+  // ── Attachment state ────────────────────────────────────────────────────────
+  const [attachments, setAttachments] = useState<AttachmentUpload[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isUploading = attachments.some(
+    (a) => a.status === "uploading" || a.status === "pending"
+  );
+  const hasUploadErrors = attachments.some((a) => a.status === "error");
+
+  // Revoke object URLs on unmount
+  useEffect(() => {
+    return () => {
+      attachments.forEach((a) => {
+        if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+      });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function removeAttachment(id: string) {
+    setAttachments((prev) => {
+      const item = prev.find((a) => a.id === id);
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((a) => a.id !== id);
+    });
+  }
+
+  function clearAllAttachments() {
+    attachments.forEach((a) => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl); });
+    setAttachments([]);
+  }
+
+  async function uploadSingleFile(upload: AttachmentUpload) {
+    const user = getAuth().currentUser;
+    if (!user) {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.id === upload.id
+            ? { ...a, status: "error", errorMsg: "Not authenticated" }
+            : a
+        )
+      );
+      return;
+    }
+
+    const sessionId = crypto.randomUUID();
+    const path = buildStoragePath(user.uid, sessionId, upload.file.name);
+    const sRef = storageRef(storage, path);
+
+    // Mark as uploading
+    setAttachments((prev) =>
+      prev.map((a) => (a.id === upload.id ? { ...a, status: "uploading" } : a))
+    );
+
+    const task = uploadBytesResumable(sRef, upload.file, {
+      contentType: upload.mimeType,
+    });
+
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === upload.id ? { ...a, progress } : a))
+        );
+      },
+      (err) => {
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.id === upload.id
+              ? { ...a, status: "error", errorMsg: err.message }
+              : a
+          )
+        );
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(task.snapshot.ref);
+          const meta: AttachmentMeta = {
+            id: upload.id,
+            name: upload.name,
+            type: upload.fileType,
+            mimeType: upload.mimeType,
+            size: upload.size,
+            storagePath: path,
+            downloadUrl,
+            uploadedAt: new Date().toISOString(),
+          };
+          setAttachments((prev) =>
+            prev.map((a) =>
+              a.id === upload.id
+                ? { ...a, status: "ready", progress: 100, meta }
+                : a
+            )
+          );
+        } catch (err) {
+          setAttachments((prev) =>
+            prev.map((a) =>
+              a.id === upload.id
+                ? { ...a, status: "error", errorMsg: String(err) }
+                : a
+            )
+          );
+        }
+      }
+    );
+  }
+
+  function handleFiles(files: FileList | File[]) {
+    setAttachError(null);
+    const fileArray = Array.from(files);
+    const currentCount = attachments.length;
+
+    const toUpload: AttachmentUpload[] = [];
+
+    for (const file of fileArray) {
+      const validation = validateFile(file, currentCount + toUpload.length);
+      if (!validation.valid) {
+        setAttachError(validation.error ?? "Invalid file.");
+        continue;
+      }
+
+      const id = crypto.randomUUID();
+      const fileType = classifyFile(file.type, file.name);
+      const previewUrl =
+        fileType === "image" ? URL.createObjectURL(file) : undefined;
+
+      toUpload.push({
+        id,
+        file,
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+        fileType,
+        status: "pending",
+        progress: 0,
+        previewUrl,
+      });
+    }
+
+    if (toUpload.length === 0) return;
+    setAttachments((prev) => [...prev, ...toUpload]);
+
+    // Start uploads immediately (parallel)
+    for (const upload of toUpload) {
+      uploadSingleFile(upload);
+    }
+  }
+
+  // Drag-and-drop handlers (attached to the input wrapper div)
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+  function onDragLeave(e: React.DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  }
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }
 
   // Load agents + templates
   useEffect(() => {
@@ -396,7 +709,9 @@ function ChatInner() {
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || !selectedAgentId || streaming) return;
+    // Allow send with no text if attachments present
+    if ((!text && attachments.length === 0) || !selectedAgentId || streaming) return;
+    if (isUploading) return; // wait for uploads to finish
 
     const userMsg: UIMessage = { role: "user", content: text, createdAt: new Date().toISOString() };
     const newMessages = [...messages, userMsg];
@@ -420,6 +735,9 @@ function ChatInner() {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           conversationId: conversationId || undefined,
           saveConversation: true,
+          attachments: attachments
+            .filter((a) => a.status === "ready" && a.meta)
+            .map((a) => a.meta!),
         }),
       });
 
@@ -511,9 +829,12 @@ function ChatInner() {
       setMessages((prev) => [...prev, errMsg]);
     } finally {
       setStreaming(false);
+      clearAllAttachments();
+      setAttachError(null);
       inputRef.current?.focus();
     }
-  }, [input, selectedAgentId, streaming, messages, conversationId, selectedAgent]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, selectedAgentId, streaming, messages, conversationId, selectedAgent, attachments, isUploading]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -521,7 +842,8 @@ function ChatInner() {
 
   function handleNewChat() {
     setMessages([]); setConversationId(""); setStreamingText(""); setInput("");
-    setStreamingAgent(null); inputRef.current?.focus();
+    setStreamingAgent(null); clearAllAttachments(); setAttachError(null);
+    inputRef.current?.focus();
   }
 
   const streamingIcon = streamingAgent
@@ -659,26 +981,142 @@ function ChatInner() {
 
       {/* ── Input area ── */}
       <div className="shrink-0 border-t border-white/[0.07] p-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="relative bg-white/[0.04] border border-white/[0.09] hover:border-white/15 focus-within:border-red-500/40 rounded-2xl transition">
-            <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
+        <div className="max-w-3xl mx-auto space-y-2">
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.doc,.docx"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) handleFiles(e.target.files);
+              // Reset so same file can be re-selected after removal
+              e.target.value = "";
+            }}
+          />
+
+          {/* Attachment error banner */}
+          {attachError && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs">
+              <span>⚠</span>
+              <span className="flex-1">{attachError}</span>
+              <button onClick={() => setAttachError(null)} className="text-red-400/60 hover:text-red-300 transition">×</button>
+            </div>
+          )}
+
+          {/* Input box with drag-drop */}
+          <div
+            className={`relative bg-white/[0.04] border rounded-2xl transition ${
+              isDragging
+                ? "border-red-500/60 bg-red-500/5 ring-1 ring-red-500/20"
+                : "border-white/[0.09] hover:border-white/15 focus-within:border-red-500/40"
+            }`}
+            onDragOver={onDragOver}
+            onDragEnter={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+          >
+            {/* Drag overlay */}
+            {isDragging && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl pointer-events-none">
+                <span className="text-2xl mb-1">📎</span>
+                <span className="text-white/50 text-sm font-medium">Drop files to attach</span>
+                <span className="text-white/25 text-xs mt-0.5">Images, PDFs, text files</span>
+              </div>
+            )}
+
+            {/* Attachment preview chips (inside the box, above textarea) */}
+            <AttachmentPreviewRow uploads={attachments} onRemove={removeAttachment} />
+
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isOperator ? "Ask anything — I'll route to the right specialist…" : `Message ${selectedAgent?.name ?? "Agent"}…`}
-              rows={1} disabled={streaming}
-              className="w-full bg-transparent px-5 pt-4 pb-12 text-sm text-white placeholder-white/20 resize-none focus:outline-none min-h-[56px] max-h-48 overflow-y-auto disabled:opacity-50"
-              style={{ fieldSizing: "content" } as React.CSSProperties} />
+              placeholder={
+                attachments.length > 0
+                  ? "Add a message (optional)…"
+                  : isDragging
+                  ? ""
+                  : isOperator
+                  ? "Ask anything — I'll route to the right specialist…"
+                  : `Message ${selectedAgent?.name ?? "Agent"}…`
+              }
+              rows={1}
+              disabled={streaming}
+              className={`w-full bg-transparent px-5 pt-4 pb-12 text-sm text-white placeholder-white/20 resize-none focus:outline-none min-h-[56px] max-h-48 overflow-y-auto disabled:opacity-50 ${isDragging ? "opacity-0" : ""}`}
+              style={{ fieldSizing: "content" } as React.CSSProperties}
+            />
+
+            {/* Toolbar */}
             <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
-              <button onClick={() => setShowTemplates(true)}
-                className="flex items-center gap-1.5 text-xs text-white/25 hover:text-white/60 transition px-2 py-1 rounded-lg hover:bg-white/5">
-                <span>◧</span><span>Templates</span>
-              </button>
-              <div className="flex items-center gap-2">
-                <span className="text-white/15 text-[11px]">⏎ send · ⇧⏎ newline</span>
-                <button onClick={sendMessage} disabled={!input.trim() || streaming || !selectedAgentId}
-                  className="w-8 h-8 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M7 1L7 13M1 7L7 1L13 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <div className="flex items-center gap-1">
+                {/* Templates button */}
+                <button
+                  onClick={() => setShowTemplates(true)}
+                  className="flex items-center gap-1.5 text-xs text-white/25 hover:text-white/60 transition px-2 py-1 rounded-lg hover:bg-white/5"
+                >
+                  <span>◧</span><span>Templates</span>
+                </button>
+
+                {/* Paperclip / attach button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={streaming || attachments.length >= 5}
+                  title={attachments.length >= 5 ? "Max 5 files per message" : "Attach file"}
+                  className={`flex items-center gap-1.5 text-xs transition px-2 py-1 rounded-lg hover:bg-white/5 ${
+                    attachments.length > 0
+                      ? "text-red-400/70 hover:text-red-300"
+                      : "text-white/25 hover:text-white/60"
+                  } disabled:opacity-30 disabled:cursor-not-allowed`}
+                >
+                  {/* Paperclip SVG */}
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11.5 6.5L6 12a3.536 3.536 0 0 1-5-5l6-6a2.357 2.357 0 0 1 3.333 3.333L4.5 10a1.178 1.178 0 0 1-1.667-1.667L8.5 2.5" />
                   </svg>
+                  {attachments.length > 0 && (
+                    <span className="text-[10px] font-bold">{attachments.length}</span>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Upload indicator */}
+                {isUploading && (
+                  <span className="text-white/30 text-[11px] animate-pulse">Uploading…</span>
+                )}
+                {!isUploading && hasUploadErrors && (
+                  <span className="text-red-400/70 text-[11px]">Upload failed</span>
+                )}
+                {!isUploading && !hasUploadErrors && (
+                  <span className="text-white/15 text-[11px]">⏎ send · ⇧⏎ newline</span>
+                )}
+
+                {/* Send button */}
+                <button
+                  onClick={sendMessage}
+                  disabled={
+                    (!input.trim() && attachments.length === 0) ||
+                    streaming ||
+                    !selectedAgentId ||
+                    isUploading ||
+                    hasUploadErrors
+                  }
+                  title={isUploading ? "Wait for uploads to finish" : "Send message"}
+                  className="w-8 h-8 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition"
+                >
+                  {isUploading ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="animate-spin">
+                      <circle cx="6" cy="6" r="4.5" stroke="white" strokeOpacity="0.3" strokeWidth="1.5"/>
+                      <path d="M6 1.5A4.5 4.5 0 0 1 10.5 6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M7 1L7 13M1 7L7 1L13 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
