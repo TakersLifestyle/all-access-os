@@ -89,3 +89,13 @@ export function adminAuth() {
   ensureInitialized();
   return getAuth();
 }
+
+export function adminStorage() {
+  ensureInitialized();
+  // Dynamically import to avoid pulling in storage SDK for routes that don't need it
+  const { getStorage } = require("firebase-admin/storage") as typeof import("firebase-admin/storage");
+  const bucketName =
+    process.env.FIREBASE_STORAGE_BUCKET ??
+    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`;
+  return getStorage().bucket(bucketName);
+}

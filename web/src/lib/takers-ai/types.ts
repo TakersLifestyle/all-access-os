@@ -9,7 +9,9 @@ export type AgentRole =
   | "support"
   | "strategy"
   | "developer"
-  | "operations";
+  | "operations"
+  | "creative"
+  | "image";
 
 export type AgentModel =
   | "claude-opus-4-5"
@@ -384,6 +386,8 @@ export const AGENT_ROLE_LABELS: Record<AgentRole, string> = {
   strategy:   "Strategy Agent",
   developer:  "Developer Agent",
   operations: "Operations Agent",
+  creative:   "Creative Director",
+  image:      "Creative Image Agent",
 };
 
 export const AGENT_ROLE_COLORS: Record<AgentRole, string> = {
@@ -395,6 +399,8 @@ export const AGENT_ROLE_COLORS: Record<AgentRole, string> = {
   strategy:   "bg-indigo-600",
   developer:  "bg-emerald-600",
   operations: "bg-amber-500",
+  creative:   "bg-purple-500",
+  image:      "bg-violet-600",
 };
 
 export const AGENT_ROLE_ICONS: Record<AgentRole, string> = {
@@ -406,6 +412,8 @@ export const AGENT_ROLE_ICONS: Record<AgentRole, string> = {
   strategy:   "🎯",
   developer:  "⚙️",
   operations: "📋",
+  creative:   "🎨",
+  image:      "🖼",
 };
 
 export const APPROVAL_TYPE_LABELS: Record<ApprovalType, string> = {

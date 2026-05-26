@@ -120,7 +120,8 @@ Agents:
 - strategy: business strategy, SWOT, revenue planning, partnerships, grants, sponsorships, competitive analysis
 - developer: Next.js, Firebase, Firestore rules, TypeScript, API design, implementation prompts, bug analysis
 - operations: SOPs, weekly planning, task delegation, moderation workflows, reporting, team coordination
-- creative: flyer design, creative briefs, image generation prompts, Canva prompts, poster copy, campaign assets, visual direction
+- image: generate flyer, make image, create poster, render image, use reference image, make it like this, create Instagram post design, create story, create TikTok cover, carousel slides, promo graphic, event poster, brand visual, DALL-E, Midjourney, Flux, Canva design, design this, visual asset, image prompt
+- creative: creative briefs, copy packages, campaign copy, content direction, brand voice, taglines
 - operator: general questions, multi-topic, unclear request, meta questions about the system
 
 Confidence scoring:

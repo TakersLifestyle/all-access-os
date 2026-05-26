@@ -555,7 +555,7 @@ interface UIMessage extends ChatMessage {
 
 const CANVA_PROMPT_RE = /(?:\*{1,2}CANVA(?:[- ]READY)?(?:\s+DESIGN)?\s*PROMPT\*{0,2}|Canva(?:[- ]ready)?\s+(?:Design\s+)?Prompt)[\s:*]+([^\n*]{20,})/i;
 const IMAGE_PROMPT_RE = /(?:\*{1,2}IMAGE(?:\s+GEN(?:ERATION)?)?\s*PROMPT\*{0,2}|(?:DALL-?E|Midjourney|Flux|Stable\s+Diffusion)\s+Prompt|Image\s+Gen(?:eration)?\s+Prompt)[\s:*]+([^\n*]{20,})/i;
-const CREATIVE_ROLES = new Set(["creative", "content", "marketing"]);
+const CREATIVE_ROLES = new Set(["creative", "content", "marketing", "image"]);
 const CREATIVE_PATTERNS = [
   /canva(?:[- ]ready)?\s+prompt/i,
   /image\s+gen(?:eration)?\s+prompt/i,
@@ -680,6 +680,49 @@ function CreativeActionBar({
       {saveError && (
         <span className="text-[10px] text-red-400/70">{saveError}</span>
       )}
+    </div>
+  );
+}
+
+// ── Image generation quick-action panel ──────────────────────────────────────
+// Shown above the input bar when Creative Image Agent is active.
+// Chips set a starter phrase in the input so the user can complete the request.
+
+const IMAGE_QUICK_ACTIONS = [
+  { icon: "🖼", label: "Generate Flyer",     text: "Generate a complete flyer package for " },
+  { icon: "📱", label: "Instagram Post",     text: "Create an Instagram post graphic for " },
+  { icon: "📲", label: "Instagram Story",    text: "Design an Instagram story for " },
+  { icon: "🎬", label: "TikTok Cover",       text: "Generate a TikTok cover graphic for " },
+  { icon: "✨", label: "4 Concepts",         text: "Generate 4 full creative concepts for " },
+  { icon: "🖨", label: "Print Poster",       text: "Design a print-ready event poster for " },
+];
+
+function ImageGenerationPanel({
+  onAction,
+  onOpenFilePicker,
+}: {
+  onAction: (text: string) => void;
+  onOpenFilePicker: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 max-w-3xl mx-auto pb-1">
+      {IMAGE_QUICK_ACTIONS.map((a) => (
+        <button
+          key={a.label}
+          onClick={() => onAction(a.text)}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-violet-300/70 hover:text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15 transition"
+        >
+          <span>{a.icon}</span>
+          <span>{a.label}</span>
+        </button>
+      ))}
+      <button
+        onClick={onOpenFilePicker}
+        className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-blue-500/25 bg-blue-500/[0.08] text-blue-300/70 hover:text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/15 transition"
+      >
+        <span>📎</span>
+        <span>Use Reference Image</span>
+      </button>
     </div>
   );
 }
@@ -1331,39 +1374,73 @@ function ChatInner() {
           </div>
         ) : messages.length === 0 && !streamingText ? (
           <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-red-600/10 border border-red-600/20 flex items-center justify-center text-3xl">
+            {/* Agent icon — violet for image agent, red for all others */}
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${
+              selectedAgent?.role === "image"
+                ? "bg-violet-600/10 border border-violet-600/20"
+                : "bg-red-600/10 border border-red-600/20"
+            }`}>
               {selectedAgent?.icon ?? "◎"}
             </div>
+
             <div>
               <h2 className="text-white/70 font-bold text-lg">{selectedAgent?.name ?? "Takers Operator"}</h2>
               <p className="text-white/30 text-sm mt-1 max-w-xs">
                 {isOperator
                   ? "Ask me anything. I'll route your request to the right specialist automatically."
+                  : selectedAgent?.role === "image"
+                  ? "Generate event flyers, social graphics, and visual asset packages. Paste or drag a reference image to match its style."
                   : selectedAgent?.description || "Specialist AI agent. Ready to help."}
               </p>
             </div>
+
+            {/* Operator: role chips */}
             {isOperator && (
               <div className="flex flex-wrap gap-1.5 justify-center max-w-sm">
-                {(["content", "marketing", "events", "strategy", "developer", "operations"] as AgentRole[]).map((role) => (
+                {(["content", "marketing", "events", "strategy", "developer", "operations", "creative", "image"] as AgentRole[]).map((role) => (
                   <span key={role} className={`text-[10px] px-2 py-1 rounded-full border border-white/10 ${AGENT_ROLE_COLORS[role]} bg-opacity-10 text-white/40`}>
                     {AGENT_ROLE_ICONS[role]} {role}
                   </span>
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 max-w-sm">
-              {[
-                "Write 3 IG captions for our next event",
-                "Give me a content plan for this week",
-                "Plan logistics for the Mansion Party",
-                "How do we grow ALL ACCESS membership?",
-              ].map((starter) => (
-                <button key={starter} onClick={() => setInput(starter)}
-                  className="text-xs text-left px-3 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-white/10 text-white/40 hover:text-white/70 transition">
-                  {starter}
-                </button>
-              ))}
-            </div>
+
+            {/* Image agent: visual starter prompts */}
+            {selectedAgent?.role === "image" ? (
+              <>
+                <div className="grid grid-cols-2 gap-2 max-w-sm">
+                  {[
+                    "Generate a flyer for the Mansion Party event",
+                    "Create 4 creative concepts for Sea Bears Courtside",
+                    "Design an Instagram story for Winnipeg After Dark",
+                    "Make a TikTok cover graphic for ALL ACCESS",
+                  ].map((starter) => (
+                    <button key={starter} onClick={() => setInput(starter)}
+                      className="text-xs text-left px-3 py-2.5 rounded-xl bg-violet-500/[0.04] hover:bg-violet-500/[0.08] border border-violet-500/[0.12] hover:border-violet-400/20 text-white/40 hover:text-white/70 transition">
+                      {starter}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-white/20 text-xs max-w-xs">
+                  💡 Paste a reference image directly into the chat box to match its visual style.
+                </p>
+              </>
+            ) : (
+              /* Default starter prompts for all other agents */
+              <div className="grid grid-cols-2 gap-2 max-w-sm">
+                {[
+                  "Write 3 IG captions for our next event",
+                  "Give me a content plan for this week",
+                  "Plan logistics for the Mansion Party",
+                  "How do we grow ALL ACCESS membership?",
+                ].map((starter) => (
+                  <button key={starter} onClick={() => setInput(starter)}
+                    className="text-xs text-left px-3 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-white/10 text-white/40 hover:text-white/70 transition">
+                    {starter}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6 max-w-3xl mx-auto">
@@ -1427,6 +1504,17 @@ function ChatInner() {
             }}
           />
 
+          {/* Image agent quick-action panel */}
+          {selectedAgent?.role === "image" && !streaming && (
+            <ImageGenerationPanel
+              onAction={(text) => {
+                setInput(text);
+                inputRef.current?.focus();
+              }}
+              onOpenFilePicker={() => fileInputRef.current?.click()}
+            />
+          )}
+
           {/* Attachment error banner */}
           {attachError && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs">
@@ -1468,11 +1556,15 @@ function ChatInner() {
               onPaste={onPaste}
               placeholder={
                 attachments.length > 0
-                  ? "Add a message (optional)…"
+                  ? selectedAgent?.role === "image"
+                    ? "Describe the flyer or image you want generated…"
+                    : "Add a message (optional)…"
                   : isDragging
                   ? ""
                   : isOperator
                   ? "Ask anything — I'll route to the right specialist…"
+                  : selectedAgent?.role === "image"
+                  ? "Describe the event, style, or format you need. Paste a reference image to match its look…"
                   : `Message ${selectedAgent?.name ?? "Agent"}…`
               }
               rows={1}

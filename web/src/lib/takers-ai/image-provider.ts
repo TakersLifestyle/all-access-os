@@ -1,18 +1,19 @@
-// Takers AI — Image Provider Abstraction
+// Takers AI — Image Provider Abstraction (v2 — real providers)
 //
-// Defines the interface for image generation providers.
-// Currently active: MockProvider (returns ready_to_render status + saved prompt)
+// Provider selection (first match wins):
+//   OPENAI_API_KEY       → DALL-E 3 (best quality, widely available)
+//   REPLICATE_API_KEY    → Flux schnell via Replicate (fast, high quality)
+//   STABILITY_API_KEY    → Stability AI Ultra (highest resolution)
+//   (none)               → Mock (returns ready_to_render + saved prompt)
 //
-// Future providers to wire in (set the relevant env var to activate):
-//   OPENAI_API_KEY          → DALL-E 3
-//   REPLICATE_API_KEY       → Flux / Stable Diffusion
-//   STABILITY_API_KEY       → Stability AI
+// All providers implement the same ImageProvider interface.
+// No additional npm packages required — uses native fetch().
 //
 // Usage:
 //   const provider = getImageProvider();
 //   const result = await provider.generate({ prompt, format });
-//   if (result.status === "rendered") { /* use result.url */ }
-//   if (result.status === "ready_to_render") { /* save prompt, show note to user */ }
+//   if (result.status === "rendered") { /* download result.url */ }
+//   if (result.status === "ready_to_render") { /* show ready_to_render note */ }
 
 import type { AssetFormat } from "./creative-brief";
 
@@ -35,12 +36,12 @@ export interface ImageGenerationRequest {
 
 export interface ImageGenerationResult {
   status: ImageGenerationStatus;
-  url?: string;                 // Present when status === "rendered"
-  thumbnailUrl?: string;
-  prompt: string;               // Prompt that was/will be used
+  url?: string;                  // Temporary provider URL — save to Storage immediately
+  storedUrl?: string;            // Firebase Storage URL (after saving)
+  prompt: string;
   providerType: ImageProviderType;
   providerMessage: string;
-  readyToRenderNote?: string;   // User-facing message when not yet rendered
+  readyToRenderNote?: string;
   width?: number;
   height?: number;
   durationMs?: number;
@@ -67,9 +68,29 @@ export function getDimensionsForFormat(format?: AssetFormat): { width: number; h
   return (format && map[format]) ? map[format] : { width: 1080, height: 1080 };
 }
 
+/** Map any AssetFormat to the nearest DALL-E 3 supported size */
+function toDalleSize(format?: AssetFormat): "1024x1024" | "1024x1792" | "1792x1024" {
+  const dim = getDimensionsForFormat(format);
+  if (dim.height > dim.width) return "1024x1792";  // vertical
+  if (dim.width > dim.height) return "1792x1024";  // horizontal
+  return "1024x1024";
+}
+
+/** Cap dimensions to provider limits */
+function capDimensions(
+  width: number,
+  height: number,
+  max: number
+): { width: number; height: number } {
+  if (width <= max && height <= max) return { width, height };
+  const scale = max / Math.max(width, height);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
+}
+
 // ── Mock Provider ─────────────────────────────────────────────────────────────
-// Active when no real provider key is configured.
-// Saves the prompt as production-ready for when a real provider is connected.
 
 class MockImageProvider implements ImageProvider {
   readonly type: ImageProviderType = "mock";
@@ -83,9 +104,8 @@ class MockImageProvider implements ImageProvider {
       providerType: "mock",
       providerMessage: "No image rendering provider connected.",
       readyToRenderNote:
-        "Image rendering provider is not yet connected. " +
-        "This prompt has been saved as ready_to_render. " +
-        "Connect an image provider in Settings to render directly.",
+        "📦 ASSET PACKAGE READY — Image rendering provider not yet connected. " +
+        "All prompts are production-ready. Connect a provider in Settings to render directly.",
       width: request.width ?? dimensions.width,
       height: request.height ?? dimensions.height,
       durationMs: 0,
@@ -93,36 +113,272 @@ class MockImageProvider implements ImageProvider {
   }
 }
 
+// ── DALL-E 3 Provider ─────────────────────────────────────────────────────────
+// Uses OpenAI Images API directly via fetch (no openai npm package needed).
+
+class DalleProvider implements ImageProvider {
+  readonly type: ImageProviderType = "dalle3";
+  readonly isConnected = true;
+
+  constructor(private readonly apiKey: string) {}
+
+  async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+    const start = Date.now();
+    const size = toDalleSize(request.format);
+    const [w, h] = size.split("x").map(Number);
+
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: request.prompt.slice(0, 4000), // API limit
+        n: 1,
+        size,
+        quality: "hd",
+        style: request.style === "illustration" ? "natural" : "vivid",
+      }),
+    });
+
+    if (!res.ok) {
+      let errMsg = `DALL-E API error ${res.status}`;
+      try {
+        const errBody = await res.json();
+        errMsg = errBody?.error?.message ?? errMsg;
+      } catch { /* ignore */ }
+      return {
+        status: "failed",
+        prompt: request.prompt,
+        providerType: "dalle3",
+        providerMessage: errMsg,
+        error: errMsg,
+        durationMs: Date.now() - start,
+      };
+    }
+
+    const data = await res.json();
+    const url = (data.data as Array<{ url: string }>)?.[0]?.url;
+    if (!url) {
+      return {
+        status: "failed",
+        prompt: request.prompt,
+        providerType: "dalle3",
+        providerMessage: "DALL-E did not return an image URL",
+        error: "No URL in response",
+        durationMs: Date.now() - start,
+      };
+    }
+
+    return {
+      status: "rendered",
+      url,
+      prompt: request.prompt,
+      providerType: "dalle3",
+      providerMessage: "Rendered via DALL-E 3 (HD)",
+      width: w,
+      height: h,
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
+// ── Flux Provider (Replicate) ─────────────────────────────────────────────────
+// Uses Replicate API directly via fetch.
+// Model: black-forest-labs/flux-schnell (fast, high quality)
+
+class FluxProvider implements ImageProvider {
+  readonly type: ImageProviderType = "flux";
+  readonly isConnected = true;
+  private static readonly POLL_INTERVAL_MS = 1500;
+  private static readonly MAX_POLLS = 40; // 60s max
+
+  constructor(private readonly apiKey: string) {}
+
+  async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+    const start = Date.now();
+    const rawDim = getDimensionsForFormat(request.format);
+    const { width, height } = capDimensions(
+      request.width ?? rawDim.width,
+      request.height ?? rawDim.height,
+      1440 // Flux max dimension
+    );
+
+    // Start prediction — use "Prefer: wait" for synchronous response
+    const startRes = await fetch(
+      "https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${this.apiKey}`,
+          "Content-Type": "application/json",
+          "Prefer": "wait=60",
+        },
+        body: JSON.stringify({
+          input: {
+            prompt: request.prompt,
+            num_outputs: 1,
+            width,
+            height,
+            num_inference_steps: 4,
+            output_format: "png",
+            disable_safety_checker: false,
+          },
+        }),
+      }
+    );
+
+    if (!startRes.ok) {
+      let errMsg = `Replicate API error ${startRes.status}`;
+      try { errMsg = (await startRes.json())?.detail ?? errMsg; } catch { /* ignore */ }
+      return { status: "failed", prompt: request.prompt, providerType: "flux", providerMessage: errMsg, error: errMsg, durationMs: Date.now() - start };
+    }
+
+    const prediction = await startRes.json();
+
+    // Check if synchronous response already has result
+    if (prediction.status === "succeeded" && prediction.output?.[0]) {
+      return {
+        status: "rendered",
+        url: prediction.output[0] as string,
+        prompt: request.prompt,
+        providerType: "flux",
+        providerMessage: "Rendered via Flux (Replicate)",
+        width,
+        height,
+        durationMs: Date.now() - start,
+      };
+    }
+
+    // Poll for result
+    if (prediction.id && prediction.status !== "failed" && prediction.status !== "canceled") {
+      for (let i = 0; i < FluxProvider.MAX_POLLS; i++) {
+        await new Promise((r) => setTimeout(r, FluxProvider.POLL_INTERVAL_MS));
+        const pollRes = await fetch(
+          `https://api.replicate.com/v1/predictions/${prediction.id as string}`,
+          { headers: { "Authorization": `Token ${this.apiKey}` } }
+        );
+        if (!pollRes.ok) continue;
+        const poll = await pollRes.json();
+
+        if (poll.status === "succeeded" && poll.output?.[0]) {
+          return {
+            status: "rendered",
+            url: poll.output[0] as string,
+            prompt: request.prompt,
+            providerType: "flux",
+            providerMessage: "Rendered via Flux (Replicate)",
+            width,
+            height,
+            durationMs: Date.now() - start,
+          };
+        }
+        if (poll.status === "failed" || poll.status === "canceled") {
+          const errMsg = (poll.error as string) ?? "Flux generation failed";
+          return { status: "failed", prompt: request.prompt, providerType: "flux", providerMessage: errMsg, error: errMsg, durationMs: Date.now() - start };
+        }
+      }
+      return { status: "failed", prompt: request.prompt, providerType: "flux", providerMessage: "Flux timed out after 60 seconds", error: "timeout", durationMs: Date.now() - start };
+    }
+
+    const err = (prediction.error as string) ?? "Flux prediction failed";
+    return { status: "failed", prompt: request.prompt, providerType: "flux", providerMessage: err, error: err, durationMs: Date.now() - start };
+  }
+}
+
+// ── Stability AI Provider ─────────────────────────────────────────────────────
+// Uses Stability AI Stable Image Ultra API directly via fetch.
+
+class StabilityProvider implements ImageProvider {
+  readonly type: ImageProviderType = "stability";
+  readonly isConnected = true;
+
+  constructor(private readonly apiKey: string) {}
+
+  async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+    const start = Date.now();
+    const rawDim = getDimensionsForFormat(request.format);
+
+    // Stability Ultra accepts arbitrary sizes (1:1 to 21:9)
+    const { width, height } = capDimensions(
+      request.width ?? rawDim.width,
+      request.height ?? rawDim.height,
+      1536
+    );
+
+    const formData = new FormData();
+    formData.append("prompt", request.prompt.slice(0, 10000));
+    if (request.negativePrompt) formData.append("negative_prompt", request.negativePrompt);
+    formData.append("output_format", "png");
+    formData.append("aspect_ratio", height > width ? "9:16" : width > height ? "16:9" : "1:1");
+
+    const res = await fetch(
+      "https://api.stability.ai/v2beta/stable-image/generate/ultra",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.apiKey}`,
+          "Accept": "image/*",
+        },
+        body: formData,
+      }
+    );
+
+    if (!res.ok) {
+      let errMsg = `Stability AI error ${res.status}`;
+      try { errMsg = (await res.json())?.errors?.join(", ") ?? errMsg; } catch { /* ignore */ }
+      return { status: "failed", prompt: request.prompt, providerType: "stability", providerMessage: errMsg, error: errMsg, durationMs: Date.now() - start };
+    }
+
+    // Returns raw image bytes
+    const imageBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(imageBuffer).toString("base64");
+    const dataUrl = `data:image/png;base64,${base64}`;
+
+    return {
+      status: "rendered",
+      url: dataUrl, // caller must convert to blob and upload to Storage
+      prompt: request.prompt,
+      providerType: "stability",
+      providerMessage: "Rendered via Stability AI Ultra",
+      width,
+      height,
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
 // ── Provider factory ──────────────────────────────────────────────────────────
-// Returns the best available provider based on configured env vars.
-// Add real provider implementations here as they become available.
+// Singleton — reset with resetImageProvider() if env changes.
 
 let _provider: ImageProvider | null = null;
 
 export function getImageProvider(): ImageProvider {
   if (_provider) return _provider;
 
-  // Future: check env vars and wire real providers
-  // Example:
-  //   if (process.env.OPENAI_API_KEY) {
-  //     _provider = new DalleProvider(process.env.OPENAI_API_KEY);
-  //     return _provider;
-  //   }
-  //   if (process.env.REPLICATE_API_KEY) {
-  //     _provider = new FluxProvider(process.env.REPLICATE_API_KEY);
-  //     return _provider;
-  //   }
+  if (process.env.OPENAI_API_KEY) {
+    _provider = new DalleProvider(process.env.OPENAI_API_KEY);
+    return _provider;
+  }
+  if (process.env.REPLICATE_API_KEY) {
+    _provider = new FluxProvider(process.env.REPLICATE_API_KEY);
+    return _provider;
+  }
+  if (process.env.STABILITY_API_KEY) {
+    _provider = new StabilityProvider(process.env.STABILITY_API_KEY);
+    return _provider;
+  }
 
   _provider = new MockImageProvider();
   return _provider;
 }
 
-/** Reset cached provider instance (useful for testing or hot config changes). */
 export function resetImageProvider(): void {
   _provider = null;
 }
 
-/** Returns the current provider status for display in the UI. */
 export function getProviderStatus(): {
   type: ImageProviderType;
   isConnected: boolean;
@@ -130,21 +386,21 @@ export function getProviderStatus(): {
   connectMessage?: string;
 } {
   const provider = getImageProvider();
+  const names: Record<ImageProviderType, string> = {
+    mock:      "Not connected",
+    dalle3:    "DALL-E 3 (OpenAI)",
+    flux:      "Flux Schnell (Replicate)",
+    stability: "Stable Image Ultra",
+  };
   if (provider.isConnected) {
-    const names: Record<ImageProviderType, string> = {
-      mock:      "None",
-      dalle3:    "DALL-E 3",
-      flux:      "Flux (Replicate)",
-      stability: "Stability AI",
-    };
     return { type: provider.type, isConnected: true, displayName: names[provider.type] };
   }
   return {
     type: "mock",
     isConnected: false,
-    displayName: "Not connected",
+    displayName: names.mock,
     connectMessage:
-      "Connect an image provider in Settings to enable direct rendering. " +
-      "All prompts are saved as ready_to_render until then.",
+      "Set OPENAI_API_KEY, REPLICATE_API_KEY, or STABILITY_API_KEY in Vercel environment variables " +
+      "to enable direct image rendering. All prompts are saved as ready_to_render until then.",
   };
 }
