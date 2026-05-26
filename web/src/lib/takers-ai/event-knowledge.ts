@@ -169,5 +169,6 @@ export async function buildEventKnowledgeContext(db: Firestore): Promise<{
  * Returns true for agent roles that should receive event knowledge injection.
  */
 export function agentNeedsEventKnowledge(role: string): boolean {
-  return ["content", "marketing", "events", "creative", "operator"].includes(role);
+  // image agent MUST get live event data — it generates flyers with real dates/prices
+  return ["content", "marketing", "events", "creative", "operator", "image"].includes(role);
 }

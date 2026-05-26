@@ -649,30 +649,62 @@ function CreativeActionBar({
     }
   }
 
+  function openInBing() {
+    if (!imagePrompt) return;
+    const url = `https://www.bing.com/images/create?q=${encodeURIComponent(imagePrompt.slice(0, 480))}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function openInCanva() {
+    // Copy prompt then open Canva
+    if (canvaPrompt) navigator.clipboard.writeText(canvaPrompt);
+    window.open("https://www.canva.com/create/", "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 mt-2 px-1">
+      {/* Render buttons — generate actual images */}
+      {imagePrompt && (
+        <button
+          onClick={openInBing}
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:text-violet-100 hover:border-violet-400/50 hover:bg-violet-500/20 transition font-medium"
+        >
+          <span>🖼</span>
+          <span>Render in Bing</span>
+        </button>
+      )}
+      {canvaPrompt && (
+        <button
+          onClick={openInCanva}
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-purple-500/25 bg-purple-500/[0.08] text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40 hover:bg-purple-500/15 transition"
+        >
+          <span>🎨</span>
+          <span>Open Canva</span>
+        </button>
+      )}
+      {/* Copy buttons */}
       {canvaPrompt && (
         <button
           onClick={copyCanva}
-          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-purple-500/25 bg-purple-500/8 text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40 hover:bg-purple-500/15 transition"
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 hover:border-white/20 transition"
         >
-          <span>🎨</span>
-          <span>{canvaCopied ? "✓ Copied!" : "Copy Canva Prompt"}</span>
+          <span>{canvaCopied ? "✓" : "📋"}</span>
+          <span>{canvaCopied ? "Canva Copied!" : "Copy Canva Prompt"}</span>
         </button>
       )}
       {imagePrompt && (
         <button
           onClick={copyImage}
-          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-blue-500/25 bg-blue-500/8 text-blue-300/70 hover:text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/15 transition"
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 hover:border-white/20 transition"
         >
-          <span>🖼</span>
-          <span>{imgCopied ? "✓ Copied!" : "Copy Image Prompt"}</span>
+          <span>{imgCopied ? "✓" : "📋"}</span>
+          <span>{imgCopied ? "Prompt Copied!" : "Copy Image Prompt"}</span>
         </button>
       )}
       <button
         onClick={saveAsset}
         disabled={saving || saved}
-        className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/8 text-emerald-300/70 hover:text-emerald-200 hover:border-emerald-400/40 hover:bg-emerald-500/15 transition disabled:opacity-40"
+        className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300/70 hover:text-emerald-200 hover:border-emerald-400/40 hover:bg-emerald-500/15 transition disabled:opacity-40"
       >
         <span>{saved ? "✓" : saving ? "…" : "💾"}</span>
         <span>{saved ? "Asset Saved!" : saving ? "Saving…" : "Save Asset"}</span>
@@ -705,24 +737,35 @@ function ImageGenerationPanel({
   onOpenFilePicker: () => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 max-w-3xl mx-auto pb-1">
-      {IMAGE_QUICK_ACTIONS.map((a) => (
+    <div className="space-y-2 max-w-3xl mx-auto pb-1">
+      {/* Quick action chips */}
+      <div className="flex flex-wrap gap-2">
+        {IMAGE_QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.label}
+            onClick={() => onAction(a.text)}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-violet-300/70 hover:text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15 transition"
+          >
+            <span>{a.icon}</span>
+            <span>{a.label}</span>
+          </button>
+        ))}
         <button
-          key={a.label}
-          onClick={() => onAction(a.text)}
-          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/[0.08] text-violet-300/70 hover:text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15 transition"
+          onClick={onOpenFilePicker}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-blue-500/25 bg-blue-500/[0.08] text-blue-300/70 hover:text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/15 transition"
         >
-          <span>{a.icon}</span>
-          <span>{a.label}</span>
+          <span>📎</span>
+          <span>Use Reference Image</span>
         </button>
-      ))}
-      <button
-        onClick={onOpenFilePicker}
-        className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-blue-500/25 bg-blue-500/[0.08] text-blue-300/70 hover:text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/15 transition"
-      >
-        <span>📎</span>
-        <span>Use Reference Image</span>
-      </button>
+      </div>
+      {/* Provider status notice */}
+      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15 text-[10px] text-amber-400/60">
+        <span>⚡</span>
+        <span>
+          <strong>Render images:</strong> After generating, click &ldquo;Render in Bing&rdquo; button on the response — or add{" "}
+          <code className="text-amber-300/70">OPENAI_API_KEY</code> to Vercel for in-platform DALL-E rendering.
+        </span>
+      </div>
     </div>
   );
 }
