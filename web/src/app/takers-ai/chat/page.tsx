@@ -670,6 +670,32 @@ function ChatInner() {
     }
   }
 
+  /** Clipboard paste — captures pasted images (e.g. screenshots) directly into the attachment queue */
+  function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageItems: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          // Give pasted images a meaningful name with a timestamp
+          const ext = item.type.split("/")[1] ?? "png";
+          const named = new File([file], `paste-${Date.now()}.${ext}`, { type: item.type });
+          imageItems.push(named);
+        }
+      }
+    }
+
+    if (imageItems.length > 0) {
+      // Only prevent default if we're handling images — let normal text paste through
+      e.preventDefault();
+      handleFiles(imageItems);
+    }
+  }
+
   // Load agents + templates
   useEffect(() => {
     Promise.all([
@@ -988,7 +1014,7 @@ function ChatInner() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.doc,.docx"
+            accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.csv,.md,.doc,.docx"
             className="hidden"
             onChange={(e) => {
               if (e.target.files) handleFiles(e.target.files);
@@ -1035,6 +1061,7 @@ function ChatInner() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={onPaste}
               placeholder={
                 attachments.length > 0
                   ? "Add a message (optional)…"

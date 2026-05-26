@@ -26,13 +26,14 @@ export const ALLOWED_DOC_MIME = new Set([
   "application/pdf",
   "text/plain",
   "text/csv",
+  "text/markdown",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
 export const ALLOWED_EXTENSIONS = new Set([
   "jpg", "jpeg", "png", "webp", "gif",
-  "pdf", "txt", "csv", "doc", "docx",
+  "pdf", "txt", "csv", "md", "doc", "docx",
 ]);
 
 // ── Limits ────────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ export interface AttachmentMeta {
 export function classifyFile(mimeType: string, fileName: string): AttachmentFileType {
   if (ALLOWED_IMAGE_MIME.has(mimeType)) return "image";
   if (mimeType === "application/pdf") return "pdf";
-  if (mimeType === "text/plain" || mimeType === "text/csv") return "text";
+  if (mimeType === "text/plain" || mimeType === "text/csv" || mimeType === "text/markdown") return "text";
   if (
     mimeType === "application/msword" ||
     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -73,7 +74,7 @@ export function classifyFile(mimeType: string, fileName: string): AttachmentFile
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return "image";
   if (ext === "pdf") return "pdf";
-  if (ext === "txt" || ext === "csv") return "text";
+  if (ext === "txt" || ext === "csv" || ext === "md") return "text";
   return "document";
 }
 

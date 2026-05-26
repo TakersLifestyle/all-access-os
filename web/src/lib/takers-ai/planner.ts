@@ -15,6 +15,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AgentRole } from "./types";
 import { MODEL_PRICING, roundCost } from "./cost";
+import type { AttachmentMeta } from "./attachments";
+import { buildPlannerAttachmentContext } from "./multimodal";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -68,6 +70,7 @@ export interface PlanRequest {
   objective: string;
   context?: string;           // additional context about the project / situation
   existingOutputs?: Record<string, string>;  // already available outputs that can be used
+  attachments?: AttachmentMeta[];  // files attached to this planning request
   constraints?: {
     maxCostUsd?: number;
     maxDurationMs?: number;
@@ -298,6 +301,13 @@ function buildPlannerPrompt(request: PlanRequest, strategies: PlanStrategy[]): s
 
   if (request.context) {
     prompt += `\nCONTEXT:\n${request.context}\n`;
+  }
+
+  if (request.attachments && request.attachments.length > 0) {
+    const attachmentCtx = buildPlannerAttachmentContext(request.attachments);
+    if (attachmentCtx) {
+      prompt += `\n${attachmentCtx}\n`;
+    }
   }
 
   if (request.existingOutputs && Object.keys(request.existingOutputs).length > 0) {

@@ -44,6 +44,12 @@ import {
   MAX_FILES_PER_MESSAGE,
   MAX_FILE_SIZE_BYTES,
 } from "@/lib/takers-ai/attachments";
+import {
+  inferWorkflowHints,
+  buildAttachmentContextNote,
+  buildMultimodalSystemContext,
+  writeMultimodalAnalytics,
+} from "@/lib/takers-ai/multimodal";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -474,7 +480,11 @@ export async function POST(req: NextRequest) {
               return [];
             });
             const feedbackSuffix = buildRoutingFeedbackSuffix(routingHints);
-            classification = await classifyIntent(userMessage, feedbackSuffix);
+            // Augment routing message with attachment context so classifier is attachment-aware
+            const routingMessage = attachments.length > 0
+              ? userMessage + buildAttachmentContextNote(attachments)
+              : userMessage;
+            classification = await classifyIntent(routingMessage, feedbackSuffix);
 
             // Emit routing event immediately so client shows indicator
             send({
@@ -624,9 +634,21 @@ export async function POST(req: NextRequest) {
           log("system-prompt", "warn", { errors: promptErrors });
         }
 
-        const systemPrompt = formatPrefSuffix
+        // Append format preferences and multimodal context (fail-open for both)
+        let systemPrompt = formatPrefSuffix
           ? systemPromptBase + formatPrefSuffix
           : systemPromptBase;
+
+        if (attachments.length > 0) {
+          try {
+            const workflowHints = inferWorkflowHints(attachments);
+            const multimodalCtx = buildMultimodalSystemContext(attachments, workflowHints);
+            systemPrompt = systemPrompt + multimodalCtx;
+            log("multimodal-ctx", "ok", { hints: workflowHints, attachmentCount: attachments.length });
+          } catch (mmErr) {
+            log("multimodal-ctx", "warn", { err: String(mmErr) });
+          }
+        }
 
         sendStage("system-prompt", Date.now() - stage6Start, {
           memoryBlockCount,
@@ -879,6 +901,42 @@ export async function POST(req: NextRequest) {
               totalDurationMs: Date.now() - requestStartedAt,
             },
           });
+
+          // Multimodal analytics (fire-and-forget — only when attachments present)
+          if (attachments.length > 0) {
+            try {
+              const workflowHints = inferWorkflowHints(attachments);
+              // Build type breakdown
+              const typeBreakdown: Partial<Record<import("@/lib/takers-ai/attachments").AttachmentFileType, number>> = {};
+              for (const att of attachments) {
+                typeBreakdown[att.type] = (typeBreakdown[att.type] ?? 0) + 1;
+              }
+              const totalSizeBytes = attachments.reduce((sum, a) => sum + a.size, 0);
+              // Infer processing methods used
+              const processingMethods: string[] = [];
+              if (attachments.some((a) => a.type === "image")) processingMethods.push("vision_block");
+              if (attachments.some((a) => a.type === "pdf")) processingMethods.push("document_block");
+              if (attachments.some((a) => a.type === "text")) processingMethods.push("text_inline");
+              if (attachments.some((a) => a.type === "document")) processingMethods.push("description_note");
+              writeMultimodalAnalytics(db, {
+                attachmentCount: attachments.length,
+                typeBreakdown,
+                totalSizeBytes,
+                workflowHints,
+                processingMethods,
+                estimatedTokensAdded: Math.round(totalSizeBytes / 3), // rough estimate
+                agentId: activeAgentId,
+                agentRole: activeAgent.role as string,
+                conversationId: convRef?.id ?? conversationId ?? null,
+                workflowRunId: workflowRunRef?.id ?? null,
+                processingSucceeded: true,
+                processingErrors: [],
+                processingMs: generationDurationMs,
+              });
+            } catch (mmErr) {
+              log("multimodal-analytics", "warn", { err: String(mmErr) });
+            }
+          }
 
           // Save assistant response to conversation
           if (convRef && fullResponse) {
