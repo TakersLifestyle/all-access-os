@@ -22,8 +22,32 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const db = adminDb();
-  const snap = await db.collection("agents").orderBy("createdAt").get();
-  const agents = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Agent[];
+  // NOTE: Do NOT use orderBy("createdAt") — Firestore silently excludes documents
+  // that don't have the field, which hides agents that were seeded without it.
+  // Sort in JS after fetching all documents instead.
+  const snap = await db.collection("agents").get();
+  const agents = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      // Normalise missing display fields so the UI always has something to render
+      icon: data.icon ?? "🤖",
+      color: data.color ?? "bg-red-600",
+      description: data.description ?? "",
+      tools: Array.isArray(data.tools) ? data.tools : [],
+      createdAt: data.createdAt ?? data.updatedAt ?? new Date().toISOString(),
+      updatedAt: data.updatedAt ?? new Date().toISOString(),
+      ...data,
+    };
+  }) as Agent[];
+
+  // Sort: default operator first, then by createdAt ascending
+  agents.sort((a, b) => {
+    if (a.isDefault) return -1;
+    if (b.isDefault) return 1;
+    return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+  });
+
   return NextResponse.json({ agents });
 }
 

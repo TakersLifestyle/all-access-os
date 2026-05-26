@@ -40,7 +40,7 @@ export async function PUT(
   }
   const { agentId } = await params;
   const body = await req.json();
-  const allowed = ["name", "role", "description", "systemPrompt", "icon", "color", "model", "maxTokens", "isActive", "isDefault"];
+  const allowed = ["name", "role", "description", "systemPrompt", "icon", "color", "model", "maxTokens", "tools", "isActive", "isDefault"];
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
