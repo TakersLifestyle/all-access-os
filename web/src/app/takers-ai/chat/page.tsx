@@ -557,6 +557,8 @@ const CANVA_PROMPT_RE = /(?:\*{1,2}CANVA(?:[- ]READY)?(?:\s+DESIGN)?\s*PROMPT\*{
 const IMAGE_PROMPT_RE = /(?:\*{1,2}IMAGE(?:\s+GEN(?:ERATION)?)?\s*PROMPT\*{0,2}|(?:DALL-?E|Midjourney|Flux|Stable\s+Diffusion)\s+Prompt|Image\s+Gen(?:eration)?\s+Prompt)[\s:*]+([^\n*]{20,})/i;
 const CREATIVE_ROLES = new Set(["creative", "content", "marketing", "image"]);
 const CREATIVE_PATTERNS = [
+  /\[IMAGE_PROMPT_START\]/i,      // new block-marker format (agents output this)
+  /\[CANVA_PROMPT_START\]/i,      // new block-marker format
   /canva(?:[- ]ready)?\s+prompt/i,
   /image\s+gen(?:eration)?\s+prompt/i,
   /dall-?e\s+prompt/i,
@@ -571,6 +573,43 @@ function isCreativeOutput(content: string, agentRole?: string): boolean {
     return CREATIVE_PATTERNS.some((p) => p.test(content));
   }
   return CREATIVE_PATTERNS.filter((p) => p.test(content)).length >= 2;
+}
+
+/**
+ * Extracts multiline content between [START_MARKER] and [END_MARKER] blocks.
+ * Used for the new agent output format: [IMAGE_PROMPT_START]...[IMAGE_PROMPT_END]
+ */
+function extractBlockContent(content: string, startMarker: string, endMarker: string): string | null {
+  const startIdx = content.indexOf(startMarker);
+  if (startIdx === -1) return null;
+  const contentStart = startIdx + startMarker.length;
+  const endIdx = content.indexOf(endMarker, contentStart);
+  const raw = endIdx !== -1
+    ? content.slice(contentStart, endIdx).trim()
+    : content.slice(contentStart, contentStart + 1200).trim();
+  return raw.length > 10 ? raw : null;
+}
+
+/**
+ * Extracts an image generation prompt from agent output.
+ * Tries new block-marker format first, falls back to old inline heading regex.
+ */
+function extractImagePrompt(content: string): string | null {
+  return (
+    extractBlockContent(content, "[IMAGE_PROMPT_START]", "[IMAGE_PROMPT_END]") ??
+    extractPromptSection(content, IMAGE_PROMPT_RE)
+  );
+}
+
+/**
+ * Extracts a Canva design prompt from agent output.
+ * Tries new block-marker format first, falls back to old inline heading regex.
+ */
+function extractCanvaPrompt(content: string): string | null {
+  return (
+    extractBlockContent(content, "[CANVA_PROMPT_START]", "[CANVA_PROMPT_END]") ??
+    extractPromptSection(content, CANVA_PROMPT_RE)
+  );
 }
 
 function extractPromptSection(content: string, re: RegExp): string | null {
@@ -600,8 +639,8 @@ function CreativeActionBar({
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const canvaPrompt = extractPromptSection(content, CANVA_PROMPT_RE);
-  const imagePrompt = extractPromptSection(content, IMAGE_PROMPT_RE);
+  const canvaPrompt = extractCanvaPrompt(content);
+  const imagePrompt = extractImagePrompt(content);
   const hasActions = canvaPrompt || imagePrompt;
 
   if (!hasActions) return null;
@@ -717,27 +756,66 @@ function CreativeActionBar({
 }
 
 // ── Inline image render widget ────────────────────────────────────────────────
-// Appears on image-agent responses. Calls generate-image in fast-path mode
-// (skipBrief=true) — no Sonnet brief generation, direct provider render.
+// Appears on image/creative agent responses. Calls generate-image in fast-path
+// mode (skipBrief=true) — no Sonnet brief generation, direct provider render.
+//
+// autoRender=true → fires immediately on mount (used for the newest message).
+// autoRender=false → shows a "Generate Image Now" button (history messages).
+
+type RenderState = "detected" | "idle" | "loading" | "rendered" | "no_provider" | "error";
+
+const RENDER_STATUS_LABELS: Record<RenderState, { label: string; dot: string }> = {
+  detected:    { label: "Prompt detected",  dot: "bg-violet-400" },
+  idle:        { label: "Render available", dot: "bg-violet-400" },
+  loading:     { label: "Rendering…",       dot: "bg-amber-400 animate-pulse" },
+  rendered:    { label: "Completed",        dot: "bg-emerald-400" },
+  no_provider: { label: "No provider",      dot: "bg-amber-500" },
+  error:       { label: "Failed",           dot: "bg-red-500" },
+};
 
 function ImageRenderWidget({
   imagePrompt,
   subject,
   agentId,
   conversationId,
+  autoRender = false,
 }: {
   imagePrompt: string;
   subject?: string;
   agentId?: string;
   conversationId?: string;
+  autoRender?: boolean;
 }) {
-  const [state, setState] = useState<"idle" | "loading" | "rendered" | "no_provider" | "error">("idle");
+  const [state, setState] = useState<RenderState>("detected");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [stageMsg, setStageMsg] = useState("Connecting to image provider…");
+  const hasAutoFired = useRef(false);
+
+  // Debug log on mount — confirms widget actually mounted and prompt is present
+  useEffect(() => {
+    console.log("[ImageRenderWidget] mounted", {
+      imagePromptDetected: true,
+      promptLength: imagePrompt.length,
+      promptPreview: imagePrompt.slice(0, 80),
+      autoRender,
+      renderWidgetMounted: true,
+    });
+    // Short pause so UI shows "Prompt detected" status before loading starts
+    const t = setTimeout(() => {
+      setState("idle");
+      if (autoRender && !hasAutoFired.current) {
+        hasAutoFired.current = true;
+        generate();
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function generate() {
     setState("loading");
     setStageMsg("Connecting to image provider…");
+    console.log("[ImageRenderWidget] generate() called", { promptLength: imagePrompt.length });
     try {
       const token = await getToken();
       const res = await fetch("/api/takers-ai/generate-image", {
@@ -753,6 +831,7 @@ function ImageRenderWidget({
       });
 
       if (!res.ok || !res.body) {
+        console.warn("[ImageRenderWidget] non-ok response", res.status);
         setState("no_provider");
         return;
       }
@@ -760,6 +839,7 @@ function ImageRenderWidget({
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = "";
+      let gotRenderEvent = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -771,65 +851,122 @@ function ImageRenderWidget({
           if (!line.startsWith("data: ")) continue;
           try {
             const ev = JSON.parse(line.slice(6));
-            if (ev.type === "stage") setStageMsg(ev.message ?? stageMsg);
+            console.log("[ImageRenderWidget] SSE event", ev.type, ev);
+
+            if (ev.type === "stage") {
+              setStageMsg(ev.message ?? stageMsg);
+            }
             if (ev.type === "render") {
+              gotRenderEvent = true;
               if (ev.renderStatus === "rendered" && ev.url) {
                 setImageUrl(ev.url);
                 setState("rendered");
+                console.log("[ImageRenderWidget] render complete", { url: ev.url });
               } else {
                 setState("no_provider");
+                console.warn("[ImageRenderWidget] no_provider render status", ev.renderStatus);
               }
             }
-            if (ev.type === "fatal") { setState("error"); setStageMsg(ev.error ?? "Provider error"); }
-          } catch { /* ignore partial lines */ }
+            if (ev.type === "fatal") {
+              setState("error");
+              setStageMsg(ev.error ?? "Provider error");
+              console.error("[ImageRenderWidget] fatal", ev.error);
+            }
+          } catch { /* ignore partial SSE lines */ }
         }
       }
-      // If stream ended with no render event
-      if (state === "loading") setState("no_provider");
-    } catch {
+      // Stream ended without a render event
+      if (!gotRenderEvent) {
+        console.warn("[ImageRenderWidget] stream ended with no render event");
+        setState("no_provider");
+      }
+    } catch (err) {
+      console.error("[ImageRenderWidget] fetch error", err);
       setState("no_provider");
     }
   }
 
   function openInBingDirect() {
-    window.open(`https://www.bing.com/images/create?q=${encodeURIComponent(imagePrompt.slice(0, 480))}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `https://www.bing.com/images/create?q=${encodeURIComponent(imagePrompt.slice(0, 480))}`,
+      "_blank", "noopener,noreferrer"
+    );
   }
 
+  const statusInfo = RENDER_STATUS_LABELS[state];
+
+  // Status pill — always shown at the top of the widget
+  const StatusPill = (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.dot}`} />
+      <span className="text-[10px] text-white/30 font-medium tracking-wide uppercase">
+        {statusInfo.label}
+      </span>
+    </div>
+  );
+
+  // ── Detected (brief flash before idle/auto-render kicks in) ──
+  if (state === "detected") {
+    return (
+      <div className="mt-2 px-1 space-y-1">
+        {StatusPill}
+        <div className="flex items-center gap-1.5 text-[11px] text-violet-300/50">
+          <span className="animate-pulse">◎</span>
+          <span>Image prompt found — preparing render…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Idle (manual trigger — history messages or no autoRender) ──
   if (state === "idle") {
     return (
-      <div className="flex items-center gap-2 mt-1.5 px-1">
-        <button
-          onClick={generate}
-          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 text-violet-200 hover:bg-violet-600/25 hover:border-violet-400/60 transition font-medium"
-        >
-          <span>⚡</span>
-          <span>Generate Image Now</span>
-        </button>
-        <span className="text-white/15 text-[10px]">or</span>
-        <button
-          onClick={openInBingDirect}
-          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
-        >
-          <span>🖼</span>
-          <span>Render in Bing</span>
-        </button>
+      <div className="mt-2 px-1 space-y-1.5">
+        {StatusPill}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generate}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 text-violet-200 hover:bg-violet-600/25 hover:border-violet-400/60 transition font-medium"
+          >
+            <span>⚡</span>
+            <span>Generate Image Now</span>
+          </button>
+          <span className="text-white/15 text-[10px]">or</span>
+          <button
+            onClick={openInBingDirect}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+          >
+            <span>🖼</span>
+            <span>Render in Bing</span>
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Loading ──
   if (state === "loading") {
     return (
-      <div className="flex items-center gap-2 mt-1.5 px-1 text-[11px] text-white/40">
-        <span className="animate-spin">⟳</span>
-        <span>{stageMsg}</span>
+      <div className="mt-2 px-1 space-y-1.5">
+        {StatusPill}
+        <div className="flex items-center gap-2 text-[11px] text-white/40">
+          <span className="animate-spin inline-block">⟳</span>
+          <span>{stageMsg}</span>
+        </div>
+        {/* Progress track */}
+        <div className="h-0.5 w-48 rounded-full bg-white/[0.05] overflow-hidden">
+          <div className="h-full bg-violet-500/60 rounded-full animate-[pulse_1.5s_ease-in-out_infinite] w-1/2" />
+        </div>
       </div>
     );
   }
 
+  // ── Rendered ──
   if (state === "rendered" && imageUrl) {
     return (
       <div className="mt-2 space-y-2 px-1">
-        <div className="rounded-xl overflow-hidden border border-white/10 max-w-sm">
+        {StatusPill}
+        <div className="rounded-xl overflow-hidden border border-white/10 max-w-sm shadow-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imageUrl} alt="Generated image" className="w-full" />
         </div>
@@ -839,7 +976,7 @@ function ImageRenderWidget({
             download="allaccess-generated.png"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition"
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition font-medium"
           >
             <span>⬇</span>
             <span>Download PNG</span>
@@ -856,20 +993,32 @@ function ImageRenderWidget({
     );
   }
 
-  // no_provider or error
+  // ── No provider / Error ──
   return (
-    <div className="mt-1.5 px-1 space-y-1.5">
-      <p className="text-[10px] text-amber-400/60">
-        {state === "error" ? stageMsg : "No image provider connected."}{" "}
-        Add <code className="text-amber-300/70">OPENAI_API_KEY</code> to Vercel to render images in-platform.
+    <div className="mt-2 px-1 space-y-1.5">
+      {StatusPill}
+      <p className="text-[10px] text-amber-400/80 font-semibold">
+        {state === "error" ? stageMsg : "OPENAI_API_KEY missing in Vercel environment."}
       </p>
-      <button
-        onClick={openInBingDirect}
-        className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 transition"
-      >
-        <span>🖼</span>
-        <span>Render Free in Bing Image Creator</span>
-      </button>
+      <p className="text-[10px] text-white/25">
+        Add <code className="text-amber-300/60">OPENAI_API_KEY</code> to Vercel project settings → redeploy → images render automatically.
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={generate}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+        >
+          <span>↺</span>
+          <span>Retry</span>
+        </button>
+        <button
+          onClick={openInBingDirect}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 transition"
+        >
+          <span>🖼</span>
+          <span>Render Free in Bing</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -930,12 +1079,13 @@ function ImageGenerationPanel({
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 function MessageBubble({
-  msg, allAgents, conversationId,
+  msg, allAgents, conversationId, isLatest,
   onSave,
 }: {
   msg: UIMessage;
   allAgents: Agent[];
   conversationId?: string;
+  isLatest?: boolean;
   onSave: (content: string, agentId: string, agentRole: AgentRole) => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -992,16 +1142,26 @@ function MessageBubble({
                 agentId={msg.agentId}
                 conversationId={conversationId}
               />
-              {/* Inline image render — only for image agent responses */}
-              {msg.agentRole === "image" && (() => {
-                const imgPrompt = extractPromptSection(msg.content, IMAGE_PROMPT_RE);
-                if (!imgPrompt) return null;
+              {/* Inline image render — image agent AND creative director responses */}
+              {(msg.agentRole === "image" || msg.agentRole === "creative") && (() => {
+                const imgPrompt = extractImagePrompt(msg.content);
+                if (!imgPrompt) {
+                  console.log("[MessageBubble] no image prompt extracted", { role: msg.agentRole, contentLen: msg.content.length });
+                  return null;
+                }
+                console.log("[MessageBubble] mounting ImageRenderWidget", {
+                  role: msg.agentRole,
+                  promptLength: imgPrompt.length,
+                  isLatest,
+                  renderWidgetMounted: true,
+                });
                 return (
                   <ImageRenderWidget
                     imagePrompt={imgPrompt}
                     subject={msg.content.slice(0, 80)}
                     agentId={msg.agentId}
                     conversationId={conversationId}
+                    autoRender={isLatest ?? false}
                   />
                 );
               })()}
@@ -1700,6 +1860,7 @@ function ChatInner() {
                 msg={msg}
                 allAgents={agents}
                 conversationId={conversationId}
+                isLatest={i === messages.length - 1}
                 onSave={(content, aId, aRole) => setSaveModal({ content, agentId: aId, agentRole: aRole })}
               />
             ))}
