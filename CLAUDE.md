@@ -155,11 +155,13 @@ firestore.rules                — production security rules (deployed)
 
 ---
 
-## Events in Database (4 active)
-1. **VIP Launch Night** — members only, memberPrice $45, June 14 2026
-2. **Winnipeg After Dark DIABLO** — memberPrice $35, generalPrice $50, July 19 2026
-3. **Mansion Party** — memberPrice $60, generalPrice $80, Aug 9 2026
-4. **Sea Bears Courtside** — memberPrice $55, generalPrice $75, Aug 23 2026
+## Events in Database — VERIFIED FROM FIRESTORE (last checked 2026-05-26)
+1. **ALL ACCESS Founding 15 — Sea Bears Courtside Launch** — $300 CAD (general + member same), June 30 2026, 15 cap, 14 remaining, active
+2. **Winnipeg After Dark — VIP Nightlife Experience** — $300 CAD (general + member same), July 10 2026, 30 cap, active
+3. **Mansion Party (All White Experience)** — $100 CAD (general + member same), July 31 2026, 25 cap, active
+4. **Rooftop Sunset Social** — $100 CAD, Dec 31 2026, 50 cap, coming_soon
+
+⚠️ Firestore is the ONLY source of truth. Do not use these numbers if they conflict with a live Firestore read.
 
 Images hosted in `web/public/events/` → served from Vercel CDN.
 
