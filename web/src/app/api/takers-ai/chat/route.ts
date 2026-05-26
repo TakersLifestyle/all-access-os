@@ -59,6 +59,7 @@ import {
   enforceModelQuality,
   analyzeForWeakRefusals,
 } from "@/lib/takers-ai/operator-mode";
+import { sanitizeForFirestore } from "@/lib/sanitize-firestore";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -313,14 +314,24 @@ async function buildSystemPrompt(
 }
 
 // ── Agent log writer ──────────────────────────────────────────────────────────
+// Sanitizes payload before writing — never lets undefined values crash the stream.
 function writeAgentLog(
   db: FirebaseFirestore.Firestore,
   data: Record<string, unknown>
 ): void {
-  db.collection("agentLogs")
-    .doc()
-    .set({ ...data, createdAt: new Date().toISOString() })
-    .catch((err) => log("agentLog", "error", { err: String(err) }));
+  try {
+    const payload = sanitizeForFirestore({
+      ...data,
+      createdAt: new Date().toISOString(),
+    }) as Record<string, unknown>;
+    db.collection("agentLogs")
+      .doc()
+      .set(payload)
+      .catch((err) => log("agentLog", "error", { err: String(err) }));
+  } catch (err) {
+    // Sanitization itself failed — log and skip, never crash the stream
+    log("agentLog", "warn", { err: `writeAgentLog sanitization failed: ${String(err)}` });
+  }
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -952,7 +963,7 @@ export async function POST(req: NextRequest) {
               operatorMode: true,
               weakRefusalDetected: refusalAnalysis.hasWeakRefusal,
               weakRefusalSeverity: refusalAnalysis.severity,
-              weakRefusalPatterns: refusalAnalysis.hasWeakRefusal ? refusalAnalysis.patterns : undefined,
+              weakRefusalPatterns: refusalAnalysis.patterns, // always string[], never undefined
             },
           });
 

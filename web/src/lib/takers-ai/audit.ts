@@ -148,11 +148,19 @@ export function writeAuditEvent(
   actor: { uid: string; role?: string; email?: string },
   data: Parameters<typeof createAuditEvent>[4] = {}
 ): void {
-  const event = createAuditEvent(type, entityType, entityId, actor, data);
-  db.collection("auditEvents")
-    .doc()
-    .set(event)
-    .catch((err) => console.error("[audit] write failed:", err));
+  try {
+    const event = createAuditEvent(type, entityType, entityId, actor, data);
+    // Sanitize before write — the payload field can contain caller-supplied data
+    // that may include undefined values, which Firestore rejects.
+    const safe = JSON.parse(JSON.stringify(event, (_k, v) => v === undefined ? null : v));
+    db.collection("auditEvents")
+      .doc()
+      .set(safe)
+      .catch((err) => console.error("[audit] write failed:", err));
+  } catch (err) {
+    // Never let audit logging crash the calling code
+    console.warn("[audit] writeAuditEvent failed:", String(err));
+  }
 }
 
 // ── Execution trace ───────────────────────────────────────────────────────────

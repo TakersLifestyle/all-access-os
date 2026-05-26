@@ -75,6 +75,13 @@ export function adminDb(): ReturnType<typeof getFirestore> {
   if (dbInstance) return dbInstance;
   ensureInitialized();
   dbInstance = getFirestore();
+  // Backstop: silently ignore undefined values rather than throwing.
+  // We still sanitize manually before writes — this is defense-in-depth only.
+  try {
+    dbInstance.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // settings() throws if called after the first operation — safe to ignore.
+  }
   return dbInstance;
 }
 
