@@ -20,9 +20,12 @@ const envPath = resolve(__dirname, "../web/.env.local");
 let serviceAccount;
 try {
   const envContent = readFileSync(envPath, "utf-8");
-  const keyLine = envContent.split("\n").find((l) => l.startsWith("FIREBASE_SERVICE_ACCOUNT_KEY="));
-  if (!keyLine) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY not found in .env.local");
-  const rawJson = keyLine.slice("FIREBASE_SERVICE_ACCOUNT_KEY=".length).trim().replace(/^['"]|['"]$/g, "");
+  const keyLine = envContent.split("\n").find(
+    (l) => l.startsWith("FIREBASE_SERVICE_ACCOUNT_KEY=") || l.startsWith("GOOGLE_APPLICATION_CREDENTIALS_JSON=")
+  );
+  if (!keyLine) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS_JSON not found in .env.local");
+  const prefix = keyLine.startsWith("FIREBASE_SERVICE_ACCOUNT_KEY=") ? "FIREBASE_SERVICE_ACCOUNT_KEY=" : "GOOGLE_APPLICATION_CREDENTIALS_JSON=";
+  const rawJson = keyLine.slice(prefix.length).trim().replace(/^['"]|['"]$/g, "");
   serviceAccount = JSON.parse(rawJson);
 } catch (err) {
   console.error("Could not read service account:", err.message);
