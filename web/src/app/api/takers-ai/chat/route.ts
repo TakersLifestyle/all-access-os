@@ -54,6 +54,11 @@ import {
   buildEventKnowledgeContext,
   agentNeedsEventKnowledge,
 } from "@/lib/takers-ai/event-knowledge";
+import {
+  buildOperatorPrefix,
+  enforceModelQuality,
+  analyzeForWeakRefusals,
+} from "@/lib/takers-ai/operator-mode";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -625,12 +630,18 @@ export async function POST(req: NextRequest) {
 
         // ── STAGES 6+7: Build system prompt (memory + knowledge) ─────────────
         const stage6Start = Date.now();
+
+        // Prepend operator mode prefix — enforces action-oriented, deliverable-first behavior
+        // across all agents. Prevents weak refusals, ensures structured copy-ready output.
+        const operatorPrefix = buildOperatorPrefix(activeAgent.role as string);
+        const agentBasePrompt = operatorPrefix + "\n\n---\n\n" + (activeAgent.systemPrompt as string);
+
         const {
           prompt: systemPromptBase,
           memoryBlockCount,
           knowledgeChunksInjected,
           stageErrors: promptErrors,
-        } = await buildSystemPrompt(db, activeAgentId, activeAgent.systemPrompt as string, {
+        } = await buildSystemPrompt(db, activeAgentId, agentBasePrompt, {
           userMessage,
           useKnowledge,
         });
@@ -732,7 +743,9 @@ export async function POST(req: NextRequest) {
         }
 
         // ── STAGE 10: Claude stream ────────────────────────────────────────────
-        const model = (activeAgent.model as string) || "claude-sonnet-4-5";
+        // Enforce model quality floor — Sonnet required for creative/strategy/events/marketing/content
+        const rawModel = (activeAgent.model as string) || "claude-sonnet-4-5";
+        const model = enforceModelQuality(activeAgent.role as string, rawModel);
         const maxTokens = Math.min((activeAgent.maxTokens as number) || 2048, 8192);
         let fullResponse = "";
         const generationStartedAt = Date.now();
@@ -809,6 +822,17 @@ export async function POST(req: NextRequest) {
           }
 
           // ── STAGE 11: Post-stream writes (all fire-and-forget) ────────────
+
+          // Operator mode: analyze output for weak refusals
+          const refusalAnalysis = analyzeForWeakRefusals(fullResponse);
+          if (refusalAnalysis.hasWeakRefusal) {
+            log("weak-refusal", "warn", {
+              severity: refusalAnalysis.severity,
+              count: refusalAnalysis.patterns.length,
+              role: activeAgent.role,
+              firstPattern: refusalAnalysis.patterns[0]?.slice(0, 80),
+            });
+          }
 
           // Tool requests
           const toolRequests = parseToolRequests(fullResponse);
@@ -925,6 +949,10 @@ export async function POST(req: NextRequest) {
               useKnowledge: useKnowledge ?? false,
               attachmentCount: attachments.length,
               totalDurationMs: Date.now() - requestStartedAt,
+              operatorMode: true,
+              weakRefusalDetected: refusalAnalysis.hasWeakRefusal,
+              weakRefusalSeverity: refusalAnalysis.severity,
+              weakRefusalPatterns: refusalAnalysis.hasWeakRefusal ? refusalAnalysis.patterns : undefined,
             },
           });
 
@@ -1000,6 +1028,9 @@ export async function POST(req: NextRequest) {
             tokenUsage,
             toolCallIds: toolCallIds.length > 0 ? toolCallIds : undefined,
             totalDurationMs: Date.now() - handlerStart,
+            operatorMode: true,
+            weakRefusalDetected: refusalAnalysis.hasWeakRefusal,
+            weakRefusalSeverity: refusalAnalysis.hasWeakRefusal ? refusalAnalysis.severity : undefined,
           });
 
         } catch (streamErr) {

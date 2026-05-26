@@ -549,6 +549,141 @@ interface UIMessage extends ChatMessage {
   };
 }
 
+// ── Creative action bar ───────────────────────────────────────────────────────
+// Detects creative output (canva prompts, image prompts, flyer concepts)
+// and surfaces copy + save buttons for each actionable section.
+
+const CANVA_PROMPT_RE = /(?:\*{1,2}CANVA(?:[- ]READY)?(?:\s+DESIGN)?\s*PROMPT\*{0,2}|Canva(?:[- ]ready)?\s+(?:Design\s+)?Prompt)[\s:*]+([^\n*]{20,})/i;
+const IMAGE_PROMPT_RE = /(?:\*{1,2}IMAGE(?:\s+GEN(?:ERATION)?)?\s*PROMPT\*{0,2}|(?:DALL-?E|Midjourney|Flux|Stable\s+Diffusion)\s+Prompt|Image\s+Gen(?:eration)?\s+Prompt)[\s:*]+([^\n*]{20,})/i;
+const CREATIVE_ROLES = new Set(["creative", "content", "marketing"]);
+const CREATIVE_PATTERNS = [
+  /canva(?:[- ]ready)?\s+prompt/i,
+  /image\s+gen(?:eration)?\s+prompt/i,
+  /dall-?e\s+prompt/i,
+  /midjourney\s+prompt/i,
+  /\*{1,2}concept\s+[1-4]\*{0,2}/i,
+  /\*{1,2}headline\*{0,2}:/i,
+  /ready_to_render/i,
+];
+
+function isCreativeOutput(content: string, agentRole?: string): boolean {
+  if (agentRole && CREATIVE_ROLES.has(agentRole)) {
+    return CREATIVE_PATTERNS.some((p) => p.test(content));
+  }
+  return CREATIVE_PATTERNS.filter((p) => p.test(content)).length >= 2;
+}
+
+function extractPromptSection(content: string, re: RegExp): string | null {
+  const match = content.match(re);
+  if (!match) return null;
+  // Return up to 800 chars after the match heading, trimmed
+  const start = content.indexOf(match[1] ?? "");
+  if (start === -1) return null;
+  const raw = content.slice(start, start + 800).split("\n\n")[0].trim();
+  return raw.length > 10 ? raw : null;
+}
+
+function CreativeActionBar({
+  content,
+  agentRole,
+  agentId,
+  conversationId,
+}: {
+  content: string;
+  agentRole?: string;
+  agentId?: string;
+  conversationId?: string;
+}) {
+  const [canvaCopied, setCanvaCopied] = useState(false);
+  const [imgCopied, setImgCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const canvaPrompt = extractPromptSection(content, CANVA_PROMPT_RE);
+  const imagePrompt = extractPromptSection(content, IMAGE_PROMPT_RE);
+  const hasActions = canvaPrompt || imagePrompt;
+
+  if (!hasActions) return null;
+
+  function copyCanva() {
+    if (!canvaPrompt) return;
+    navigator.clipboard.writeText(canvaPrompt);
+    setCanvaCopied(true);
+    setTimeout(() => setCanvaCopied(false), 2000);
+  }
+
+  function copyImage() {
+    if (!imagePrompt) return;
+    navigator.clipboard.writeText(imagePrompt);
+    setImgCopied(true);
+    setTimeout(() => setImgCopied(false), 2000);
+  }
+
+  async function saveAsset() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/takers-ai/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          assetType: "creative_brief",
+          title: `Creative Package — ${new Date().toLocaleDateString("en-CA")}`,
+          content,
+          renderStatus: "ready_to_render",
+          agentId: agentId ?? null,
+          conversationId: conversationId ?? null,
+          tags: ["creative", agentRole ?? "creative"],
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed");
+      setTimeout(() => setSaveError(null), 4000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-2 px-1">
+      {canvaPrompt && (
+        <button
+          onClick={copyCanva}
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-purple-500/25 bg-purple-500/8 text-purple-300/70 hover:text-purple-200 hover:border-purple-400/40 hover:bg-purple-500/15 transition"
+        >
+          <span>🎨</span>
+          <span>{canvaCopied ? "✓ Copied!" : "Copy Canva Prompt"}</span>
+        </button>
+      )}
+      {imagePrompt && (
+        <button
+          onClick={copyImage}
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-blue-500/25 bg-blue-500/8 text-blue-300/70 hover:text-blue-200 hover:border-blue-400/40 hover:bg-blue-500/15 transition"
+        >
+          <span>🖼</span>
+          <span>{imgCopied ? "✓ Copied!" : "Copy Image Prompt"}</span>
+        </button>
+      )}
+      <button
+        onClick={saveAsset}
+        disabled={saving || saved}
+        className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/8 text-emerald-300/70 hover:text-emerald-200 hover:border-emerald-400/40 hover:bg-emerald-500/15 transition disabled:opacity-40"
+      >
+        <span>{saved ? "✓" : saving ? "…" : "💾"}</span>
+        <span>{saved ? "Asset Saved!" : saving ? "Saving…" : "Save Asset"}</span>
+      </button>
+      {saveError && (
+        <span className="text-[10px] text-red-400/70">{saveError}</span>
+      )}
+    </div>
+  );
+}
+
 // ── Message bubble ────────────────────────────────────────────────────────────
 function MessageBubble({
   msg, allAgents, conversationId,
@@ -564,6 +699,7 @@ function MessageBubble({
   const respondingAgent = msg.agentId ? allAgents.find((a) => a.id === msg.agentId) : null;
   const agentIcon = respondingAgent ? AGENT_ROLE_ICONS[respondingAgent.role as AgentRole] : "◎";
   const agentColor = respondingAgent ? AGENT_ROLE_COLORS[respondingAgent.role as AgentRole] : "bg-red-600";
+  const showCreativeActions = !isUser && isCreativeOutput(msg.content, msg.agentRole);
 
   function handleCopy() {
     navigator.clipboard.writeText(msg.content);
@@ -602,6 +738,16 @@ function MessageBubble({
           }`}>
             {msg.content}
           </div>
+
+          {/* Creative action buttons — shown when creative output detected */}
+          {showCreativeActions && (
+            <CreativeActionBar
+              content={msg.content}
+              agentRole={msg.agentRole}
+              agentId={msg.agentId}
+              conversationId={conversationId}
+            />
+          )}
 
           {!isUser && (
             <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition px-1">
