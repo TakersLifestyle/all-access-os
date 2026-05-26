@@ -364,6 +364,7 @@ export async function POST(req: NextRequest) {
     saveConversation?: boolean;
     useKnowledge?: boolean;
     attachments?: AttachmentMeta[];
+    responseMode?: "quick" | "standard" | "campaign";
   };
 
   try {
@@ -372,7 +373,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { agentId, messages, conversationId, saveConversation, useKnowledge } = body;
+  const { agentId, messages, conversationId, saveConversation, useKnowledge, responseMode } = body;
   const rawAttachments = Array.isArray(body.attachments) ? body.attachments : [];
 
   if (!agentId || !messages?.length) {
@@ -677,6 +678,14 @@ export async function POST(req: NextRequest) {
             log("multimodal-ctx", "warn", { err: String(mmErr) });
           }
         }
+
+        // ── Response mode suffix ──────────────────────────────────────────────
+        if (responseMode === "quick") {
+          systemPrompt += "\n\n---\n\n**RESPONSE MODE: QUICK** — Be concise and direct. For creative requests: max 2 options. No long explanations. Lead with the deliverable. No preamble.";
+        } else if (responseMode === "campaign") {
+          systemPrompt += "\n\n---\n\n**RESPONSE MODE: FULL CAMPAIGN** — Produce the complete package. All formats, all concepts, full creative direction, all copy variations.";
+        }
+        // "standard" = no suffix, default behavior
 
         // ── Event knowledge injection (content/marketing/events/operator) ──────
         // Injects live event data from Firestore to prevent hallucinated event details.

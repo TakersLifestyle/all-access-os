@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/takers-ai/agents",    label: "Agents",       icon: "✦" },
   { href: "/takers-ai/workflows", label: "Workflows",    icon: "⟳" },
   { href: "/takers-ai/approvals", label: "Approvals",    icon: "✓" },
+  { href: "/takers-ai/knowledge",  label: "Knowledge",    icon: "◬" },
   { href: "/takers-ai/memory",    label: "Brand Memory", icon: "◈" },
   { href: "/takers-ai/templates", label: "Templates",    icon: "◧" },
   { href: "/takers-ai/outputs",   label: "Saved Outputs",icon: "◫" },

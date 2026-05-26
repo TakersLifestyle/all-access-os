@@ -107,8 +107,11 @@ export async function POST(req: NextRequest) {
     attachments?: AttachmentMeta[];
     tone?: string;
     conversationId?: string;
-    conceptIndex?: number;  // 0-3 — which concept to render (default: 0)
+    conceptIndex?: number;
     agentId?: string;
+    // Fast path: skip brief generation, render prompt directly
+    skipBrief?: boolean;
+    directPrompt?: string;
   };
 
   try {
@@ -128,6 +131,8 @@ export async function POST(req: NextRequest) {
     conversationId,
     conceptIndex = 0,
     agentId,
+    skipBrief = false,
+    directPrompt,
   } = body;
   const attachments: AttachmentMeta[] = Array.isArray(body.attachments) ? body.attachments : [];
 
@@ -234,25 +239,49 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // ── Stage 3: Creative brief generation ───────────────────────────────
-        stage("brief", "Generating 4 full creative concepts with Sonnet…");
+        // ── Stage 3: Creative brief generation (skipped in fast-path mode) ────
+        let renderPrompt: string;
+        let brief;
 
-        const brief = await generateCreativeBrief({
-          subject,
-          formats,
-          eventFacts,
-          tone,
-          agentId,
-          conversationId,
-          context: referenceContextBlock || undefined,
-        });
-
-        send({ type: "brief", brief });
-        stage("brief", `Brief complete. ${brief.concepts?.length ?? 1} concept(s) generated.`);
-
-        // Pick the concept to render
-        const targetConcept = brief.concepts?.[Math.min(conceptIndex, (brief.concepts?.length ?? 1) - 1)];
-        const renderPrompt = targetConcept?.imageGenPrompt ?? brief.imageGenPrompt;
+        if (skipBrief && directPrompt?.trim()) {
+          // Fast path: use the prompt extracted from an existing chat response
+          renderPrompt = directPrompt.trim();
+          stage("brief", "Using extracted image prompt — skipping brief generation.");
+          // Minimal synthetic brief for storage record
+          brief = {
+            subject,
+            formats,
+            headline: subject,
+            subheadline: "",
+            bodyText: "",
+            cta: "",
+            colorPalette: [],
+            typographyDirection: "",
+            imageStyle: "",
+            layoutNotes: "",
+            canvaPrompt: "",
+            imageGenPrompt: renderPrompt,
+            hashtags: [],
+            captionDraft: "",
+            confidence: 100,
+            warnings: ["Fast-path render — no creative brief generated"],
+          };
+        } else {
+          stage("brief", "Generating creative concept with Sonnet…");
+          brief = await generateCreativeBrief({
+            subject,
+            formats,
+            eventFacts,
+            tone,
+            agentId,
+            conversationId,
+            context: referenceContextBlock || undefined,
+          });
+          send({ type: "brief", brief });
+          stage("brief", `Brief complete. ${brief.concepts?.length ?? 1} concept(s) generated.`);
+          const targetConcept = brief.concepts?.[Math.min(conceptIndex, (brief.concepts?.length ?? 1) - 1)];
+          renderPrompt = targetConcept?.imageGenPrompt ?? brief.imageGenPrompt;
+        }
         const primaryFormat = formats[0] ?? "instagram_post";
 
         // ── Stage 4: Image rendering ──────────────────────────────────────────
@@ -299,7 +328,7 @@ export async function POST(req: NextRequest) {
             providerMessage: renderResult.providerMessage,
             imageUrl: storedUrl ?? renderResult.url ?? null,
             imagePrompt: renderPrompt,
-            canvaPrompt: targetConcept?.canvaPrompt ?? brief.canvaPrompt,
+            canvaPrompt: brief.canvaPrompt ?? null,
             eventFacts: eventFacts ?? null,
             hasReferenceImage: imageAttachments.length > 0,
             agentId: agentId ?? null,
@@ -314,7 +343,7 @@ export async function POST(req: NextRequest) {
           // Also save to imagePrompts collection for reuse
           await db.collection("imagePrompts").doc().set(sanitizeForFirestore({
             prompt: renderPrompt,
-            canvaPrompt: targetConcept?.canvaPrompt ?? brief.canvaPrompt,
+            canvaPrompt: brief.canvaPrompt ?? null,
             subject,
             format: primaryFormat,
             providerType: renderResult.providerType,
@@ -338,7 +367,7 @@ export async function POST(req: NextRequest) {
           providerMessage: renderResult.providerMessage,
           readyToRenderNote: renderResult.readyToRenderNote ?? null,
           imagePrompt: renderPrompt,
-          canvaPrompt: targetConcept?.canvaPrompt ?? brief.canvaPrompt,
+          canvaPrompt: brief.canvaPrompt ?? null,
           durationMs: renderResult.durationMs ?? null,
         });
 

@@ -716,6 +716,164 @@ function CreativeActionBar({
   );
 }
 
+// ── Inline image render widget ────────────────────────────────────────────────
+// Appears on image-agent responses. Calls generate-image in fast-path mode
+// (skipBrief=true) — no Sonnet brief generation, direct provider render.
+
+function ImageRenderWidget({
+  imagePrompt,
+  subject,
+  agentId,
+  conversationId,
+}: {
+  imagePrompt: string;
+  subject?: string;
+  agentId?: string;
+  conversationId?: string;
+}) {
+  const [state, setState] = useState<"idle" | "loading" | "rendered" | "no_provider" | "error">("idle");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [stageMsg, setStageMsg] = useState("Connecting to image provider…");
+
+  async function generate() {
+    setState("loading");
+    setStageMsg("Connecting to image provider…");
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/takers-ai/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          subject: subject || "Creative asset for ALL ACCESS Winnipeg",
+          skipBrief: true,
+          directPrompt: imagePrompt,
+          agentId: agentId ?? null,
+          conversationId: conversationId ?? null,
+        }),
+      });
+
+      if (!res.ok || !res.body) {
+        setState("no_provider");
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const ev = JSON.parse(line.slice(6));
+            if (ev.type === "stage") setStageMsg(ev.message ?? stageMsg);
+            if (ev.type === "render") {
+              if (ev.renderStatus === "rendered" && ev.url) {
+                setImageUrl(ev.url);
+                setState("rendered");
+              } else {
+                setState("no_provider");
+              }
+            }
+            if (ev.type === "fatal") { setState("error"); setStageMsg(ev.error ?? "Provider error"); }
+          } catch { /* ignore partial lines */ }
+        }
+      }
+      // If stream ended with no render event
+      if (state === "loading") setState("no_provider");
+    } catch {
+      setState("no_provider");
+    }
+  }
+
+  function openInBingDirect() {
+    window.open(`https://www.bing.com/images/create?q=${encodeURIComponent(imagePrompt.slice(0, 480))}`, "_blank", "noopener,noreferrer");
+  }
+
+  if (state === "idle") {
+    return (
+      <div className="flex items-center gap-2 mt-1.5 px-1">
+        <button
+          onClick={generate}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 text-violet-200 hover:bg-violet-600/25 hover:border-violet-400/60 transition font-medium"
+        >
+          <span>⚡</span>
+          <span>Generate Image Now</span>
+        </button>
+        <span className="text-white/15 text-[10px]">or</span>
+        <button
+          onClick={openInBingDirect}
+          className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+        >
+          <span>🖼</span>
+          <span>Render in Bing</span>
+        </button>
+      </div>
+    );
+  }
+
+  if (state === "loading") {
+    return (
+      <div className="flex items-center gap-2 mt-1.5 px-1 text-[11px] text-white/40">
+        <span className="animate-spin">⟳</span>
+        <span>{stageMsg}</span>
+      </div>
+    );
+  }
+
+  if (state === "rendered" && imageUrl) {
+    return (
+      <div className="mt-2 space-y-2 px-1">
+        <div className="rounded-xl overflow-hidden border border-white/10 max-w-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="Generated image" className="w-full" />
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={imageUrl}
+            download="allaccess-generated.png"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition"
+          >
+            <span>⬇</span>
+            <span>Download PNG</span>
+          </a>
+          <button
+            onClick={generate}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 transition"
+          >
+            <span>↺</span>
+            <span>Regenerate</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // no_provider or error
+  return (
+    <div className="mt-1.5 px-1 space-y-1.5">
+      <p className="text-[10px] text-amber-400/60">
+        {state === "error" ? stageMsg : "No image provider connected."}{" "}
+        Add <code className="text-amber-300/70">OPENAI_API_KEY</code> to Vercel to render images in-platform.
+      </p>
+      <button
+        onClick={openInBingDirect}
+        className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 transition"
+      >
+        <span>🖼</span>
+        <span>Render Free in Bing Image Creator</span>
+      </button>
+    </div>
+  );
+}
+
 // ── Image generation quick-action panel ──────────────────────────────────────
 // Shown above the input bar when Creative Image Agent is active.
 // Chips set a starter phrase in the input so the user can complete the request.
@@ -827,12 +985,27 @@ function MessageBubble({
 
           {/* Creative action buttons — shown when creative output detected */}
           {showCreativeActions && (
-            <CreativeActionBar
-              content={msg.content}
-              agentRole={msg.agentRole}
-              agentId={msg.agentId}
-              conversationId={conversationId}
-            />
+            <>
+              <CreativeActionBar
+                content={msg.content}
+                agentRole={msg.agentRole}
+                agentId={msg.agentId}
+                conversationId={conversationId}
+              />
+              {/* Inline image render — only for image agent responses */}
+              {msg.agentRole === "image" && (() => {
+                const imgPrompt = extractPromptSection(msg.content, IMAGE_PROMPT_RE);
+                if (!imgPrompt) return null;
+                return (
+                  <ImageRenderWidget
+                    imagePrompt={imgPrompt}
+                    subject={msg.content.slice(0, 80)}
+                    agentId={msg.agentId}
+                    conversationId={conversationId}
+                  />
+                );
+              })()}
+            </>
           )}
 
           {!isUser && (
@@ -903,8 +1076,27 @@ function ChatInner() {
   const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Response mode ───────────────────────────────────────────────────────────
+  const [responseMode, setResponseMode] = useState<"quick" | "standard" | "campaign">("quick");
+
+  // ── Scroll management ───────────────────────────────────────────────────────
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  function handleChatScroll() {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setUserScrolledUp(distFromBottom > 120);
+  }
+
+  function scrollToBottom(force = false) {
+    if (force || !userScrolledUp) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }
 
   const isUploading = attachments.some(
     (a) => a.status === "uploading" || a.status === "pending"
@@ -1157,10 +1349,20 @@ function ChatInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialConvId]);
 
-  // Auto-scroll
+  // Auto-scroll — only when user hasn't scrolled up
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, streamingText]);
+
+  // When streaming starts, always jump to bottom and reset scroll guard
+  useEffect(() => {
+    if (streaming) {
+      setUserScrolledUp(false);
+      scrollToBottom(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
   const isOperator = selectedAgent?.isDefault === true;
@@ -1193,6 +1395,7 @@ function ChatInner() {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           conversationId: conversationId || undefined,
           saveConversation: true,
+          responseMode,
           attachments: attachments
             .filter((a) => a.status === "ready" && a.meta)
             .map((a) => a.meta!),
@@ -1406,7 +1609,11 @@ function ChatInner() {
       </div>
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div
+        ref={chatContainerRef}
+        onScroll={handleChatScroll}
+        className="flex-1 overflow-y-auto px-6 py-6 relative"
+      >
         {loadingConv ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -1527,6 +1734,19 @@ function ChatInner() {
             <div ref={bottomRef} />
           </div>
         )}
+
+        {/* Jump to latest — floating over the messages area */}
+        {userScrolledUp && (
+          <div className="sticky bottom-4 flex justify-center pointer-events-none">
+            <button
+              onClick={() => { setUserScrolledUp(false); scrollToBottom(true); }}
+              className="pointer-events-auto flex items-center gap-1.5 text-xs px-4 py-2 rounded-full bg-[#13131f] border border-white/15 text-white/60 hover:text-white hover:border-white/30 shadow-2xl transition"
+            >
+              <span>↓</span>
+              <span>Jump to latest</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Input area ── */}
@@ -1546,6 +1766,25 @@ function ChatInner() {
               e.target.value = "";
             }}
           />
+
+          {/* Response mode selector */}
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
+            <div className="flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.07] rounded-lg p-0.5">
+              {(["quick", "standard", "campaign"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setResponseMode(m)}
+                  className={`text-[10px] px-2.5 py-1 rounded-md transition font-medium ${
+                    responseMode === m
+                      ? "bg-white/[0.10] text-white/80"
+                      : "text-white/25 hover:text-white/50"
+                  }`}
+                >
+                  {m === "quick" ? "⚡ Quick" : m === "standard" ? "◎ Standard" : "📦 Campaign"}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Image agent quick-action panel */}
           {selectedAgent?.role === "image" && !streaming && (
