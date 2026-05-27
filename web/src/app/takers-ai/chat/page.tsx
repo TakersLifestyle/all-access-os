@@ -854,7 +854,8 @@ function ImageRenderWidget({
 
       if (!res.ok || !res.body) {
         console.warn("[ImageRenderWidget] non-ok response", res.status);
-        setState("no_provider");
+        setState("error");
+        setStageMsg(`Server returned ${res.status} — check Vercel function logs`);
         return;
       }
 
@@ -884,9 +885,19 @@ function ImageRenderWidget({
                 setImageUrl(ev.url);
                 setState("rendered");
                 console.log("[ImageRenderWidget] render complete", { url: ev.url });
-              } else {
+              } else if (ev.renderStatus === "ready_to_render") {
+                // Mock provider — no API key configured in Vercel
                 setState("no_provider");
-                console.warn("[ImageRenderWidget] no_provider render status", ev.renderStatus);
+                console.warn("[ImageRenderWidget] no provider connected (mock)");
+              } else {
+                // Provider exists but call failed (billing, 429, content policy, etc.)
+                setState("error");
+                setStageMsg(
+                  ev.providerMessage
+                    ? ev.providerMessage
+                    : "Image generation failed — check OpenAI billing at platform.openai.com"
+                );
+                console.error("[ImageRenderWidget] provider error", ev.renderStatus, ev.providerMessage);
               }
             }
             if (ev.type === "fatal") {
@@ -900,11 +911,14 @@ function ImageRenderWidget({
       // Stream ended without a render event
       if (!gotRenderEvent) {
         console.warn("[ImageRenderWidget] stream ended with no render event");
-        setState("no_provider");
+        // No render event at all — likely a server-side fatal before rendering
+        setState("error");
+        setStageMsg("No response from render server — check Vercel logs");
       }
     } catch (err) {
       console.error("[ImageRenderWidget] fetch error", err);
-      setState("no_provider");
+      setState("error");
+      setStageMsg(err instanceof Error ? err.message : "Network error — could not reach render server");
     }
   }
 
