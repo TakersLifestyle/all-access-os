@@ -130,9 +130,17 @@ class DalleProvider implements ImageProvider {
     const size = toImageSize(request.format);
     const [w, h] = size.split("x").map(Number);
 
+    // gpt-image-1 renders graphic design well when the prompt starts with a design frame.
+    // Strip any photography/Midjourney residue and ensure design-first framing.
+    const rawPrompt = request.prompt.slice(0, 32000);
+    const hasDesignFrame = /professionally designed|event flyer|promotional poster|graphic design|poster layout/i.test(rawPrompt);
+    const prompt = hasDesignFrame
+      ? rawPrompt
+      : `A professionally designed event flyer / promotional poster. ${rawPrompt}`;
+
     const payload = {
       model: "gpt-image-1",
-      prompt: request.prompt.slice(0, 32000),
+      prompt,
       n: 1,
       size,
       quality: "high",
