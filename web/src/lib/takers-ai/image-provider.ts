@@ -68,11 +68,11 @@ export function getDimensionsForFormat(format?: AssetFormat): { width: number; h
   return (format && map[format]) ? map[format] : { width: 1080, height: 1080 };
 }
 
-/** Map any AssetFormat to the nearest DALL-E 3 supported size */
-function toDalleSize(format?: AssetFormat): "1024x1024" | "1024x1792" | "1792x1024" {
+/** Map any AssetFormat to the nearest gpt-image-1 supported size */
+function toImageSize(format?: AssetFormat): "1024x1024" | "1024x1536" | "1536x1024" {
   const dim = getDimensionsForFormat(format);
-  if (dim.height > dim.width) return "1024x1792";  // vertical
-  if (dim.width > dim.height) return "1792x1024";  // horizontal
+  if (dim.height > dim.width) return "1024x1536";  // vertical (portrait)
+  if (dim.width > dim.height) return "1536x1024";  // horizontal (landscape)
   return "1024x1024";
 }
 
@@ -113,8 +113,11 @@ class MockImageProvider implements ImageProvider {
   }
 }
 
-// ── DALL-E 3 Provider ─────────────────────────────────────────────────────────
+// ── gpt-image-1 Provider ──────────────────────────────────────────────────────
 // Uses OpenAI Images API directly via fetch (no openai npm package needed).
+// gpt-image-1 does NOT support: style, response_format
+// quality values: "auto" | "high" | "medium" | "low"   (NOT "hd" or "standard")
+// Returns: b64_json (base64-encoded PNG — no temporary URL)
 
 class DalleProvider implements ImageProvider {
   readonly type: ImageProviderType = "dalle3";
@@ -124,8 +127,18 @@ class DalleProvider implements ImageProvider {
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     const start = Date.now();
-    const size = toDalleSize(request.format);
+    const size = toImageSize(request.format);
     const [w, h] = size.split("x").map(Number);
+
+    const payload = {
+      model: "gpt-image-1",
+      prompt: request.prompt.slice(0, 32000),
+      n: 1,
+      size,
+      quality: "high",
+    };
+
+    console.log("[image-provider] IMAGE PAYLOAD", JSON.stringify(payload, null, 2));
 
     const res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
@@ -133,22 +146,16 @@ class DalleProvider implements ImageProvider {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: request.prompt.slice(0, 4000), // API limit
-        n: 1,
-        size,
-        quality: "hd",
-        style: request.style === "illustration" ? "natural" : "vivid",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      let errMsg = `DALL-E API error ${res.status}`;
+      let errMsg = `OpenAI API error ${res.status}`;
       try {
         const errBody = await res.json();
         errMsg = errBody?.error?.message ?? errMsg;
       } catch { /* ignore */ }
+      console.error("[image-provider] API error:", errMsg);
       return {
         status: "failed",
         prompt: request.prompt,
@@ -160,24 +167,38 @@ class DalleProvider implements ImageProvider {
     }
 
     const data = await res.json();
-    const url = (data.data as Array<{ url: string }>)?.[0]?.url;
-    if (!url) {
+    console.log("[image-provider] API response keys:", Object.keys(data));
+
+    // gpt-image-1 returns b64_json (not a URL)
+    const item = (data.data as Array<{ b64_json?: string; url?: string }>)?.[0];
+    const b64 = item?.b64_json;
+    const directUrl = item?.url;
+
+    if (!b64 && !directUrl) {
+      console.error("[image-provider] No image data in response:", JSON.stringify(data).slice(0, 500));
       return {
         status: "failed",
         prompt: request.prompt,
         providerType: "dalle3",
-        providerMessage: "DALL-E did not return an image URL",
-        error: "No URL in response",
+        providerMessage: "OpenAI did not return image data",
+        error: "No image data in response",
         durationMs: Date.now() - start,
       };
     }
 
+    // Convert b64 → data URL so saveImageToStorage can handle it
+    const imageUrl = b64
+      ? `data:image/png;base64,${b64}`
+      : directUrl!;
+
+    console.log("[image-provider] Image received — b64 length:", b64?.length ?? 0, "hasUrl:", !!directUrl);
+
     return {
       status: "rendered",
-      url,
+      url: imageUrl,
       prompt: request.prompt,
       providerType: "dalle3",
-      providerMessage: "Rendered via DALL-E 3 (HD)",
+      providerMessage: "Rendered via gpt-image-1 (High quality)",
       width: w,
       height: h,
       durationMs: Date.now() - start,
@@ -371,7 +392,7 @@ export function getImageProvider(): ImageProvider {
   });
 
   if (process.env.OPENAI_API_KEY) {
-    console.log("[image-provider] selected: DalleProvider (DALL-E 3)");
+    console.log("[image-provider] selected: DalleProvider (gpt-image-1)");
     _provider = new DalleProvider(process.env.OPENAI_API_KEY);
     return _provider;
   }
