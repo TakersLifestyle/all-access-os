@@ -633,6 +633,33 @@ function extractPromptSection(content: string, re: RegExp): string | null {
   return raw.length > 10 ? raw : null;
 }
 
+/**
+ * Strip technical marker blocks from the visible message text.
+ * The ImageRenderWidget handles the actual rendering — users shouldn't
+ * see [IMAGE_PROMPT_START]...[IMAGE_PROMPT_END] raw blocks or the old
+ * copy-paste fallback instructions.
+ */
+function cleanForDisplay(content: string): string {
+  let out = content;
+
+  // Remove [IMAGE_PROMPT_START]...[IMAGE_PROMPT_END] blocks (including their header line)
+  out = out.replace(/\*{0,2}Image Generation Prompt:?\*{0,2}\s*\n?\[IMAGE_PROMPT_START\][\s\S]*?\[IMAGE_PROMPT_END\]/gi, "");
+  out = out.replace(/\[IMAGE_PROMPT_START\][\s\S]*?\[IMAGE_PROMPT_END\]/gi, "");
+
+  // Remove [CANVA_PROMPT_START]...[CANVA_PROMPT_END] blocks (including their header line)
+  out = out.replace(/\*{0,2}Canva Design Prompt:?\*{0,2}\s*\n?\[CANVA_PROMPT_START\][\s\S]*?\[CANVA_PROMPT_END\]/gi, "");
+  out = out.replace(/\[CANVA_PROMPT_START\][\s\S]*?\[CANVA_PROMPT_END\]/gi, "");
+
+  // Remove old fallback copy-paste instructions
+  out = out.replace(/\*{0,2}If image doesn.t render automatically[\s\S]*?manually\./gi, "");
+  out = out.replace(/Add [`']?OPENAI_API_KEY[`']?[\s\S]*?manually\./gi, "");
+
+  // Collapse 3+ consecutive blank lines down to 2
+  out = out.replace(/\n{3,}/g, "\n\n");
+
+  return out.trim();
+}
+
 function CreativeActionBar({
   content,
   agentRole,
@@ -1225,7 +1252,7 @@ function MessageBubble({
               ? "bg-red-600/20 border border-red-600/25 text-white/90 rounded-tr-sm"
               : "bg-white/[0.04] border border-white/[0.08] text-white/80 rounded-tl-sm"
           }`}>
-            {msg.content}
+            {isUser ? msg.content : cleanForDisplay(msg.content)}
           </div>
 
           {/* Creative action buttons — shown when creative output detected */}
