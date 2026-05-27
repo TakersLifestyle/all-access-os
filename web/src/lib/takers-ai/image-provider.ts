@@ -358,19 +358,35 @@ let _provider: ImageProvider | null = null;
 export function getImageProvider(): ImageProvider {
   if (_provider) return _provider;
 
+  // Always-on diagnostic log — visible in Vercel function logs
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  const hasReplicate = !!process.env.REPLICATE_API_KEY;
+  const hasStability = !!process.env.STABILITY_API_KEY;
+  console.log("[image-provider] getImageProvider() called", {
+    hasOpenAI,
+    hasReplicate,
+    hasStability,
+    nodeEnv: process.env.NODE_ENV,
+    openAIKeyPrefix: process.env.OPENAI_API_KEY?.slice(0, 8) ?? "NOT_SET",
+  });
+
   if (process.env.OPENAI_API_KEY) {
+    console.log("[image-provider] selected: DalleProvider (DALL-E 3)");
     _provider = new DalleProvider(process.env.OPENAI_API_KEY);
     return _provider;
   }
   if (process.env.REPLICATE_API_KEY) {
+    console.log("[image-provider] selected: FluxProvider (Replicate)");
     _provider = new FluxProvider(process.env.REPLICATE_API_KEY);
     return _provider;
   }
   if (process.env.STABILITY_API_KEY) {
+    console.log("[image-provider] selected: StabilityProvider");
     _provider = new StabilityProvider(process.env.STABILITY_API_KEY);
     return _provider;
   }
 
+  console.warn("[image-provider] selected: MockImageProvider — NO API KEY FOUND");
   _provider = new MockImageProvider();
   return _provider;
 }

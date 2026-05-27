@@ -36,7 +36,8 @@ import { fetchLiveEvents } from "@/lib/takers-ai/event-knowledge";
 import type { AttachmentMeta } from "@/lib/takers-ai/attachments";
 import type { AssetFormat } from "@/lib/takers-ai/creative-brief";
 
-const IS_DEV = process.env.NODE_ENV === "development";
+// Logging always-on for production diagnostics — remove IS_DEV guard
+const IS_DEV = true; // always log until provider issue is resolved
 
 async function verifyAdmin(req: NextRequest) {
   const authHeader = req.headers.get("Authorization");
