@@ -2,9 +2,13 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // Monorepo: tell Next.js to trace files from the repo root so Vercel's
+  // outputFileTracingRoot and this value agree (both resolve to the parent
+  // of web/).  Fixes: "Both outputFileTracingRoot and turbopack.root are set
+  // but must have the same value."
+  // ─────────────────────────────────────────────────────────────────────────
+  outputFileTracingRoot: path.resolve(__dirname, ".."),
 
   // ─────────────────────────────────────────────────────────────────────────
   // Expose image provider type to the client bundle at build time.
