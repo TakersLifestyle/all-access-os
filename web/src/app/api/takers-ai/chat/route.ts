@@ -780,12 +780,26 @@ export async function POST(req: NextRequest) {
           const attachmentLogger = (msg: string, err?: string) =>
             log("attachment", "warn", { msg, err });
 
+          // Claude rejects messages with empty content — filter before building the payload.
+          // This can happen when conversation history contains image-render turns where
+          // the user sent attachments only, or the assistant response was empty.
+          const nonEmptyMessages = messages.filter(
+            (m) => typeof m.content === "string" && m.content.trim().length > 0
+          );
+          if (nonEmptyMessages.length < messages.length) {
+            log("message-filter", "warn", {
+              removed: messages.length - nonEmptyMessages.length,
+              total: messages.length,
+              msg: "Dropped empty-content messages before sending to Claude",
+            });
+          }
+
           let claudeMessages: Anthropic.Messages.MessageParam[];
           if (attachments.length > 0) {
             log("attachment-build", "start", { count: attachments.length });
             try {
               claudeMessages = await buildMessagesWithAttachments(
-                messages,
+                nonEmptyMessages,
                 attachments,
                 attachmentLogger
               );
@@ -797,10 +811,10 @@ export async function POST(req: NextRequest) {
             } catch (attErr) {
               // Fail-open: if attachment processing errors, fall back to plain messages
               log("attachment-build", "error", { err: String(attErr) });
-              claudeMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+              claudeMessages = nonEmptyMessages.map((m) => ({ role: m.role, content: m.content }));
             }
           } else {
-            claudeMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+            claudeMessages = nonEmptyMessages.map((m) => ({ role: m.role, content: m.content }));
           }
 
           const stream = anthropic.messages.stream({
