@@ -19,6 +19,10 @@ interface MemoryAlbum {
   eventDate: string;
   location?: string;
   category?: string;
+  episodeNumber?: number;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
   eventId?: string;
   description: string;
   coverImageUrl: string;
@@ -122,6 +126,13 @@ export default function AdminMemoriesPage() {
   const [creatorThumbnail, setCreatorThumbnail] = useState("");
   const [addingCreator, setAddingCreator] = useState(false);
 
+  // Focal point editor state
+  const [showFocalEditor, setShowFocalEditor] = useState(false);
+  const [editFocalX, setEditFocalX] = useState(50);
+  const [editFocalY, setEditFocalY] = useState(50);
+  const [editZoom, setEditZoom] = useState(1);
+  const [savingFocal, setSavingFocal] = useState(false);
+
   // Move photo state
   const [movingPhoto, setMovingPhoto] = useState<MemoryMedia | null>(null);
   const [moveTargetAlbumId, setMoveTargetAlbumId] = useState("");
@@ -168,6 +179,10 @@ export default function AdminMemoriesPage() {
     setFeaturedLimitError(false);
     setUploadQueue([]);
     setMediaTab("photo");
+    setShowFocalEditor(false);
+    setEditFocalX(album.focalX ?? 50);
+    setEditFocalY(album.focalY ?? 50);
+    setEditZoom(album.zoom ?? 1);
     await loadMedia(album.id);
   };
 
@@ -375,6 +390,23 @@ export default function AdminMemoriesPage() {
       setAlbums(prev => prev.map(a => a.id === selectedAlbum.id ? { ...a, creatorCount: a.creatorCount + 1 } : a));
     } finally {
       setAddingCreator(false);
+    }
+  };
+
+  const saveFocalPoint = async () => {
+    if (!selectedAlbum) return;
+    setSavingFocal(true);
+    try {
+      await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), {
+        focalX: editFocalX,
+        focalY: editFocalY,
+        zoom: editZoom,
+      });
+      setSelectedAlbum(prev => prev ? { ...prev, focalX: editFocalX, focalY: editFocalY, zoom: editZoom } : prev);
+      setAlbums(prev => prev.map(a => a.id === selectedAlbum.id ? { ...a, focalX: editFocalX, focalY: editFocalY, zoom: editZoom } : a));
+      setShowFocalEditor(false);
+    } finally {
+      setSavingFocal(false);
     }
   };
 
@@ -711,6 +743,22 @@ export default function AdminMemoriesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {selectedAlbum.coverImageUrl && (
+                    <button
+                      onClick={() => {
+                        const next = !showFocalEditor;
+                        setShowFocalEditor(next);
+                        if (next) {
+                          setEditFocalX(selectedAlbum.focalX ?? 50);
+                          setEditFocalY(selectedAlbum.focalY ?? 50);
+                          setEditZoom(selectedAlbum.zoom ?? 1);
+                        }
+                      }}
+                      className={`text-xs border px-3 py-1.5 rounded-lg transition ${showFocalEditor ? "bg-pink-600/20 border-pink-500/40 text-pink-300" : "text-white/40 hover:text-white border-white/10 hover:border-white/25"}`}
+                    >
+                      {showFocalEditor ? "Close Editor" : "Adjust Position"}
+                    </button>
+                  )}
                   <Link
                     href={`/memories/${selectedAlbum.id}`}
                     target="_blank"
@@ -731,6 +779,145 @@ export default function AdminMemoriesPage() {
                 </div>
               </div>
             </div>
+
+            {/* Focal point editor */}
+            {showFocalEditor && selectedAlbum.coverImageUrl && (
+              <div className="bg-white/[0.03] border border-pink-500/20 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-white text-sm">Adjust Cover Position</h3>
+                    <p className="text-white/30 text-xs mt-0.5">Click on the image to set the focal point — the hero banner will center there.</p>
+                  </div>
+                  <button onClick={() => setShowFocalEditor(false)} className="text-white/30 hover:text-white text-sm transition">✕</button>
+                </div>
+
+                {/* Click-to-set preview */}
+                <div
+                  className="relative w-full overflow-hidden rounded-xl cursor-crosshair bg-black select-none"
+                  style={{ height: "220px" }}
+                  onClick={e => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                    const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+                    setEditFocalX(Math.max(0, Math.min(100, x)));
+                    setEditFocalY(Math.max(0, Math.min(100, y)));
+                  }}
+                >
+                  <img
+                    src={selectedAlbum.coverImageUrl}
+                    alt="Cover preview"
+                    className="w-full h-full object-cover pointer-events-none"
+                    style={{
+                      objectPosition: `${editFocalX}% ${editFocalY}%`,
+                      transform: editZoom !== 1 ? `scale(${editZoom})` : undefined,
+                      transformOrigin: `${editFocalX}% ${editFocalY}%`,
+                    }}
+                    draggable={false}
+                  />
+                  {/* Focal crosshair */}
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{ left: `${editFocalX}%`, top: `${editFocalY}%`, transform: "translate(-50%,-50%)" }}
+                  >
+                    <div className="w-7 h-7 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)] relative">
+                      <div className="absolute top-1/2 -left-4 right-1/2 h-px bg-white opacity-70" />
+                      <div className="absolute top-1/2 left-1/2 -right-4 h-px bg-white opacity-70" />
+                      <div className="absolute left-1/2 -top-4 bottom-1/2 w-px bg-white opacity-70" />
+                      <div className="absolute left-1/2 top-1/2 -bottom-4 w-px bg-white opacity-70" />
+                    </div>
+                  </div>
+                  <p className="absolute bottom-2 right-2 text-white/50 text-[9px] bg-black/60 px-2 py-0.5 rounded-full pointer-events-none">
+                    Click to move focal point
+                  </p>
+                </div>
+
+                {/* Sliders */}
+                <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white/40 text-xs">Horizontal (X)</label>
+                      <span className="text-white/25 text-xs tabular-nums">{editFocalX}%</span>
+                    </div>
+                    <input
+                      type="range" min={0} max={100} value={editFocalX}
+                      onChange={e => setEditFocalX(Number(e.target.value))}
+                      className="w-full accent-pink-500 h-1"
+                    />
+                    <div className="flex justify-between text-[9px] text-white/15">
+                      <span>Left</span><span>Center</span><span>Right</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white/40 text-xs">Vertical (Y)</label>
+                      <span className="text-white/25 text-xs tabular-nums">{editFocalY}%</span>
+                    </div>
+                    <input
+                      type="range" min={0} max={100} value={editFocalY}
+                      onChange={e => setEditFocalY(Number(e.target.value))}
+                      className="w-full accent-pink-500 h-1"
+                    />
+                    <div className="flex justify-between text-[9px] text-white/15">
+                      <span>Top</span><span>Middle</span><span>Bottom</span>
+                    </div>
+                  </div>
+                  <div className="col-span-2 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white/40 text-xs">Zoom</label>
+                      <span className="text-white/25 text-xs tabular-nums">{editZoom.toFixed(2)}×</span>
+                    </div>
+                    <input
+                      type="range" min={100} max={200} value={Math.round(editZoom * 100)}
+                      onChange={e => setEditZoom(Number(e.target.value) / 100)}
+                      className="w-full accent-pink-500 h-1"
+                    />
+                    <div className="flex justify-between text-[9px] text-white/15">
+                      <span>1× (default)</span><span>1.5×</span><span>2× (max)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick presets */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white/20 text-[10px]">Presets:</span>
+                  {[
+                    { label: "Top Left", x: 15, y: 15 },
+                    { label: "Top Center", x: 50, y: 10 },
+                    { label: "Top Right", x: 85, y: 15 },
+                    { label: "Center", x: 50, y: 50 },
+                    { label: "Center Right", x: 80, y: 35 },
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => { setEditFocalX(p.x); setEditFocalY(p.y); }}
+                      className="text-[10px] px-2 py-1 rounded-lg border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 pt-1 border-t border-white/10">
+                  <button
+                    onClick={() => { setEditFocalX(50); setEditFocalY(50); setEditZoom(1); }}
+                    className="text-white/40 hover:text-white/70 text-xs transition border border-white/10 px-3 py-1.5 rounded-lg"
+                  >
+                    Reset
+                  </button>
+                  <div className="text-white/20 text-xs ml-1">
+                    ({editFocalX}%, {editFocalY}%) · {editZoom.toFixed(2)}×
+                  </div>
+                  <button
+                    onClick={saveFocalPoint}
+                    disabled={savingFocal}
+                    className="ml-auto bg-pink-600 hover:bg-pink-500 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-2 rounded-xl text-sm font-bold transition"
+                  >
+                    {savingFocal ? "Saving…" : "Save Position"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Featured limit warning */}
             {featuredLimitError && (

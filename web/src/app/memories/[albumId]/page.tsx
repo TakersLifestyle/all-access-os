@@ -22,6 +22,9 @@ interface MemoryAlbum {
   location?: string;
   category?: string;
   episodeNumber?: number;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
   photoCount: number;
   videoCount: number;
   creatorCount: number;
@@ -736,6 +739,11 @@ export default function AlbumPage() {
             src={album.coverImageUrl}
             alt={album.title}
             className="w-full h-full object-cover"
+            style={{
+              objectPosition: `${album.focalX ?? 50}% ${album.focalY ?? 50}%`,
+              transform: (album.zoom ?? 1) !== 1 ? `scale(${album.zoom})` : undefined,
+              transformOrigin: `${album.focalX ?? 50}% ${album.focalY ?? 50}%`,
+            }}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-[#080412] to-purple-950/50" />
