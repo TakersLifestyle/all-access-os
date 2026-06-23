@@ -133,6 +133,7 @@ export default function Nav() {
             <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
             <Link href="/perks" className="text-white/70 hover:text-white transition">Perks</Link>
             <Link href="/community" className="text-white/70 hover:text-white transition">Community</Link>
+            <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
             <ConnectDropdown />
             <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
             {isAdmin && (
@@ -153,6 +154,7 @@ export default function Nav() {
         ) : (
           <>
             <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
+            <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
             <ConnectDropdown />
             <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
             <SocialIcons />

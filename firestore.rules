@@ -410,6 +410,45 @@ service cloud.firestore {
     }
 
 
+    // ─── memoryAlbums/{albumId} ─────────────────────────────
+    // READ  — any signed-in user (members see their memories)
+    // WRITE — admin only (created via Admin > Memories page)
+    match /memoryAlbums/{albumId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    // ─── memoryMedia/{mediaId} ──────────────────────────────
+    // READ  — any signed-in user
+    // WRITE — admin only for create/delete; signed-in users can toggle likedBy only
+    match /memoryMedia/{mediaId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+                    || (isSignedIn()
+                        && request.resource.data.diff(resource.data)
+                           .affectedKeys().hasOnly(["likedBy"]));
+    }
+
+
+    // ─── memoryComments/{commentId} ─────────────────────────
+    // READ   — any signed-in user
+    // CREATE — any signed-in user (must own the userId field)
+    // DELETE — own comment or admin
+    match /memoryComments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 1000;
+      allow delete: if isAdmin()
+                    || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update: if false;
+    }
+
+
     // ─── Catch-all ──────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
