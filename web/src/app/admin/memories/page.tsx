@@ -122,6 +122,11 @@ export default function AdminMemoriesPage() {
   const [creatorThumbnail, setCreatorThumbnail] = useState("");
   const [addingCreator, setAddingCreator] = useState(false);
 
+  // Move photo state
+  const [movingPhoto, setMovingPhoto] = useState<MemoryMedia | null>(null);
+  const [moveTargetAlbumId, setMoveTargetAlbumId] = useState("");
+  const [moving, setMoving] = useState(false);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -373,6 +378,27 @@ export default function AdminMemoriesPage() {
     }
   };
 
+  const movePhoto = async () => {
+    if (!movingPhoto || !moveTargetAlbumId || !selectedAlbum) return;
+    setMoving(true);
+    try {
+      await updateDoc(doc(db, "memoryMedia", movingPhoto.id), { albumId: moveTargetAlbumId });
+      const srcCountField = movingPhoto.type === "photo" ? "photoCount" : movingPhoto.type === "video" ? "videoCount" : "creatorCount";
+      await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { [srcCountField]: increment(-1) });
+      await updateDoc(doc(db, "memoryAlbums", moveTargetAlbumId), { [srcCountField]: increment(1) });
+      setMedia(prev => prev.filter(m => m.id !== movingPhoto.id));
+      setAlbums(prev => prev.map(a => {
+        if (a.id === selectedAlbum.id) return { ...a, [srcCountField]: a[srcCountField as keyof MemoryAlbum] as number - 1 };
+        if (a.id === moveTargetAlbumId) return { ...a, [srcCountField]: a[srcCountField as keyof MemoryAlbum] as number + 1 };
+        return a;
+      }));
+      setMovingPhoto(null);
+      setMoveTargetAlbumId("");
+    } finally {
+      setMoving(false);
+    }
+  };
+
   const deleteMediaItem = async (item: MemoryMedia) => {
     if (!confirm(`Delete this ${item.type.replace(/_/g, " ")}?`)) return;
     await deleteDoc(doc(db, "memoryMedia", item.id));
@@ -442,6 +468,46 @@ export default function AdminMemoriesPage() {
       onDragLeave={() => setIsDragOver(false)}
       onDrop={onDrop}
     >
+      {/* Move Photo Modal */}
+      {movingPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6" onClick={() => setMovingPhoto(null)}>
+          <div className="bg-[#0e0a1a] border border-white/15 rounded-2xl p-6 w-full max-w-sm space-y-5" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-white">Move Photo to Album</h3>
+            {movingPhoto.url && (
+              <img src={movingPhoto.url} alt="" className="w-full h-36 object-cover rounded-xl border border-white/10" />
+            )}
+            <div className="space-y-2">
+              <label className="text-white/40 text-xs">Destination Album</label>
+              <select
+                value={moveTargetAlbumId}
+                onChange={e => setMoveTargetAlbumId(e.target.value)}
+                className="w-full bg-[#0e0a1a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/50"
+              >
+                <option value="">Select album…</option>
+                {albums.filter(a => a.id !== selectedAlbum?.id).map(a => (
+                  <option key={a.id} value={a.id}>{a.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => { setMovingPhoto(null); setMoveTargetAlbumId(""); }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-white/50 hover:text-white/80 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={movePhoto}
+                disabled={!moveTargetAlbumId || moving}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                {moving ? "Moving…" : "Move →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-pink-950/80 border-4 border-dashed border-pink-400/60 flex items-center justify-center pointer-events-none">
           <div className="text-center space-y-3">
@@ -875,6 +941,7 @@ export default function AdminMemoriesPage() {
                         onTogglePin={() => togglePin(item)}
                         onToggleFeatured={() => toggleFeatured(item)}
                         onSetCover={() => setAsCover(item.url)}
+                        onMove={() => { setMovingPhoto(item); setMoveTargetAlbumId(""); }}
                       />
                     ))}
                   </div>
@@ -988,6 +1055,7 @@ function PhotoMediaItem({
   onTogglePin,
   onToggleFeatured,
   onSetCover,
+  onMove,
 }: {
   item: MemoryMedia;
   featuredCount: number;
@@ -996,6 +1064,7 @@ function PhotoMediaItem({
   onTogglePin: () => void;
   onToggleFeatured: () => void;
   onSetCover: () => void;
+  onMove: () => void;
 }) {
   const canFeature = item.isFeatured || featuredCount < 10;
   return (
@@ -1039,6 +1108,12 @@ function PhotoMediaItem({
           className={`w-full text-[10px] px-2 py-1 rounded-lg transition ${item.isPinned ? "bg-pink-600/80 text-white" : "bg-white/15 text-white/70 hover:bg-white/25"}`}
         >
           {item.isPinned ? "📌 Pinned" : "Pin"}
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); onMove(); }}
+          className="w-full text-[10px] px-2 py-1 rounded-lg bg-white/15 text-white/70 hover:bg-blue-500/60 hover:text-white transition"
+        >
+          Move →
         </button>
         <button
           onClick={onDelete}

@@ -19,10 +19,14 @@ interface MemoryAlbum {
   eventId?: string;
   description?: string;
   coverImageUrl?: string;
+  location?: string;
+  category?: string;
+  episodeNumber?: number;
   photoCount: number;
   videoCount: number;
   creatorCount: number;
   attendeeCount: number;
+  isFeatured?: boolean;
 }
 
 interface MemoryMedia {
@@ -140,7 +144,6 @@ function FeaturedCard({
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-pink-950/50 via-black to-purple-950/40" />
       )}
-
       {!isPhoto && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/25">
           <div className="w-10 h-10 rounded-full bg-white/20 group-hover:bg-white/35 backdrop-blur-sm flex items-center justify-center transition-colors border border-white/20">
@@ -150,7 +153,6 @@ function FeaturedCard({
           </div>
         </div>
       )}
-
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       {item.caption && (
         <p className="absolute bottom-2 left-2 right-2 text-white text-xs line-clamp-1 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow">
@@ -164,7 +166,6 @@ function FeaturedCard({
 function AttendeeCard({ attendee }: { attendee: AlbumAttendee }) {
   const name = attendee.userName ?? attendee.userEmail ?? "Member";
   const initial = name[0].toUpperCase();
-
   return (
     <div className="shrink-0 w-36 bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center">
       <div className="w-11 h-11 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-base font-bold text-white/70">
@@ -192,7 +193,7 @@ function AttendeeCard({ attendee }: { attendee: AlbumAttendee }) {
   );
 }
 
-function PhotoGrid({
+function MasonryPhotoGrid({
   photos,
   userId,
   onOpen,
@@ -207,7 +208,7 @@ function PhotoGrid({
     return (
       <div className="text-center py-20 space-y-3 text-white/30">
         <p className="text-5xl">📸</p>
-        <p className="font-semibold text-white/50">Photos and videos coming soon.</p>
+        <p className="font-semibold text-white/50">Photos coming soon.</p>
         <p className="text-sm max-w-xs mx-auto leading-relaxed">
           Check back after the event for official photos, videos, creator content, and downloadable memories.
         </p>
@@ -215,20 +216,20 @@ function PhotoGrid({
     );
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="columns-2 sm:columns-3 gap-3">
       {photos.map((photo, i) => {
         const liked = (photo.likedBy ?? []).includes(userId);
         const likeCount = (photo.likedBy ?? []).length;
         return (
           <div
             key={photo.id}
-            className="group relative aspect-square overflow-hidden rounded-xl bg-white/5 cursor-pointer"
+            className="break-inside-avoid mb-3 group relative overflow-hidden rounded-xl bg-white/5 cursor-pointer"
             onClick={() => onOpen(i)}
           >
             <img
               src={photo.url}
               alt={photo.caption ?? ""}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full block transition-transform duration-300 group-hover:scale-[1.02]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <button
@@ -265,7 +266,7 @@ function VideoGrid({
     return (
       <div className="text-center py-20 space-y-3 text-white/30">
         <p className="text-5xl">🎥</p>
-        <p className="font-semibold text-white/50">Photos and videos coming soon.</p>
+        <p className="font-semibold text-white/50">Videos coming soon.</p>
         <p className="text-sm max-w-xs mx-auto leading-relaxed">
           Check back after the event for official photos, videos, creator content, and downloadable memories.
         </p>
@@ -346,7 +347,7 @@ function CreatorGrid({
     return (
       <div className="text-center py-20 space-y-3 text-white/30">
         <p className="text-5xl">🎨</p>
-        <p className="font-semibold text-white/50">Photos and videos coming soon.</p>
+        <p className="font-semibold text-white/50">Creator content coming soon.</p>
         <p className="text-sm max-w-xs mx-auto leading-relaxed">
           Check back after the event for official photos, videos, creator content, and downloadable memories.
         </p>
@@ -441,7 +442,6 @@ function CommentsSection({
           {submitting ? "…" : "Post"}
         </button>
       </div>
-
       {comments.length === 0 ? (
         <div className="text-center py-12 text-white/25 text-sm">Be the first to share a memory.</div>
       ) : (
@@ -476,6 +476,35 @@ function CommentsSection({
   );
 }
 
+// ─── Series Nav Card ──────────────────────────────────────
+
+function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "prev" | "next" }) {
+  return (
+    <Link href={`/memories/${album.id}`} className="group flex-1 block">
+      <div className={`flex items-center gap-3 p-4 rounded-2xl border border-white/10 hover:border-pink-500/25 bg-white/[0.02] hover:bg-white/[0.04] transition-all ${direction === "next" ? "flex-row-reverse text-right" : ""}`}>
+        {album.coverImageUrl && (
+          <img
+            src={album.coverImageUrl}
+            alt={album.title}
+            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-white/10"
+          />
+        )}
+        <div className="min-w-0">
+          <p className="text-white/25 text-[9px] font-bold uppercase tracking-widest mb-1">
+            {direction === "prev" ? "← Previous" : "Next →"}
+          </p>
+          {album.episodeNumber && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-pink-600/80 text-white mb-1 inline-block">
+              EP.{album.episodeNumber}
+            </span>
+          )}
+          <p className="text-white/70 text-sm font-semibold leading-tight line-clamp-2 group-hover:text-white transition">{album.title}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────
 
 export default function AlbumPage() {
@@ -488,6 +517,7 @@ export default function AlbumPage() {
   const [media, setMedia] = useState<MemoryMedia[]>([]);
   const [comments, setComments] = useState<MemoryComment[]>([]);
   const [attendees, setAttendees] = useState<AlbumAttendee[]>([]);
+  const [seriesAlbums, setSeriesAlbums] = useState<MemoryAlbum[]>([]);
   const [fetching, setFetching] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("photos");
   const [lightboxIndex, setLightboxIndex] = useState(-1);
@@ -521,7 +551,7 @@ export default function AlbumPage() {
     if (!loading && !user) router.push(`/login?redirect=/memories/${albumId}`);
   }, [loading, user, albumId, router]);
 
-  // Load album + media + comments + attendees
+  // Load album + media + comments + attendees + series siblings
   useEffect(() => {
     if (!user || !albumId || (!isActive && !isAdmin)) return;
     (async () => {
@@ -550,6 +580,20 @@ export default function AlbumPage() {
           );
           const allAttendees = attendeeSnap.docs.map(d => ({ id: d.id, ...d.data() } as AlbumAttendee));
           setAttendees(allAttendees.filter(a => a.status === "confirmed" || !a.status));
+        }
+
+        // Load series siblings when category is set
+        if (albumData.category) {
+          const seriesSnap = await getDocs(
+            query(collection(db, "memoryAlbums"),
+              where("category", "==", albumData.category),
+              where("status", "==", "active"))
+          );
+          const siblings = seriesSnap.docs
+            .map(d => ({ id: d.id, ...d.data() } as MemoryAlbum))
+            .filter(a => a.id !== albumId)
+            .sort((a, b) => (a.episodeNumber ?? 99) - (b.episodeNumber ?? 99));
+          setSeriesAlbums(siblings);
         }
       } finally {
         setFetching(false);
@@ -617,7 +661,7 @@ export default function AlbumPage() {
 
   if (loading || !user) return null;
 
-  // Locked state for inactive non-admin members
+  // Locked state
   if (!isActive && !isAdmin) {
     return (
       <main className="max-w-5xl mx-auto px-6 py-12">
@@ -632,10 +676,7 @@ export default function AlbumPage() {
               Join the community to view event albums, recaps, and downloadable media.
             </p>
           </div>
-          <Link
-            href="/signup"
-            className="inline-block mt-2 bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition"
-          >
+          <Link href="/signup" className="inline-block mt-2 bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition">
             Become a Supporter — $25/mo
           </Link>
         </div>
@@ -645,27 +686,39 @@ export default function AlbumPage() {
 
   if (fetching) {
     return (
-      <main className="max-w-5xl mx-auto px-6 py-12 space-y-6">
-        <div className="h-4 bg-white/5 rounded w-24 animate-pulse" />
-        <div className="h-9 bg-white/5 rounded-xl w-2/3 animate-pulse" />
-        <div className="h-4 bg-white/5 rounded w-1/4 animate-pulse" />
-        <div className="flex gap-3 mt-6">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white/5 rounded-xl w-56 aspect-video animate-pulse shrink-0" />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="bg-white/5 rounded-xl aspect-square animate-pulse" />
-          ))}
-        </div>
-      </main>
+      <>
+        <div className="h-[380px] bg-white/[0.03] animate-pulse" />
+        <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">
+          <div className="h-4 bg-white/5 rounded w-24 animate-pulse" />
+          <div className="h-9 bg-white/5 rounded-xl w-2/3 animate-pulse" />
+          <div className="flex gap-3 mt-6">
+            {[1, 2, 3].map(i => <div key={i} className="bg-white/5 rounded-xl w-56 aspect-video animate-pulse shrink-0" />)}
+          </div>
+          <div className="columns-2 sm:columns-3 gap-3 mt-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="break-inside-avoid mb-3 bg-white/5 rounded-xl animate-pulse" style={{ height: `${140 + (i % 3) * 40}px` }} />
+            ))}
+          </div>
+        </main>
+      </>
     );
   }
 
   if (!album) return null;
 
   const lightboxPhoto = lightboxIndex >= 0 ? photos[lightboxIndex] : null;
+
+  // Series nav: find all siblings plus current sorted, locate prev/next
+  const allSeriesSorted = [
+    ...seriesAlbums,
+    // current album stub for positioning
+    { id: albumId, episodeNumber: album.episodeNumber ?? 99 } as MemoryAlbum,
+  ].sort((a, b) => (a.episodeNumber ?? 99) - (b.episodeNumber ?? 99));
+  const currentSeriesIdx = allSeriesSorted.findIndex(a => a.id === albumId);
+  const prevAlbumStub = currentSeriesIdx > 0 ? allSeriesSorted[currentSeriesIdx - 1] : null;
+  const nextAlbumStub = currentSeriesIdx < allSeriesSorted.length - 1 ? allSeriesSorted[currentSeriesIdx + 1] : null;
+  const prevAlbum = prevAlbumStub ? seriesAlbums.find(a => a.id === prevAlbumStub.id) ?? null : null;
+  const nextAlbum = nextAlbumStub ? seriesAlbums.find(a => a.id === nextAlbumStub.id) ?? null : null;
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "photos", label: "Photos", count: photos.length },
@@ -676,25 +729,62 @@ export default function AlbumPage() {
 
   return (
     <>
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        {/* Back link */}
-        <Link href="/memories" className="text-white/30 hover:text-white/60 text-sm transition inline-block">
-          ← Memories
-        </Link>
+      {/* ── Full-width Hero Banner ─────────────────────────── */}
+      <div className="relative h-[360px] md:h-[460px] overflow-hidden">
+        {album.coverImageUrl ? (
+          <img
+            src={album.coverImageUrl}
+            alt={album.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-[#080412] to-purple-950/50" />
+        )}
+        {/* Multi-layer gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#080412] via-[#080412]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080412]/70 to-transparent" />
 
-        {/* Album header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight">{album.title}</h1>
-          <p className="text-white/40 text-sm">{formatEventDate(album.eventDate)}</p>
-          {album.description && (
-            <p className="text-white/50 text-sm leading-relaxed max-w-xl">{album.description}</p>
-          )}
-          <div className="flex items-center gap-4 pt-1 text-sm text-white/30">
-            {(album.photoCount ?? 0) > 0 && <span>📸 {album.photoCount} Photos</span>}
-            {(album.videoCount ?? 0) > 0 && <span>🎥 {album.videoCount} Videos</span>}
-            {(album.attendeeCount ?? 0) > 0 && <span>👥 {album.attendeeCount} Attendees</span>}
+        {/* Overlaid content */}
+        <div className="absolute inset-0 flex flex-col justify-between p-6 md:p-10 max-w-5xl mx-auto w-full left-0 right-0">
+          {/* Back link */}
+          <Link href="/memories" className="text-white/40 hover:text-white/70 text-sm transition self-start">
+            ← Memories
+          </Link>
+
+          {/* Album info */}
+          <div className="space-y-3 max-w-xl">
+            {(album.category || album.episodeNumber) && (
+              <div className="flex items-center gap-2">
+                {album.episodeNumber && (
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-pink-600 text-white">
+                    EP.{album.episodeNumber}
+                  </span>
+                )}
+                {album.category && (
+                  <span className="text-[9px] font-semibold px-2 py-1 rounded-full border border-white/20 text-white/50 uppercase">
+                    {album.category}
+                  </span>
+                )}
+              </div>
+            )}
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight">{album.title}</h1>
+            <p className="text-white/40 text-sm">
+              {formatEventDate(album.eventDate)}{album.location ? ` · ${album.location}` : ""}
+            </p>
+            {album.description && (
+              <p className="text-white/50 text-sm leading-relaxed line-clamp-2">{album.description}</p>
+            )}
+            <div className="flex items-center gap-4 text-sm text-white/30 pt-1">
+              {(album.photoCount ?? 0) > 0 && <span>📸 {album.photoCount}</span>}
+              {(album.videoCount ?? 0) > 0 && <span>🎥 {album.videoCount}</span>}
+              {(album.attendeeCount ?? 0) > 0 && <span>👥 {album.attendeeCount}</span>}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Content ───────────────────────────────────────── */}
+      <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
 
         {/* ── Featured Moments ──────────────────────────────── */}
         {featuredMedia.length > 0 && (
@@ -705,10 +795,7 @@ export default function AlbumPage() {
                 {featuredMedia.length} moment{featuredMedia.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <div
-              className="flex gap-3 overflow-x-auto pb-3 -mx-6 px-6"
-              style={{ scrollbarWidth: "none" }}
-            >
+            <div className="flex gap-3 overflow-x-auto pb-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
               {featuredMedia.map(item => (
                 <FeaturedCard
                   key={item.id}
@@ -728,13 +815,8 @@ export default function AlbumPage() {
         {attendees.length > 0 && (
           <section className="space-y-3">
             <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">Who&apos;s In This Album</p>
-            <div
-              className="flex gap-3 overflow-x-auto pb-3 -mx-6 px-6"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {attendees.map(a => (
-                <AttendeeCard key={a.id} attendee={a} />
-              ))}
+            <div className="flex gap-3 overflow-x-auto pb-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
+              {attendees.map(a => <AttendeeCard key={a.id} attendee={a} />)}
             </div>
           </section>
         )}
@@ -763,7 +845,7 @@ export default function AlbumPage() {
 
         {/* Tab content */}
         {activeTab === "photos" && (
-          <PhotoGrid photos={photos} userId={user.uid} onOpen={setLightboxIndex} onLike={toggleLike} />
+          <MasonryPhotoGrid photos={photos} userId={user.uid} onOpen={setLightboxIndex} onLike={toggleLike} />
         )}
         {activeTab === "videos" && (
           <VideoGrid videos={videos} userId={user.uid} onLike={toggleLike} />
@@ -783,6 +865,19 @@ export default function AlbumPage() {
             isAdmin={isAdmin}
           />
         )}
+
+        {/* ── Series Navigation ─────────────────────────────── */}
+        {(prevAlbum || nextAlbum) && (
+          <section className="pt-6 border-t border-white/10 space-y-4">
+            <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">
+              {album.category} Series
+            </p>
+            <div className="flex gap-4 flex-wrap sm:flex-nowrap">
+              {prevAlbum && <SeriesNavCard album={prevAlbum} direction="prev" />}
+              {nextAlbum && <SeriesNavCard album={nextAlbum} direction="next" />}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* ── Photo Lightbox ─────────────────────────────────── */}
@@ -791,7 +886,6 @@ export default function AlbumPage() {
           className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
           onClick={() => setLightboxIndex(-1)}
         >
-          {/* Controls */}
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => downloadMedia(lightboxPhoto.url, `memory-${lightboxPhoto.id}.jpg`)}
