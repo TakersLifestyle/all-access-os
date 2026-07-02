@@ -30,7 +30,6 @@ function useEventTeasers() {
       const all = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as EventTeaser))
         .filter((e) => e.status !== "draft");
-      // Launch event first, active by date middle, coming_soon last
       all.sort((a, b) => {
         if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
         if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
@@ -69,7 +68,6 @@ export default function Home() {
   const events = useEventTeasers();
 
   const launchEvent = events.find((e) => e.isLaunchEvent);
-  const otherEvents = events.filter((e) => !e.isLaunchEvent);
 
   const handleCheckout = async () => {
     setError(null);
@@ -93,231 +91,305 @@ export default function Home() {
   if (loading) return null;
 
   return (
-    <main className="max-w-5xl mx-auto px-6 space-y-24 pb-24">
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10 sm:space-y-14 pb-32">
 
-      {/* ── HERO ──────────────────────────────────────────── */}
-      <section className="pt-16 text-center space-y-6">
-        <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-4 py-1.5 text-sm text-pink-300 font-medium">
-          <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
-          Launching June 30 — Only 15 Tickets
-        </div>
+      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      <section className="pt-6 sm:pt-10 grid md:grid-cols-2 gap-8 sm:gap-10 items-center">
 
-        <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-          Built for the<br />
-          <span className="text-pink-500">Community</span>
-        </h1>
+        {/* Left: copy + CTAs */}
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-pink-300 font-medium flex-wrap">
+            <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
+            Winnipeg Community Event&nbsp;•&nbsp;June 30&nbsp;•&nbsp;Only {launchEvent?.ticketsRemaining ?? 5} Spots Remaining
+          </div>
 
-        <p className="text-white/60 text-lg max-w-xl mx-auto leading-relaxed">
-          Safe spaces. Real experiences. Genuine connection.<br />
-          <span className="text-white/80">ALL ACCESS</span> is Winnipeg&apos;s community platform — built for youth, young adults, and everyone who wants to belong.
-        </p>
+          <div className="space-y-3">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight">
+              Built for the<br />
+              <span className="text-pink-500">Community</span>
+            </h1>
+            <p className="text-white/75 text-xl font-medium leading-snug">
+              Connecting Winnipeg through safe events, local experiences, and genuine relationships.
+            </p>
+          </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <Link
-            href="/events"
-            className="bg-pink-600 hover:bg-pink-500 px-8 py-3.5 rounded-xl font-bold text-lg transition"
-          >
-            View Events →
-          </Link>
-          {!user ? (
+          <p className="text-white/50 text-base leading-relaxed">
+            ALL ACCESS Winnipeg is a non-profit community organization focused on bringing
+            people together through experiences that promote connection, belonging, and well-being.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <Link
-              href="/signup"
-              className="border border-white/20 hover:border-white/40 px-8 py-3.5 rounded-xl font-semibold text-lg transition text-white/70 hover:text-white"
+              href="/events"
+              className="bg-pink-600 hover:bg-pink-500 px-7 py-3.5 rounded-xl font-bold text-base transition text-center"
             >
-              Create Account
+              Explore Events →
             </Link>
-          ) : !isActive ? (
-            <button
-              onClick={handleCheckout}
-              disabled={checkoutLoading}
-              className="border border-pink-500/40 hover:border-pink-500/70 px-8 py-3.5 rounded-xl font-semibold text-lg transition text-pink-300 hover:text-pink-200"
-            >
-              {checkoutLoading ? "Redirecting..." : "Unlock Member Pricing"}
-            </button>
-          ) : (
-            <Link
-              href="/perks"
-              className="border border-white/20 hover:border-white/40 px-8 py-3.5 rounded-xl font-semibold text-lg transition text-white/70 hover:text-white"
-            >
-              My Perks
-            </Link>
+            {!user ? (
+              <Link
+                href="/signup"
+                className="border border-white/20 hover:border-white/40 px-7 py-3.5 rounded-xl font-semibold text-base transition text-white/70 hover:text-white text-center"
+              >
+                Join the Community
+              </Link>
+            ) : !isActive ? (
+              <button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="border border-pink-500/40 hover:border-pink-500/70 px-7 py-3.5 rounded-xl font-semibold text-base transition text-pink-300 hover:text-pink-200"
+              >
+                {checkoutLoading ? "Redirecting…" : "Become a Supporter"}
+              </button>
+            ) : (
+              <Link
+                href="/perks"
+                className="border border-white/20 hover:border-white/40 px-7 py-3.5 rounded-xl font-semibold text-base transition text-white/70 hover:text-white text-center"
+              >
+                View My Perks
+              </Link>
+            )}
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-sm bg-red-950/40 border border-red-800 rounded-lg p-3">
+              {error}
+            </p>
           )}
         </div>
 
-        {error && (
-          <p className="text-red-400 text-sm bg-red-950/40 border border-red-800 rounded-lg p-3 max-w-sm mx-auto">
-            {error}
-          </p>
-        )}
-      </section>
-
-      {/* ── LAUNCH EVENT SPOTLIGHT ────────────────────────── */}
-      {launchEvent && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-white/20 text-xs uppercase tracking-widest font-semibold">First Launch Event</span>
-            <div className="flex-1 h-px bg-white/5" />
-            <Link href="/events" className="text-pink-400 hover:text-pink-300 text-xs transition">View all →</Link>
-          </div>
-
-          <Link href="/events" className="group block rounded-2xl overflow-hidden border border-pink-500/25 bg-pink-950/10 hover:border-pink-500/50 transition-all duration-300 hover:shadow-[0_0_40px_rgba(236,72,153,0.1)]">
-            <div className="flex flex-col md:flex-row">
-              {launchEvent.imageUrl && (
-                <div className="relative md:w-72 h-52 md:h-auto shrink-0 overflow-hidden">
-                  <img src={launchEvent.imageUrl} alt={launchEvent.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/30 md:bg-gradient-to-l" />
-                </div>
+        {/* Right: Sea Bears featured card */}
+        {launchEvent && (
+          <Link
+            href="/events"
+            className="group block rounded-2xl overflow-hidden border border-pink-500/30 bg-pink-950/10 hover:border-pink-500/60 transition-all duration-300 hover:shadow-[0_0_40px_rgba(236,72,153,0.12)]"
+          >
+            {/* Image */}
+            <div className="relative h-52 overflow-hidden">
+              {launchEvent.imageUrl ? (
+                <img
+                  src={launchEvent.imageUrl}
+                  alt={launchEvent.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-pink-900/50 to-purple-900/40" />
               )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-              <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-5">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    <span className="bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      🚀 Launch Event
-                    </span>
-                    <span className="bg-black/40 border border-white/20 text-white/80 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
-                      Only {launchEvent.ticketsRemaining} tickets
-                    </span>
-                    <span className="bg-white/5 border border-white/15 text-white/50 text-xs font-medium px-3 py-1 rounded-full">
-                      June 30, 2026
-                    </span>
-                  </div>
+              {/* Top badges */}
+              <div className="absolute top-3 left-3">
+                <span className="bg-pink-600/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
+                  🏀 Founding 15
+                </span>
+              </div>
+              <div className="absolute top-3 right-3">
+                <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/40 text-red-300 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                  ⚡ Only {launchEvent.ticketsRemaining} Spots Remaining
+                </span>
+              </div>
 
-                  <div>
-                    <p className="text-white/30 text-xs font-semibold uppercase tracking-widest mb-1">Founding 15</p>
-                    <h2 className="text-2xl md:text-3xl font-bold leading-tight group-hover:text-pink-300 transition">
-                      Sea Bears Courtside Experience
-                    </h2>
-                  </div>
+              {/* Bottom overlay */}
+              <div className="absolute bottom-3 left-4 right-4">
+                <p className="text-white font-bold text-lg leading-tight drop-shadow">Sea Bears Courtside Launch</p>
+                <p className="text-white/60 text-xs mt-0.5">June 30, 2026&nbsp;•&nbsp;Canada Life Centre</p>
+              </div>
+            </div>
 
-                  <p className="text-white/50 text-sm leading-relaxed max-w-md">
-                    15 people. One first launch. June 30 decides who was here first.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {["Courtside", "Buffet", "Private transport", "Real connection"].map((tag) => (
-                      <span key={tag} className="text-[11px] bg-white/5 border border-white/10 rounded-full px-2.5 py-0.5 text-white/35 font-medium">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="space-y-0.5">
-                    {!user ? (
-                      <p className="text-white/40 text-sm">Sign in to view pricing</p>
-                    ) : (
-                      <>
-                        <p className="text-white font-bold text-xl">
-                          {fmt(launchEvent.generalPrice)}
-                        </p>
-                        <p className="text-white/30 text-xs">Founding access · Flat rate · Open to everyone.</p>
-                      </>
-                    )}
-                  </div>
-                  <span className="text-pink-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                    Claim founding access →
+            {/* Card body */}
+            <div className="p-4 space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {["Courtside", "Buffet", "Private transport", "Real connection"].map((tag) => (
+                  <span key={tag} className="text-[11px] bg-white/5 border border-white/10 rounded-full px-2.5 py-0.5 text-white/40 font-medium">
+                    {tag}
                   </span>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-bold text-lg">{fmt(launchEvent.generalPrice)}</p>
+                  <p className="text-white/30 text-xs">Founding access&nbsp;·&nbsp;Open to everyone</p>
                 </div>
+                <span className="text-pink-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                  Get tickets →
+                </span>
               </div>
             </div>
           </Link>
-        </section>
-      )}
+        )}
+      </section>
 
-      {/* ── STATS ─────────────────────────────────────────── */}
-      <section className="grid grid-cols-3 gap-4 text-center">
+      {/* ── WHY ALL ACCESS WINNIPEG ───────────────────────────────────────── */}
+      <section className="space-y-6">
+        <div className="text-center space-y-1.5">
+          <h2 className="text-2xl font-bold">Why ALL ACCESS Winnipeg?</h2>
+          <p className="text-white/40 text-sm">A non-profit built around what Winnipeg actually needs.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              icon: "🫶",
+              title: "Community First",
+              desc: "Building real connections across Winnipeg — not followers, not clout. People.",
+            },
+            {
+              icon: "🔒",
+              title: "Safe Spaces",
+              desc: "Respectful, welcoming, drama-free experiences where everyone feels they belong.",
+            },
+            {
+              icon: "🎉",
+              title: "Unique Experiences",
+              desc: "Sports, social events, wellness activities, and local outings — curated with purpose.",
+            },
+            {
+              icon: "🌎",
+              title: "Inclusive For Everyone",
+              desc: "Open to all backgrounds, ages (where applicable), and communities across Winnipeg.",
+            },
+          ].map((card) => (
+            <div
+              key={card.title}
+              className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 space-y-3 hover:border-pink-500/20 transition"
+            >
+              <span className="text-3xl">{card.icon}</span>
+              <h3 className="font-bold text-sm text-white">{card.title}</h3>
+              <p className="text-white/45 text-xs leading-relaxed">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── COMMUNITY IMPACT STRIP ────────────────────────────────────────── */}
+      <section className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
         {[
-          { stat: "15", label: "Founding seats available" },
-          { stat: "6+", label: "Community perks" },
-          { stat: "WPG", label: "100% Winnipeg-based" },
+          { stat: `${launchEvent?.ticketsRemaining ?? 5}`, label: "Founding seats remaining", pink: true },
+          { stat: "6+", label: "Community perks", pink: false },
+          { stat: "WPG", label: "100% Winnipeg-based", pink: false },
         ].map((item) => (
-          <div key={item.label} className="bg-white/5 border border-white/10 rounded-2xl py-6 px-4">
+          <div
+            key={item.label}
+            className={`rounded-2xl py-4 sm:py-6 px-2 sm:px-4 border ${
+              item.pink
+                ? "bg-pink-950/20 border-pink-500/30"
+                : "bg-white/5 border-white/10"
+            }`}
+          >
             <p className="text-3xl font-bold text-pink-400">{item.stat}</p>
-            <p className="text-white/40 text-sm mt-1">{item.label}</p>
+            <p className={`text-sm mt-1 ${item.pink ? "text-white/60" : "text-white/40"}`}>{item.label}</p>
           </div>
         ))}
       </section>
 
-      {/* ── THIS SUMMER LINEUP ────────────────────────────── */}
-      {otherEvents.length > 0 && (
+      {/* ── URGENCY BANNER ────────────────────────────────────────────────── */}
+      {launchEvent && launchEvent.status !== "sold_out" && (
+        <Link
+          href="/events"
+          className="group flex items-center justify-between gap-4 flex-wrap bg-gradient-to-r from-pink-950/50 via-red-950/30 to-pink-950/50 border border-pink-500/30 rounded-2xl px-6 py-4 hover:border-pink-500/60 transition"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-pulse shrink-0" />
+            <p className="text-white/80 font-semibold text-sm">
+              Sea Bears Courtside Launch is nearly full.{" "}
+              <span className="text-pink-400">
+                Only {launchEvent.ticketsRemaining} founding {launchEvent.ticketsRemaining === 1 ? "spot" : "spots"} remain.
+              </span>
+            </p>
+          </div>
+          <span className="text-pink-400 text-sm font-bold group-hover:translate-x-1 transition-transform shrink-0">
+            Claim yours →
+          </span>
+        </Link>
+      )}
+
+      {/* ── UPCOMING COMMUNITY EXPERIENCES ───────────────────────────────── */}
+      {events.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold">This Summer Lineup</h2>
-              <p className="text-white/35 text-sm mt-1">Four curated experiences. One community.</p>
+              <h2 className="text-2xl font-bold">Upcoming Community Experiences</h2>
+              <p className="text-white/35 text-sm mt-1">Real events. Real people. Open to everyone.</p>
             </div>
             <Link href="/events" className="text-pink-400 hover:text-pink-300 text-sm transition shrink-0 mt-1">
               View all →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {otherEvents.map((ev) => {
-              if (ev.status === "coming_soon") {
-                return (
-                  <div key={ev.id} className="bg-white/5 border border-white/15 hover:border-purple-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.07)] rounded-2xl overflow-hidden transition-all duration-300 group">
-                    <div className="relative h-40 overflow-hidden">
-                      {ev.imageUrl ? (
-                        <img src={ev.imageUrl} alt={cleanTitle(ev.title)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-purple-900/40 via-pink-900/20 to-black" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute top-3 left-3">
-                        <span className="bg-purple-600/90 backdrop-blur-sm text-xs text-white border border-purple-400/40 px-2.5 py-0.5 rounded-full font-bold">
-                          Future Drop
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <h3 className="font-semibold text-sm leading-tight text-white">{cleanTitle(ev.title)}</h3>
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/40 text-xs">📅 Date TBA</span>
-                        <span className="text-purple-400 text-xs font-semibold">Details soon</span>
-                      </div>
-                      <p className="text-white/30 text-xs truncate">📍 Private Rooftop Venue</p>
-                    </div>
-                  </div>
-                );
-              }
-
-              const spotsLow = ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.3);
+          <div className="grid sm:grid-cols-2 gap-4">
+            {events.map((ev) => {
+              const isComingSoon = ev.status === "coming_soon";
+              const spotsLow =
+                !isComingSoon &&
+                ev.capacity > 0 &&
+                ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.35);
               const memberPrice = Math.round(ev.generalPrice * 0.85);
+
               return (
-                <Link key={ev.id} href="/events" className="bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl overflow-hidden transition group">
-                  <div className="relative h-40 bg-white/5 overflow-hidden">
+                <Link
+                  key={ev.id}
+                  href="/events"
+                  className={`group rounded-2xl overflow-hidden border transition-all duration-300 ${
+                    ev.isLaunchEvent
+                      ? "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/55 hover:shadow-[0_0_30px_rgba(236,72,153,0.1)]"
+                      : isComingSoon
+                      ? "border-white/10 bg-white/[0.03] hover:border-purple-500/25"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  }`}
+                >
+                  {/* Event image */}
+                  <div className="relative h-44 overflow-hidden">
                     {ev.imageUrl ? (
-                      <img src={ev.imageUrl} alt={ev.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={ev.imageUrl}
+                        alt={cleanTitle(ev.title)}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-pink-900/30 to-purple-900/30" />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    {spotsLow && (
-                      <div className="absolute top-3 left-3">
-                        <span className="bg-red-900/80 backdrop-blur text-xs text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                    {/* Badges */}
+                    <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+                      {ev.isLaunchEvent && (
+                        <span className="bg-pink-600/90 backdrop-blur-sm text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                          🏀 Founding 15
+                        </span>
+                      )}
+                      {isComingSoon && (
+                        <span className="bg-purple-600/90 backdrop-blur-sm text-white text-xs font-bold px-2.5 py-0.5 rounded-full border border-purple-400/30">
+                          Coming Soon
+                        </span>
+                      )}
+                      {spotsLow && (
+                        <span className="bg-red-900/80 backdrop-blur text-xs text-red-300 border border-red-500/30 px-2.5 py-0.5 rounded-full font-semibold animate-pulse">
                           ⚡ {ev.ticketsRemaining} left
                         </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+
+                  {/* Card body */}
                   <div className="p-4 space-y-2">
-                    <h3 className="font-semibold text-sm leading-tight">{ev.title}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/40 text-xs">{formatDate(ev.date)}</span>
-                      {!user ? (
-                        <span className="text-emerald-400 text-xs font-semibold">FREE</span>
+                    <h3 className="font-semibold text-sm leading-tight text-white">{cleanTitle(ev.title)}</h3>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-white/40 text-xs">
+                        {isComingSoon ? "📅 Date TBA" : `📅 ${formatDate(ev.date)}`}
+                      </span>
+                      {isComingSoon ? (
+                        <span className="text-purple-400 text-xs font-semibold">Details soon</span>
+                      ) : !user ? (
+                        <span className="text-white/60 text-xs font-semibold">{fmt(ev.generalPrice)}</span>
                       ) : ev.generalPrice > 0 ? (
                         <span className="text-white/60 text-xs font-semibold">
-                          From {fmt(isActive ? memberPrice : ev.generalPrice)}
+                          {isActive ? `Member ${fmt(memberPrice)}` : fmt(ev.generalPrice)}
                         </span>
                       ) : (
                         <span className="text-emerald-400 text-xs font-semibold">Free</span>
                       )}
                     </div>
-                    {ev.location && <p className="text-white/30 text-xs truncate">📍 {ev.location}</p>}
+                    {ev.location && !isComingSoon && (
+                      <p className="text-white/30 text-xs truncate">📍 {ev.location}</p>
+                    )}
                   </div>
                 </Link>
               );
@@ -326,53 +398,14 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── WHAT YOU GET ──────────────────────────────────── */}
-      <section className="space-y-6">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">More Than a Night Out</h2>
-          <p className="text-white/40 text-sm">Designed for connection. Built for community.</p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {[
-            {
-              icon: "🎉",
-              title: "Community Experiences",
-              desc: "Safe, curated events — sports nights, cultural experiences, community socials. Open to everyone. Built for real connection.",
-              href: "/events",
-            },
-            {
-              icon: "🎁",
-              title: "Member Perks",
-              desc: "Local partner discounts, promo codes, and member pricing — a small way to give back to the people who support the mission.",
-              href: "/perks",
-            },
-            {
-              icon: "👥",
-              title: "Real Connections",
-              desc: "A growing community of Winnipeggers who show up, give back, and build something together — not just attend.",
-              href: "/community",
-            },
-          ].map((f) => (
-            <Link
-              key={f.title}
-              href={f.href}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-pink-500/30 rounded-2xl p-6 space-y-3 transition group"
-            >
-              <span className="text-3xl">{f.icon}</span>
-              <h3 className="font-bold text-lg group-hover:text-pink-400 transition">{f.title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{f.desc}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ── MEMBERSHIP ────────────────────────────────────── */}
+      {/* ── MEMBERSHIP ────────────────────────────────────────────────────── */}
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-bold">Support the Mission.</h2>
             <p className="text-white/40 text-sm max-w-sm mx-auto">
-              Membership directly funds safe, accessible experiences for Winnipeg youth and young adults — and saves you money at every event.
+              Membership directly funds safe, accessible experiences for Winnipeg youth and young adults —
+              and saves you money at every event.
             </p>
           </div>
 
@@ -407,7 +440,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
             >
-              {checkoutLoading ? "Redirecting..." : "Become a Supporter — $25/mo"}
+              {checkoutLoading ? "Redirecting…" : "Become a Supporter — $25/mo"}
             </button>
 
             {error && (
@@ -423,11 +456,11 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── LIVE SOCIAL FEED ──────────────────────────────── */}
+      {/* ── LIVE SOCIAL FEED ──────────────────────────────────────────────── */}
       <SocialFeedSection maxPosts={8} showHeader={true} showFollowCTAs={true} />
 
-      {/* ── MISSION STRIP ─────────────────────────────────── */}
-      <section className="text-center space-y-6 border-t border-white/5 pt-16">
+      {/* ── MISSION STRIP ─────────────────────────────────────────────────── */}
+      <section className="text-center space-y-6 border-t border-white/5 pt-12">
         <p className="text-white/20 text-xs uppercase tracking-[0.2em] font-bold">Built in Winnipeg</p>
         <div className="space-y-4">
           <p className="text-white/70 text-xl md:text-2xl font-bold max-w-2xl mx-auto leading-snug">
@@ -441,9 +474,12 @@ export default function Home() {
         <div className="flex flex-wrap gap-2.5 justify-center pt-2">
           {[
             "Real Access", "Community First", "Mental Well-being",
-            "Youth-Led", "Cultural Growth", "Open to Everyone"
+            "Youth-Led", "Cultural Growth", "Open to Everyone",
           ].map((tag) => (
-            <span key={tag} className="bg-white/[0.04] border border-white/8 rounded-full px-4 py-1.5 text-white/35 text-xs font-medium tracking-wide">
+            <span
+              key={tag}
+              className="bg-white/[0.04] border border-white/[0.08] rounded-full px-4 py-1.5 text-white/35 text-xs font-medium tracking-wide"
+            >
               {tag}
             </span>
           ))}

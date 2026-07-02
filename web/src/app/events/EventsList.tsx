@@ -474,7 +474,7 @@ function FoundingValueStack() {
 }
 
 // ── Founding 15 Experience Flow ──────────────────────────────────────────────
-function ExperienceFlow() {
+function ExperienceFlow({ ticketsRemaining }: { ticketsRemaining: number }) {
   const steps = [
     {
       num: "01",
@@ -513,7 +513,7 @@ function ExperienceFlow() {
         <p className="text-white/35 text-xs">This is not just a ticket — it&apos;s the full ALL ACCESS experience.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {steps.map((step) => (
           <div key={step.num} className="bg-black/40 border border-white/8 rounded-xl p-4 space-y-2 relative overflow-hidden">
             <div className="absolute top-2 right-3 text-white/[0.04] text-5xl font-black leading-none select-none pointer-events-none">{step.num}</div>
@@ -542,7 +542,7 @@ function ExperienceFlow() {
         <p className="text-white/55 text-xs leading-relaxed">
           Your ticket includes buffet dining, courtside access, transportation, and beverages. Alcohol is optionally available at venue pricing.
         </p>
-        <p className="text-white/30 text-xs">Only 15 founding spots available. This is the beginning of the ALL ACCESS experience standard.</p>
+        <p className="text-white/30 text-xs">Only {ticketsRemaining} founding {ticketsRemaining === 1 ? "spot" : "spots"} remaining. This is the beginning of the ALL ACCESS experience standard.</p>
       </div>
 
       <p className="text-center text-white/30 text-xs font-medium italic">
@@ -692,7 +692,7 @@ function EventCard({
         </div>
       )}
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {/* No-image pricing row */}
         {!ev.imageUrl && (
           <div className="flex justify-between items-start gap-3 flex-wrap">
@@ -787,7 +787,7 @@ function EventCard({
 
         {/* Launch event: value stack + experience flow — only when NOT confirmed (confirmed state has its own list) */}
         {ev.isLaunchEvent && !isConfirmed && <FoundingValueStack />}
-        {ev.isLaunchEvent && !isConfirmed && <ExperienceFlow />}
+        {ev.isLaunchEvent && !isConfirmed && <ExperienceFlow ticketsRemaining={ev.ticketsRemaining} />}
 
         {/* ── Action section ── */}
         <div className="pt-1 space-y-3">
