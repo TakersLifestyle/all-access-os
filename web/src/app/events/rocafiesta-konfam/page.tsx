@@ -279,6 +279,7 @@ export default function RocafiestaPage() {
               muted
               loop
               playsInline
+              controls
               className="w-full h-full object-cover"
             />
           </div>
@@ -351,9 +352,9 @@ export default function RocafiestaPage() {
             {/* Left: poster thumbnail */}
             <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-80 bg-black">
               <img
-                src="/events/rocafiesta-poster.jpg"
+                src="/events/konfam-1.jpg"
                 alt="Konfam"
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-cover object-center"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
