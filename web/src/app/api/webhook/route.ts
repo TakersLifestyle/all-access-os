@@ -64,6 +64,25 @@ async function syncUser(params: {
     // Default to member
   }
 
+  // Determine accountType and whether hasCommunityAccess should be preserved.
+  // Active subscription → supporter. Lapsed but had event ticket → stay community.
+  // Preserve hasCommunityAccess so event attendees keep access even after membership ends.
+  let existingHasCommunityAccess = false;
+  try {
+    const existingRecord = await auth.getUser(uid);
+    const ec = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
+    existingHasCommunityAccess = !!ec.hasCommunityAccess;
+  } catch { /* no-op */ }
+
+  let accountType: "community" | "supporter" | undefined;
+  if (platformStatus === "active") {
+    accountType = "supporter";
+  } else if (existingHasCommunityAccess) {
+    accountType = "community";
+  }
+
+  const newHasCommunityAccess = platformStatus === "active" || existingHasCommunityAccess;
+
   // 1. Sync Firestore doc
   await db
     .collection("users")
@@ -77,29 +96,26 @@ async function syncUser(params: {
         stripeStatus,
         stripeCurrentPeriodEnd: stripeCurrentPeriodEnd ?? null,
         stripeCancelAtPeriodEnd: stripeCancelAtPeriodEnd ?? false,
+        hasCommunityAccess: newHasCommunityAccess,
+        ...(accountType ? { accountType } : {}),
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     );
 
-  // 2. Set Firebase Auth custom claims
-  // These are read by Firestore rules as request.auth.token.role / .status
+  // 2. Set Firebase Auth custom claims — read by Firestore rules
   // Client must call user.getIdToken(true) to pick up new claims immediately
-  // Preserve hasCommunityAccess — earned from event tickets, must survive membership changes
-  let existingHasCommunityAccess = false;
-  try {
-    const existingRecord = await auth.getUser(uid);
-    existingHasCommunityAccess = !!((existingRecord.customClaims as Record<string, unknown>)?.hasCommunityAccess);
-  } catch { /* no-op */ }
-
-  await auth.setCustomUserClaims(uid, {
+  const newClaims: Record<string, unknown> = {
     role,
     status: platformStatus,
-    ...(existingHasCommunityAccess ? { hasCommunityAccess: true } : {}),
-  });
+  };
+  if (newHasCommunityAccess) newClaims.hasCommunityAccess = true;
+  if (accountType) newClaims.accountType = accountType;
+
+  await auth.setCustomUserClaims(uid, newClaims);
 
   console.log(
-    `[webhook] synced uid=${uid} role=${role} status=${platformStatus} stripeStatus=${stripeStatus}`
+    `[webhook] synced uid=${uid} role=${role} status=${platformStatus} accountType=${accountType ?? "none"}`
   );
 }
 
@@ -276,23 +292,34 @@ export async function POST(req: NextRequest) {
               `[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`
             );
 
-            // Grant hasCommunityAccess — event attendees unlock community features
+            // Grant hasCommunityAccess + accountType — event attendees become Community Members
             if (purchaseUserId) {
               try {
                 const auth = adminAuth();
                 const existingRecord = await auth.getUser(purchaseUserId);
                 const existingClaims = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
+                // Preserve supporter status if already a $25/mo subscriber
+                const isAlreadySupporter =
+                  existingClaims.accountType === "supporter" ||
+                  existingClaims.status === "active";
+                const newAccountType = isAlreadySupporter ? "supporter" : "community";
+
                 await auth.setCustomUserClaims(purchaseUserId, {
                   ...existingClaims,
                   hasCommunityAccess: true,
+                  accountType: newAccountType,
                 });
                 await db.collection("users").doc(purchaseUserId).set(
-                  { hasCommunityAccess: true, updatedAt: new Date().toISOString() },
+                  {
+                    hasCommunityAccess: true,
+                    accountType: newAccountType,
+                    updatedAt: new Date().toISOString(),
+                  },
                   { merge: true }
                 );
-                console.log(`[webhook] hasCommunityAccess granted | uid=${purchaseUserId}`);
+                console.log(`[webhook] community access granted | uid=${purchaseUserId} accountType=${newAccountType}`);
               } catch (err) {
-                console.error("[webhook] hasCommunityAccess claim grant failed:", err);
+                console.error("[webhook] community access claim grant failed:", err);
               }
             }
 

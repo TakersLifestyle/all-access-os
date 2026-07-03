@@ -160,22 +160,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 409 });
   }
 
-  // ── 6. Grant hasCommunityAccess claim if userId is known ─────────────────
+  // ── 6. Grant hasCommunityAccess + accountType = "community" if userId is known ──
   if (userId) {
     try {
       const existingRecord = await adminAuth().getUser(userId);
       const existingClaims = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
+      const isAlreadySupporter =
+        existingClaims.accountType === "supporter" || existingClaims.status === "active";
+      const newAccountType = isAlreadySupporter ? "supporter" : "community";
+
       await adminAuth().setCustomUserClaims(userId, {
         ...existingClaims,
         hasCommunityAccess: true,
+        accountType: newAccountType,
       });
       await db.collection("users").doc(userId).set(
-        { hasCommunityAccess: true, updatedAt: now },
+        { hasCommunityAccess: true, accountType: newAccountType, updatedAt: now },
         { merge: true }
       );
-      console.log(`[add-offline-attendee] hasCommunityAccess granted | uid=${userId}`);
+      console.log(`[add-offline-attendee] community access granted | uid=${userId} accountType=${newAccountType}`);
     } catch (err) {
-      console.error("[add-offline-attendee] hasCommunityAccess claim failed:", err);
+      console.error("[add-offline-attendee] community access claim failed:", err);
     }
   }
 

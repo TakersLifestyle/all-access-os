@@ -325,7 +325,7 @@ function CheckoutStatus() {
 
 // ── Profile page ──────────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  const { user, profile, isAdmin, loading, refreshToken } = useAuth();
+  const { user, profile, isAdmin, hasCommunityAccess, isSupportingMember, isCommunityMember, loading, refreshToken } = useAuth();
   const router = useRouter();
   const didRefresh = useRef(false);
   const [purchases, setPurchases] = useState<EventPurchase[]>([]);
@@ -402,18 +402,22 @@ export default function ProfilePage() {
 
   if (loading || !profile) return null;
 
-  const isActive = profile.status === "active";
   const isFoundingMember = purchases.some((p) => p.isFoundingMember);
   const isCreator = profile.isCreator === true;
-  const roleLabel = profile.role === "admin" ? "Owner" : "Member";
 
-  // Badge styling — Admin=amber/orange, Active member=green, Inactive member=grey
-  const roleBadgeClass =
-    profile.role === "admin"
-      ? "text-amber-400 bg-amber-400/10 border border-amber-400/30"
-      : isActive
-      ? "text-green-400 bg-green-400/10 border border-green-400/30"
-      : "text-white/60 bg-white/5 border border-white/10";
+  // Account tier label + badge styling
+  const tierLabel = isAdmin ? "Admin"
+    : isSupportingMember ? "Supporting Member"
+    : isCommunityMember ? "Community Member"
+    : "Public";
+
+  const tierBadgeClass = isAdmin
+    ? "text-amber-400 bg-amber-400/10 border border-amber-400/30"
+    : isSupportingMember
+    ? "text-amber-400 bg-amber-900/30 border border-amber-500/30"
+    : isCommunityMember
+    ? "text-blue-300 bg-blue-900/20 border border-blue-500/25"
+    : "text-white/50 bg-white/5 border border-white/10";
 
   const initial = (profile.displayName ?? profile.email ?? "M")[0].toUpperCase();
 
@@ -433,9 +437,14 @@ export default function ProfilePage() {
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-600 to-pink-800 flex items-center justify-center text-2xl font-bold">
               {initial}
             </div>
-            {/* Verified ring for active members */}
-            {isActive && (
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-black flex items-center justify-center">
+            {/* Tier ring — gold for supporter, blue for community, hidden for public */}
+            {isSupportingMember && (
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full border-2 border-black flex items-center justify-center">
+                <span className="text-[9px] font-black">★</span>
+              </div>
+            )}
+            {isCommunityMember && (
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-black flex items-center justify-center">
                 <span className="text-[9px]">✓</span>
               </div>
             )}
@@ -445,9 +454,9 @@ export default function ProfilePage() {
               <p className="font-semibold text-lg">
                 {profile.displayName ?? profile.email?.split("@")[0] ?? "Member"}
               </p>
-              {/* Role badge */}
-              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleBadgeClass}`}>
-                {roleLabel}
+              {/* Tier badge */}
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${tierBadgeClass}`}>
+                {tierLabel}
               </span>
               {/* Creator badge */}
               {isCreator && (
@@ -455,7 +464,7 @@ export default function ProfilePage() {
                   Creator
                 </span>
               )}
-              {/* Founding 15 badge — only when they own a founding purchase */}
+              {/* Founding 15 badge */}
               {isFoundingMember && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
                   🏀 Founding 15
@@ -466,21 +475,40 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Status + Role cards */}
+        {/* Account tier cards */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Status</p>
-            <p className={`font-semibold ${isActive ? "text-green-400" : "text-yellow-400"}`}>
-              {isActive ? "Active Member" : profile.status === "past_due" ? "Past Due" : "Inactive"}
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Account</p>
+            <p className={`font-semibold ${
+              isAdmin ? "text-amber-400"
+              : isSupportingMember ? "text-amber-400"
+              : isCommunityMember ? "text-blue-300"
+              : "text-white/50"
+            }`}>
+              {tierLabel}
             </p>
           </div>
           <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Role</p>
-            <p className={`font-semibold ${profile.role === "admin" ? "text-amber-400" : isActive ? "text-green-400" : "text-white"}`}>
-              {roleLabel}
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Access</p>
+            <p className={`font-semibold ${hasCommunityAccess ? "text-emerald-400" : "text-white/30"}`}>
+              {hasCommunityAccess ? "Full Access" : "Public Only"}
             </p>
           </div>
         </div>
+
+        {/* Upgrade CTA — community members who haven't subscribed yet */}
+        {!isAdmin && isCommunityMember && (
+          <Link
+            href="/#membership"
+            className="flex items-center justify-between bg-amber-950/20 hover:bg-amber-950/30 border border-amber-500/25 rounded-xl px-5 py-4 transition group"
+          >
+            <div>
+              <p className="font-semibold text-amber-400 text-sm">Upgrade to Supporting Member</p>
+              <p className="text-white/35 text-xs mt-0.5">$25/month · Unlock perks, discounts &amp; more</p>
+            </div>
+            <span className="text-amber-400 group-hover:translate-x-1 transition-transform shrink-0">→</span>
+          </Link>
+        )}
 
         {/* Admin shortcut */}
         {isAdmin && (

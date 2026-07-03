@@ -32,15 +32,16 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.status == "active";
     }
 
-    // Member OR admin — membership-only features (perks, etc.)
-    function isMemberOrAdmin() {
-      return isActive() || isAdmin();
-    }
-
     // Community access — active member OR event ticket purchaser OR manual grant
     // Unlocks: Memories, Albums, Photos, Videos, Community posting
     function hasCommunityAccess() {
       return isAdmin() || isActive() || request.auth.token.hasCommunityAccess == true;
+    }
+
+    // Supporting Member — $25/mo subscriber (accountType == "supporter") OR admin
+    // Unlocks: Perks, discounts, priority registration, exclusive experiences
+    function isSupportingMember() {
+      return isAdmin() || isActive() || request.auth.token.accountType == "supporter";
     }
 
     function isOwner(userId) {
@@ -108,10 +109,10 @@ service cloud.firestore {
 
 
     // ─── perks/{perkId} ─────────────────────────────────────
-    // Members only — perk codes are a membership benefit
+    // Supporting Members only — perk codes are a $25/mo subscriber benefit
     match /perks/{perkId} {
       allow read: if isAdmin()
-                  || (isMemberOrAdmin() && resource.data.status == "active");
+                  || (isSupportingMember() && resource.data.status == "active");
       allow create, update, delete: if isAdmin();
     }
 

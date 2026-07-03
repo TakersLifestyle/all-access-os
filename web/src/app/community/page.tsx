@@ -75,9 +75,12 @@ function Avatar({ name }: { name: string }) {
 function Badge({ badge }: { badge?: string }) {
   if (!badge) return null;
   const styles: Record<string, string> = {
-    "Admin":           "bg-pink-900/40 border-pink-500/30 text-pink-300",
-    "Founding Member": "bg-amber-900/30 border-amber-500/25 text-amber-300/80",
-    "Active Member":   "bg-white/5 border-white/10 text-white/40",
+    "Admin":              "bg-pink-900/40 border-pink-500/30 text-pink-300",
+    "Supporting Member":  "bg-amber-900/40 border-amber-500/30 text-amber-400",
+    "Founding Member":    "bg-amber-900/30 border-amber-500/25 text-amber-300/80",
+    "Community Member":   "bg-blue-900/30 border-blue-500/25 text-blue-300",
+    // Legacy value — keep styled until all posts migrate naturally
+    "Active Member":      "bg-amber-900/30 border-amber-500/25 text-amber-300/80",
   };
   const cls = styles[badge] ?? "bg-white/5 border-white/10 text-white/40";
   return (
@@ -408,7 +411,7 @@ function PostCard({ post, canInteract, isAdmin, currentUserId, displayName, badg
 
 // ── Page ───────────────────────────────────────────────────
 export default function CommunityPage() {
-  const { user, isActive, isAdmin, hasCommunityAccess, profile, loading } = useAuth();
+  const { user, isAdmin, hasCommunityAccess, isSupportingMember, profile, loading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [feedLoading, setFeedLoading] = useState(true);
@@ -419,9 +422,9 @@ export default function CommunityPage() {
   const isSignedIn = !!user;
   const currentUserId = user?.uid;
 
-  // Determine badge from profile
+  // Determine badge for posts written by this user
   const badge = isAdmin ? "Admin"
-    : profile?.status === "active" ? "Active Member"
+    : isSupportingMember ? "Supporting Member"
     : hasCommunityAccess ? "Community Member"
     : undefined;
 

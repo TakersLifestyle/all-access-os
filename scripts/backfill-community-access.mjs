@@ -80,17 +80,22 @@ async function main() {
         continue;
       }
 
+      const isAlreadySupporter =
+        existingClaims.accountType === "supporter" || existingClaims.status === "active";
+      const newAccountType = isAlreadySupporter ? "supporter" : "community";
+
       await auth.setCustomUserClaims(uid, {
         ...existingClaims,
         hasCommunityAccess: true,
+        accountType: newAccountType,
       });
 
       await db.collection("users").doc(uid).set(
-        { hasCommunityAccess: true, updatedAt: new Date().toISOString() },
+        { hasCommunityAccess: true, accountType: newAccountType, updatedAt: new Date().toISOString() },
         { merge: true }
       );
 
-      console.log(`  [granted] ${uid} (${userRecord.email ?? "no email"})`);
+      console.log(`  [granted] ${uid} (${userRecord.email ?? "no email"}) → accountType=${newAccountType}`);
       granted++;
     } catch (err) {
       if (err.code === "auth/user-not-found") {

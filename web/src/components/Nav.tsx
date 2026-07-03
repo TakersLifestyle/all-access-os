@@ -87,7 +87,7 @@ function ConnectDropdown() {
 }
 
 export default function Nav() {
-  const { user, profile, isAdmin, loading } = useAuth();
+  const { user, profile, isAdmin, hasCommunityAccess, isSupportingMember, loading } = useAuth();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -123,7 +123,12 @@ export default function Nav() {
                   Admin
                 </Link>
               )}
-              <Link href="/profile" className="text-white/70 hover:text-white transition">
+              <Link href="/profile" className="flex items-center gap-1.5 text-white/70 hover:text-white transition">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  isSupportingMember ? "bg-amber-400"
+                  : hasCommunityAccess ? "bg-blue-400"
+                  : "bg-white/20"
+                }`} />
                 {profile?.displayName ?? profile?.email ?? "Profile"}
               </Link>
               <button

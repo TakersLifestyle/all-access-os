@@ -15,6 +15,9 @@ import { auth, db } from "./firebase";
 type UserRole = "admin" | "member";
 type UserStatus = "active" | "inactive" | "past_due" | "cancelled";
 
+/** Community Member = attended an event. Supporting Member = $25/mo subscription. */
+export type AccountType = "community" | "supporter";
+
 interface UserProfile {
   uid: string;
   email: string | null;
@@ -26,6 +29,7 @@ interface UserProfile {
   isCreator?: boolean;
   creatorStatus?: string;
   hasCommunityAccess?: boolean;
+  accountType?: AccountType;
 }
 
 interface AuthContextType {
@@ -34,8 +38,14 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isActive: boolean;
-  /** True when user has any form of community access: active membership, event ticket purchase, or manual grant. */
+  /** true when user has community access: active membership, event ticket, or manual grant. */
   hasCommunityAccess: boolean;
+  /** Attended ≥1 event but not a $25/mo subscriber. */
+  isCommunityMember: boolean;
+  /** $25/mo subscriber (or admin). Full perks + badges + discounts. */
+  isSupportingMember: boolean;
+  /** Raw accountType from claim / Firestore ("community" | "supporter" | null). */
+  accountType: AccountType | null;
   /** Force-refresh the Firebase ID token to pick up new custom claims immediately.
    *  Call this right after checkout success so the user gets access without sign-out/sign-in. */
   refreshToken: () => Promise<void>;
@@ -48,6 +58,9 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isActive: false,
   hasCommunityAccess: false,
+  isCommunityMember: false,
+  isSupportingMember: false,
+  accountType: null,
   refreshToken: async () => {},
 });
 
@@ -64,26 +77,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role?: UserRole;
         status?: UserStatus;
         hasCommunityAccess?: boolean;
+        accountType?: AccountType;
       };
 
       // Custom claims are the source of truth for role/status
       // Firestore doc is the fallback for first-time users before webhook fires
       let role: UserRole = (claims.role as UserRole) ?? "member";
       let status: UserStatus = (claims.status as UserStatus) ?? "inactive";
+      let hasCommunityAccess = !!claims.hasCommunityAccess;
+      let accountType: AccountType | undefined = claims.accountType;
       let stripeCustomerId: string | undefined;
       let stripeSubscriptionId: string | undefined;
       let isCreator: boolean | undefined;
       let creatorStatus: string | undefined;
 
       // Pull extra profile data from Firestore (name, stripe IDs, creator flags)
-      // Only if claims don't have everything yet
+      // Also used as fallback for hasCommunityAccess / accountType when token not yet refreshed
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
         if (snap.exists()) {
           const data = snap.data();
-          // If no custom claims yet (first login before webhook), use Firestore values
           if (!claims.role) role = data.role ?? "member";
           if (!claims.status) status = data.status ?? "inactive";
+          // Firestore fallback when claim hasn't been picked up yet (token stale)
+          if (!hasCommunityAccess) hasCommunityAccess = !!data.hasCommunityAccess;
+          if (!accountType) accountType = data.accountType as AccountType | undefined;
           stripeCustomerId = data.stripeCustomerId;
           stripeSubscriptionId = data.stripeSubscriptionId;
           isCreator = data.isCreator;
@@ -103,7 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stripeSubscriptionId,
         isCreator,
         creatorStatus,
-        hasCommunityAccess: !!claims.hasCommunityAccess,
+        hasCommunityAccess,
+        accountType,
       });
     } catch {
       setProfile({
@@ -144,7 +163,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = profile?.role === "admin";
   const isActive = profile?.status === "active" || isAdmin;
-  const hasCommunityAccess = isAdmin || isActive || !!profile?.hasCommunityAccess;
+  const isSupportingMember = isAdmin || isActive || profile?.accountType === "supporter";
+  const hasCommunityAccess = isSupportingMember || !!profile?.hasCommunityAccess;
+  const isCommunityMember = hasCommunityAccess && !isSupportingMember;
+  const accountType: AccountType | null = profile?.accountType ?? null;
 
   return (
     <AuthContext.Provider
@@ -155,6 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isActive,
         hasCommunityAccess,
+        isCommunityMember,
+        isSupportingMember,
+        accountType,
         refreshToken,
       }}
     >
