@@ -40,6 +40,9 @@ interface Event {
   soldOut?: boolean;
   registrationOpen?: boolean;
   checkoutEnabled?: boolean;
+  type?: string;
+  featured?: boolean;
+  slug?: string;
 }
 
 // EventPurchase — mirrors the eventPurchases Firestore collection
@@ -681,6 +684,66 @@ function CompletedEventClosed() {
   );
 }
 
+// ── Featured concert card ────────────────────────────────────────────────────
+function FeaturedConcertCard({ ev }: { ev: Event }) {
+  const href = ev.slug ? `/events/${ev.slug}` : "/events";
+  return (
+    <Link
+      href={href}
+      className="group block rounded-2xl overflow-hidden border border-amber-500/30 bg-black hover:border-amber-500/60 hover:shadow-[0_0_50px_rgba(245,158,11,0.1)] transition-all duration-300"
+    >
+      {ev.imageUrl && (
+        <div className="relative w-full h-72 overflow-hidden">
+          <img
+            src={ev.imageUrl}
+            alt={ev.title}
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+          <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+            <span className="bg-amber-500 text-black text-xs font-black px-3 py-1.5 rounded-full">
+              FEATURED CONCERT
+            </span>
+            {ev.date && (
+              <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+                {new Date(ev.date + "T12:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            )}
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <p className="text-amber-400/80 text-xs font-bold uppercase tracking-[0.15em]">
+              Konfam&apos;s First Headline Show
+            </p>
+            <h2 className="text-3xl font-black text-white mt-1 leading-tight tracking-tight">
+              ROCAFIESTA
+            </h2>
+            <p className="text-white/55 text-sm mt-1">A Spiritual Experience with Konfam</p>
+          </div>
+        </div>
+      )}
+      <div className="px-6 py-4 bg-black flex items-center justify-between gap-4 border-t border-amber-500/10">
+        <div className="flex gap-5 flex-wrap">
+          <div>
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Tickets from</p>
+            <p className="text-white font-black text-lg">$40</p>
+          </div>
+          <div className="border-l border-white/10 pl-5">
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Date</p>
+            <p className="text-white font-semibold text-sm">September 5, 2026</p>
+          </div>
+          <div className="border-l border-white/10 pl-5">
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Location</p>
+            <p className="text-white font-semibold text-sm">Winnipeg, MB</p>
+          </div>
+        </div>
+        <span className="text-amber-400 font-bold text-sm group-hover:translate-x-1 transition-transform shrink-0">
+          View Event →
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 // ── Event card ───────────────────────────────────────────────────────────────
 function EventCard({
   ev,
@@ -1125,6 +1188,8 @@ export default function EventsList() {
           if (aCompleted && !bCompleted) return 1;
           if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
           if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
+          if (a.featured && !b.featured) return -1;
+          if (!a.featured && b.featured) return 1;
           if (a.status === "coming_soon" && b.status !== "coming_soon") return 1;
           if (a.status !== "coming_soon" && b.status === "coming_soon") return -1;
           return (a.date ?? "").localeCompare(b.date ?? "");
@@ -1217,6 +1282,8 @@ export default function EventsList() {
         {events.map((ev) =>
           ev.status === "coming_soon"
             ? <FutureDropCard key={ev.id} ev={ev} />
+            : ev.type === "concert" && ev.status !== "completed"
+            ? <FeaturedConcertCard key={ev.id} ev={ev} />
             : (
               <EventCard
                 key={ev.id}

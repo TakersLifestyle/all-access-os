@@ -19,6 +19,9 @@ interface EventTeaser {
   generalPrice: number;
   isLaunchEvent?: boolean;
   status: string;
+  type?: string;
+  featured?: boolean;
+  slug?: string;
 }
 
 function useEventTeasers() {
@@ -68,6 +71,7 @@ export default function Home() {
   const events = useEventTeasers();
 
   const launchEvent = events.find((e) => e.isLaunchEvent);
+  const featuredConcert = events.find((e) => e.type === "concert" && e.featured && e.status === "active");
 
   const handleCheckout = async () => {
     setError(null);
@@ -98,7 +102,12 @@ export default function Home() {
 
         {/* Left: copy + CTAs */}
         <div className="space-y-6">
-          {launchEvent?.status === "completed" ? (
+          {featuredConcert ? (
+            <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-amber-400 font-medium flex-wrap">
+              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              New Concert Event&nbsp;•&nbsp;September 5, 2026&nbsp;•&nbsp;Tickets from $40
+            </div>
+          ) : launchEvent?.status === "completed" ? (
             <div className="inline-flex items-center gap-2 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-emerald-400 font-medium flex-wrap">
               <span className="text-emerald-400">✓</span>
               Winnipeg Community Event&nbsp;•&nbsp;June 30, 2026&nbsp;•&nbsp;Sold Out — Event Completed
@@ -164,8 +173,58 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right: Sea Bears featured card */}
-        {launchEvent && (
+        {/* Right: featured event card — ROCAFIESTA when active, Sea Bears as fallback */}
+        {featuredConcert ? (
+          <Link
+            href={featuredConcert.slug ? `/events/${featuredConcert.slug}` : "/events"}
+            className="group block rounded-2xl overflow-hidden border border-amber-500/30 bg-black hover:border-amber-500/60 hover:shadow-[0_0_40px_rgba(245,158,11,0.12)] transition-all duration-300"
+          >
+            <div className="relative h-52 overflow-hidden bg-black">
+              {featuredConcert.imageUrl && (
+                <img
+                  src={featuredConcert.imageUrl}
+                  alt={featuredConcert.title}
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute top-3 left-3">
+                <span className="bg-amber-500 text-black text-xs font-black px-3 py-1 rounded-full">
+                  FEATURED CONCERT
+                </span>
+              </div>
+              <div className="absolute top-3 right-3">
+                <span className="bg-black/80 backdrop-blur-sm border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1 rounded-full">
+                  Tickets from $40
+                </span>
+              </div>
+              <div className="absolute bottom-3 left-4 right-4">
+                <p className="text-amber-400/80 text-xs font-bold uppercase tracking-wider">Konfam&apos;s First Headline Show</p>
+                <p className="text-white font-bold text-lg leading-tight mt-0.5">ROCAFIESTA</p>
+                <p className="text-white/55 text-xs mt-0.5">September 5, 2026 · Winnipeg, MB</p>
+              </div>
+            </div>
+            <div className="p-4 bg-black space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {["Live Music", "Faith & Culture", "VIP Available", "Community"].map((tag) => (
+                  <span key={tag} className="text-[11px] bg-amber-500/5 border border-amber-500/15 rounded-full px-2.5 py-0.5 text-amber-400/60 font-medium">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-bold text-lg">$40 – $70</p>
+                  <p className="text-white/30 text-xs">Student · Regular · VIP</p>
+                </div>
+                <span className="text-amber-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
+                  Get tickets →
+                </span>
+              </div>
+            </div>
+          </Link>
+        ) : launchEvent ? (
           <Link
             href={launchEvent.status === "completed" ? "/memories" : "/events"}
             className={`group block rounded-2xl overflow-hidden border transition-all duration-300 ${
@@ -174,7 +233,6 @@ export default function Home() {
                 : "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/60 hover:shadow-[0_0_40px_rgba(236,72,153,0.12)]"
             }`}
           >
-            {/* Image */}
             <div className="relative h-52 overflow-hidden">
               {launchEvent.imageUrl ? (
                 <img
@@ -186,8 +244,6 @@ export default function Home() {
                 <div className="w-full h-full bg-gradient-to-br from-pink-900/50 to-purple-900/40" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-              {/* Top badges */}
               <div className="absolute top-3 left-3">
                 <span className="bg-pink-600/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
                   🏀 Founding 15
@@ -204,15 +260,11 @@ export default function Home() {
                   </span>
                 )}
               </div>
-
-              {/* Bottom overlay */}
               <div className="absolute bottom-3 left-4 right-4">
                 <p className="text-white font-bold text-lg leading-tight drop-shadow">Sea Bears Courtside Launch</p>
                 <p className="text-white/60 text-xs mt-0.5">June 30, 2026&nbsp;•&nbsp;Canada Life Centre</p>
               </div>
             </div>
-
-            {/* Card body */}
             <div className="p-4 space-y-3">
               <div className="flex flex-wrap gap-1.5">
                 {["Courtside", "Buffet", "Private transport", "Real connection"].map((tag) => (
@@ -238,7 +290,7 @@ export default function Home() {
               </div>
             </div>
           </Link>
-        )}
+        ) : null}
       </section>
 
       {/* ── WHY ALL ACCESS WINNIPEG ───────────────────────────────────────── */}
@@ -363,12 +415,16 @@ export default function Home() {
                 ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.35);
               const memberPrice = Math.round(ev.generalPrice * 0.85);
 
+              const isConcert = ev.type === "concert" && !isCompleted;
+              const concertHref = isConcert && ev.slug ? `/events/${ev.slug}` : null;
               return (
                 <Link
                   key={ev.id}
-                  href={isCompleted ? "/memories" : "/events"}
+                  href={concertHref ?? (isCompleted ? "/memories" : "/events")}
                   className={`group rounded-2xl overflow-hidden border transition-all duration-300 ${
-                    ev.isLaunchEvent && !isCompleted
+                    isConcert
+                      ? "border-amber-500/25 bg-black hover:border-amber-500/50 hover:shadow-[0_0_30px_rgba(245,158,11,0.1)]"
+                      : ev.isLaunchEvent && !isCompleted
                       ? "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/55 hover:shadow-[0_0_30px_rgba(236,72,153,0.1)]"
                       : isComingSoon
                       ? "border-white/10 bg-white/[0.03] hover:border-purple-500/25"
@@ -390,7 +446,12 @@ export default function Home() {
 
                     {/* Badges */}
                     <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
-                      {ev.isLaunchEvent && (
+                      {isConcert && (
+                        <span className="bg-amber-500 text-black text-xs font-black px-2.5 py-0.5 rounded-full">
+                          FEATURED
+                        </span>
+                      )}
+                      {ev.isLaunchEvent && !isConcert && (
                         <span className="bg-pink-600/90 backdrop-blur-sm text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
                           🏀 Founding 15
                         </span>
