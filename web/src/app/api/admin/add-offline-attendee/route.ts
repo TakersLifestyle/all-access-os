@@ -160,7 +160,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 409 });
   }
 
-  // ── 6. Audit log — non-critical, outside transaction ──────────────────────
+  // ── 6. Grant hasCommunityAccess claim if userId is known ─────────────────
+  if (userId) {
+    try {
+      const existingRecord = await adminAuth().getUser(userId);
+      const existingClaims = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
+      await adminAuth().setCustomUserClaims(userId, {
+        ...existingClaims,
+        hasCommunityAccess: true,
+      });
+      await db.collection("users").doc(userId).set(
+        { hasCommunityAccess: true, updatedAt: now },
+        { merge: true }
+      );
+      console.log(`[add-offline-attendee] hasCommunityAccess granted | uid=${userId}`);
+    } catch (err) {
+      console.error("[add-offline-attendee] hasCommunityAccess claim failed:", err);
+    }
+  }
+
+  // ── 7. Audit log — non-critical, outside transaction ──────────────────────
   await db.collection("adminAuditLog").add({
     action: "add_offline_attendee",
     adminUid,

@@ -513,7 +513,7 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
 export default function AlbumPage() {
   const params = useParams();
   const albumId = (Array.isArray(params?.albumId) ? params.albumId[0] : params?.albumId) ?? "";
-  const { user, profile, isAdmin, isActive, loading } = useAuth();
+  const { user, profile, isAdmin, hasCommunityAccess, loading } = useAuth();
   const router = useRouter();
 
   const [album, setAlbum] = useState<MemoryAlbum | null>(null);
@@ -556,7 +556,7 @@ export default function AlbumPage() {
 
   // Load album + media + comments + attendees + series siblings
   useEffect(() => {
-    if (!user || !albumId || (!isActive && !isAdmin)) return;
+    if (!user || !albumId || !hasCommunityAccess) return;
     (async () => {
       setFetching(true);
       try {
@@ -602,7 +602,7 @@ export default function AlbumPage() {
         setFetching(false);
       }
     })();
-  }, [user, albumId, isActive, isAdmin, router]);
+  }, [user, albumId, hasCommunityAccess, router]);
 
   // Lightbox keyboard handler
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -665,7 +665,7 @@ export default function AlbumPage() {
   if (loading || !user) return null;
 
   // Locked state
-  if (!isActive && !isAdmin) {
+  if (!hasCommunityAccess) {
     return (
       <main className="max-w-5xl mx-auto px-6 py-12">
         <Link href="/memories" className="text-white/30 hover:text-white/60 text-sm transition inline-block mb-10">
@@ -674,14 +674,19 @@ export default function AlbumPage() {
         <div className="text-center py-20 space-y-5">
           <p className="text-7xl">🔒</p>
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Memories are available to ALL ACCESS members.</h2>
+            <h2 className="text-2xl font-bold">Memories are for the community.</h2>
             <p className="text-white/40 text-sm max-w-md mx-auto leading-relaxed">
-              Join the community to view event albums, recaps, and downloadable media.
+              Attend an ALL ACCESS event or become a monthly supporter to access event albums, recaps, and downloadable media.
             </p>
           </div>
-          <Link href="/signup" className="inline-block mt-2 bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition">
-            Become a Supporter — $25/mo
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+            <Link href="/signup" className="bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition">
+              Become a Supporter — $25/mo
+            </Link>
+            <Link href="/events" className="text-white/40 hover:text-white text-sm transition">
+              View Upcoming Events →
+            </Link>
+          </div>
         </div>
       </main>
     );

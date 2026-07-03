@@ -85,9 +85,17 @@ async function syncUser(params: {
   // 2. Set Firebase Auth custom claims
   // These are read by Firestore rules as request.auth.token.role / .status
   // Client must call user.getIdToken(true) to pick up new claims immediately
+  // Preserve hasCommunityAccess — earned from event tickets, must survive membership changes
+  let existingHasCommunityAccess = false;
+  try {
+    const existingRecord = await auth.getUser(uid);
+    existingHasCommunityAccess = !!((existingRecord.customClaims as Record<string, unknown>)?.hasCommunityAccess);
+  } catch { /* no-op */ }
+
   await auth.setCustomUserClaims(uid, {
     role,
     status: platformStatus,
+    ...(existingHasCommunityAccess ? { hasCommunityAccess: true } : {}),
   });
 
   console.log(
@@ -267,6 +275,26 @@ export async function POST(req: NextRequest) {
             console.log(
               `[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`
             );
+
+            // Grant hasCommunityAccess — event attendees unlock community features
+            if (purchaseUserId) {
+              try {
+                const auth = adminAuth();
+                const existingRecord = await auth.getUser(purchaseUserId);
+                const existingClaims = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
+                await auth.setCustomUserClaims(purchaseUserId, {
+                  ...existingClaims,
+                  hasCommunityAccess: true,
+                });
+                await db.collection("users").doc(purchaseUserId).set(
+                  { hasCommunityAccess: true, updatedAt: new Date().toISOString() },
+                  { merge: true }
+                );
+                console.log(`[webhook] hasCommunityAccess granted | uid=${purchaseUserId}`);
+              } catch (err) {
+                console.error("[webhook] hasCommunityAccess claim grant failed:", err);
+              }
+            }
 
             // Backfill userId on ticketOrder if it was missing at checkout time
             if (!(orderData.userId as string | null) && purchaseUserId) {

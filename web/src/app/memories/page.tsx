@@ -120,7 +120,7 @@ function EpisodeCard({ album }: { album: MemoryAlbum }) {
 }
 
 export default function MemoriesPage() {
-  const { user, isActive, isAdmin, loading } = useAuth();
+  const { user, hasCommunityAccess, loading } = useAuth();
   const router = useRouter();
   const [albums, setAlbums] = useState<MemoryAlbum[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -132,7 +132,7 @@ export default function MemoriesPage() {
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (!user || (!isActive && !isAdmin)) { setFetching(false); return; }
+    if (!user || !hasCommunityAccess) { setFetching(false); return; }
     (async () => {
       try {
         const snap = await getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active")));
@@ -141,19 +141,19 @@ export default function MemoriesPage() {
         setAlbums(result);
       } finally { setFetching(false); }
     })();
-  }, [user, isActive, isAdmin]);
+  }, [user, hasCommunityAccess]);
 
   if (loading || !user) return null;
 
-  if (!isActive && !isAdmin) {
+  if (!hasCommunityAccess) {
     return (
       <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center py-24 space-y-6">
           <p className="text-7xl">🔒</p>
           <div className="space-y-3">
-            <h2 className="text-2xl font-bold">Memories are available to ALL ACCESS members.</h2>
+            <h2 className="text-2xl font-bold">Memories are for the community.</h2>
             <p className="text-white/40 text-sm max-w-md mx-auto leading-relaxed">
-              Join the community to view event albums, photos, videos, and downloadable memories.
+              Attend an ALL ACCESS event or become a monthly supporter to view event albums, photos, videos, and downloadable memories.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">

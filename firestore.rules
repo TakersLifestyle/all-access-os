@@ -32,9 +32,15 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.status == "active";
     }
 
-    // Member OR admin — community write access
+    // Member OR admin — membership-only features (perks, etc.)
     function isMemberOrAdmin() {
       return isActive() || isAdmin();
+    }
+
+    // Community access — active member OR event ticket purchaser OR manual grant
+    // Unlocks: Memories, Albums, Photos, Videos, Community posting
+    function hasCommunityAccess() {
+      return isAdmin() || isActive() || request.auth.token.hasCommunityAccess == true;
     }
 
     function isOwner(userId) {
@@ -111,44 +117,44 @@ service cloud.firestore {
 
 
     // ─── posts/{postId} ─────────────────────────────────────
-    // READ  — signed-in users only (community is gated behind auth)
-    // WRITE — active members and admins only
+    // READ  — signed-in users only (community feed visible to all auth'd users)
+    // WRITE — community access (active member OR event attendee OR manual grant)
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow create: if isMemberOrAdmin() && validPost();
+      allow create: if hasCommunityAccess() && validPost();
       allow update: if isAdmin()
-                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
+                    || (isOwner(resource.data.userId) && hasCommunityAccess()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["content", "updatedAt"]));
-      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && hasCommunityAccess());
     }
 
 
     // ─── comments/{commentId} ───────────────────────────────
     // READ  — signed-in users only
-    // WRITE — active members and admins only
+    // WRITE — community access
     match /comments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isMemberOrAdmin() && validComment();
+      allow create: if hasCommunityAccess() && validComment();
       allow update: if isAdmin()
-                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
+                    || (isOwner(resource.data.userId) && hasCommunityAccess()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["content", "updatedAt"]));
-      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && hasCommunityAccess());
     }
 
 
     // ─── replies/{replyId} ──────────────────────────────────
     // READ  — signed-in users only
-    // WRITE — active members and admins only
+    // WRITE — community access
     match /replies/{replyId} {
       allow read: if isSignedIn();
-      allow create: if isMemberOrAdmin() && validReply();
+      allow create: if hasCommunityAccess() && validReply();
       allow update: if isAdmin()
-                    || (isOwner(resource.data.userId) && isMemberOrAdmin()
+                    || (isOwner(resource.data.userId) && hasCommunityAccess()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["content", "updatedAt"]));
-      allow delete: if isAdmin() || (isOwner(resource.data.userId) && isMemberOrAdmin());
+      allow delete: if isAdmin() || (isOwner(resource.data.userId) && hasCommunityAccess());
     }
 
 
@@ -411,40 +417,40 @@ service cloud.firestore {
 
 
     // ─── memoryAlbums/{albumId} ─────────────────────────────
-    // READ  — any signed-in user (members see their memories)
+    // READ  — community access (active member OR event attendee OR manual grant)
     // WRITE — admin only (created via Admin > Memories page)
     match /memoryAlbums/{albumId} {
-      allow read: if isSignedIn();
+      allow read: if hasCommunityAccess();
       allow create, update, delete: if isAdmin();
     }
 
 
     // ─── memoryMedia/{mediaId} ──────────────────────────────
-    // READ  — any signed-in user
-    // WRITE — admin only for create/delete; signed-in users can toggle likedBy only
+    // READ  — community access
+    // WRITE — admin only for create/delete; community members can toggle likedBy
     match /memoryMedia/{mediaId} {
-      allow read: if isSignedIn();
+      allow read: if hasCommunityAccess();
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
-                    || (isSignedIn()
+                    || (hasCommunityAccess()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["likedBy"]));
     }
 
 
     // ─── memoryComments/{commentId} ─────────────────────────
-    // READ   — any signed-in user
-    // CREATE — any signed-in user (must own the userId field)
+    // READ   — community access
+    // CREATE — community access (must own the userId field)
     // DELETE — own comment or admin
     match /memoryComments/{commentId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
+      allow read: if hasCommunityAccess();
+      allow create: if hasCommunityAccess()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 1000;
       allow delete: if isAdmin()
-                    || (isSignedIn() && resource.data.userId == request.auth.uid);
+                    || (hasCommunityAccess() && resource.data.userId == request.auth.uid);
       allow update: if false;
     }
 

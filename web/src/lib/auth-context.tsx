@@ -25,6 +25,7 @@ interface UserProfile {
   stripeSubscriptionId?: string;
   isCreator?: boolean;
   creatorStatus?: string;
+  hasCommunityAccess?: boolean;
 }
 
 interface AuthContextType {
@@ -33,6 +34,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isActive: boolean;
+  /** True when user has any form of community access: active membership, event ticket purchase, or manual grant. */
+  hasCommunityAccess: boolean;
   /** Force-refresh the Firebase ID token to pick up new custom claims immediately.
    *  Call this right after checkout success so the user gets access without sign-out/sign-in. */
   refreshToken: () => Promise<void>;
@@ -44,6 +47,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isActive: false,
+  hasCommunityAccess: false,
   refreshToken: async () => {},
 });
 
@@ -59,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const claims = idTokenResult.claims as {
         role?: UserRole;
         status?: UserStatus;
+        hasCommunityAccess?: boolean;
       };
 
       // Custom claims are the source of truth for role/status
@@ -98,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         stripeSubscriptionId,
         isCreator,
         creatorStatus,
+        hasCommunityAccess: !!claims.hasCommunityAccess,
       });
     } catch {
       setProfile({
@@ -106,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         displayName: firebaseUser.displayName,
         role: "member",
         status: "inactive",
+        hasCommunityAccess: false,
       });
     }
   }, []);
@@ -137,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = profile?.role === "admin";
   const isActive = profile?.status === "active" || isAdmin;
+  const hasCommunityAccess = isAdmin || isActive || !!profile?.hasCommunityAccess;
 
   return (
     <AuthContext.Provider
@@ -146,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         isAdmin,
         isActive,
+        hasCommunityAccess,
         refreshToken,
       }}
     >
