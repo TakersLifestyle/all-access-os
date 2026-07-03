@@ -37,7 +37,8 @@ function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await ensureUserDoc(result.user.uid, result.user.email, result.user.displayName);
       router.push(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");

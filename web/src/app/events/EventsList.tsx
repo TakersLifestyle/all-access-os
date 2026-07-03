@@ -37,6 +37,9 @@ interface Event {
   imageUrl: string;
   isLaunchEvent?: boolean;
   noMemberDiscount?: boolean;
+  soldOut?: boolean;
+  registrationOpen?: boolean;
+  checkoutEnabled?: boolean;
 }
 
 // EventPurchase — mirrors the eventPurchases Firestore collection
@@ -552,6 +555,132 @@ function ExperienceFlow({ ticketsRemaining }: { ticketsRemaining: number }) {
   );
 }
 
+// ── Founding 15 — Post-event attended state ──────────────────────────────────
+function FoundingAttendedState({ ticket, ev }: { ticket: EventPurchase; ev: Event }) {
+  const paidDate = ticket.purchasedAt ? formatShortDate(ticket.purchasedAt) : null;
+  const shortOrderId = ticket.id.slice(-8).toUpperCase();
+
+  const perks = [
+    { emoji: "🏀", label: "Premium courtside Sea Bears ticket" },
+    { emoji: "🍽️", label: "Dinner buffet" },
+    { emoji: "🥤", label: "Beverages included" },
+    { emoji: "🚐", label: "Group transportation — to & from event" },
+    { emoji: "📍", label: "Private host meetup" },
+    { emoji: "🪧", label: "Wristband + guest verification" },
+    { emoji: "📸", label: "Group photos + founder social" },
+    { emoji: "🏅", label: "Founding 15 recognition" },
+    { emoji: "⚡", label: "Priority future ALL ACCESS opportunities" },
+  ];
+
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-5">
+      <div className="bg-gradient-to-br from-emerald-950/40 via-black/60 to-black/70 border border-emerald-500/20 rounded-2xl p-5 text-center space-y-3">
+        <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5">
+          <span className="text-emerald-400 text-sm">✓</span>
+          <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-widest">Founding 15 · You Attended</span>
+        </div>
+        <div>
+          <h3 className="text-2xl font-black text-white tracking-tight">Thank you.</h3>
+          <p className="text-white/50 text-sm mt-1 leading-relaxed">
+            You were part of something real.<br />
+            <span className="text-white/30">June 30, 2026 · Canada Life Centre</span>
+          </p>
+        </div>
+        <Link
+          href="/memories"
+          className="inline-flex items-center gap-2 bg-pink-600/90 hover:bg-pink-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition"
+        >
+          📸 View Event Memories
+        </Link>
+      </div>
+
+      <div className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-600/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+            <span className="text-base">🎟</span>
+          </div>
+          <div>
+            <p className="text-white text-sm font-bold leading-tight">
+              {ticket.quantity} Founding Spot{ticket.quantity !== 1 ? "s" : ""} — Attended
+            </p>
+            {paidDate && <p className="text-white/25 text-xs mt-0.5">Purchased {paidDate}</p>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-white/15 text-[10px] font-mono tracking-wider">#{shortOrderId}</p>
+          <p className="text-emerald-400 text-xs font-bold mt-0.5">✓ ATTENDED</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest px-0.5">Your Founding Experience Included</p>
+        <div className="space-y-1.5">
+          {perks.map((perk) => (
+            <div key={perk.label} className="flex items-center gap-3 px-3 py-2 bg-white/[0.02] rounded-lg border border-white/[0.04]">
+              <span className="text-sm shrink-0">{perk.emoji}</span>
+              <span className="text-white/40 text-xs flex-1">{perk.label}</span>
+              <span className="text-emerald-400 text-xs font-bold shrink-0">✓</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Generic event — Post-event attended state ────────────────────────────────
+function GenericAttendedState({ ticket }: { ticket: EventPurchase }) {
+  const paidDate = ticket.purchasedAt ? formatShortDate(ticket.purchasedAt) : null;
+  const shortOrderId = ticket.id.slice(-8).toUpperCase();
+
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-5">
+      <div className="bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-center space-y-2">
+        <p className="text-emerald-400 text-lg">✓</p>
+        <p className="text-white/70 font-semibold text-sm">You attended this event.</p>
+        <p className="text-white/30 text-xs">Thank you for being part of the community.</p>
+      </div>
+      <div className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm">🎟</span>
+          <div>
+            <p className="text-white text-sm font-bold">{ticket.quantity} Ticket{ticket.quantity !== 1 ? "s" : ""} — Attended</p>
+            {paidDate && <p className="text-white/25 text-xs">{paidDate}</p>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-white/15 text-[10px] font-mono">#{shortOrderId}</p>
+          <p className="text-emerald-400 text-xs font-bold mt-0.5">✓ ATTENDED</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Completed event — public/closed view ────────────────────────────────────
+function CompletedEventClosed() {
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="w-full text-center py-5 px-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+          <span className="text-emerald-400 text-xs">✓</span>
+          <span className="text-white/40 text-xs font-bold uppercase tracking-widest">Event Completed</span>
+        </div>
+        <p className="text-white/50 text-sm font-medium">This event has ended.</p>
+        <p className="text-white/25 text-xs leading-relaxed">
+          Thank you to everyone who joined us for this inaugural experience.
+        </p>
+        <Link
+          href="/memories"
+          className="inline-flex items-center gap-2 mx-auto bg-white/8 hover:bg-white/12 border border-white/15 text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition"
+        >
+          📸 View Event Memories
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ── Event card ───────────────────────────────────────────────────────────────
 function EventCard({
   ev,
@@ -568,9 +697,10 @@ function EventCard({
   userEmail?: string;
   userTicket?: EventPurchase | null;
 }) {
-  const isSoldOut = ev.status === "sold_out" || ev.ticketsRemaining === 0;
-  const isCritical = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= 5;
-  const isLow = !isSoldOut && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
+  const isCompleted = ev.status === "completed";
+  const isSoldOut = isCompleted || ev.status === "sold_out" || ev.ticketsRemaining === 0;
+  const isCritical = !isSoldOut && !isCompleted && ev.capacity > 0 && ev.ticketsRemaining <= 5;
+  const isLow = !isSoldOut && !isCompleted && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
   const isConfirmed = !!userTicket;
 
   // ── Pricing ──────────────────────────────────────────────
@@ -607,7 +737,9 @@ function EventCard({
 
   return (
     <div className={`rounded-2xl overflow-hidden transition-all duration-300 group ${
-      isConfirmed
+      isCompleted
+        ? "border border-white/10 bg-white/[0.03]"
+        : isConfirmed
         ? "border border-emerald-500/20 bg-white/5 shadow-[0_0_40px_rgba(16,185,129,0.04)]"
         : isSoldOut
         ? "border border-white/5 bg-white/[0.02] opacity-50"
@@ -627,37 +759,56 @@ function EventCard({
 
           {/* Status badges */}
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-            {/* Confirmed badge — highest priority */}
-            {isConfirmed && (
-              <span className="bg-emerald-600/90 backdrop-blur-sm border border-emerald-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                You&rsquo;re Attending
-              </span>
-            )}
-
-            {!isConfirmed && ev.isLaunchEvent && !isSoldOut && (
-              <span className="bg-pink-600/90 backdrop-blur-sm border border-pink-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                🚀 Launching June 30
-              </span>
-            )}
-            {!isConfirmed && isSoldOut && (
-              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full">SOLD OUT</span>
-            )}
-            {!isConfirmed && isCritical && !isSoldOut && !ev.isLaunchEvent && (
-              <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">🔥 {ev.ticketsRemaining} Left</span>
-            )}
-            {!isConfirmed && ev.isLaunchEvent && !isSoldOut && ev.ticketsRemaining <= 15 && (
-              <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/80 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-                Only {ev.ticketsRemaining} Tickets
-              </span>
-            )}
-            {!isConfirmed && !isCritical && isLow && (
-              <span className="bg-amber-900/90 backdrop-blur-sm border border-amber-500/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">⚡ Limited Spots</span>
+            {isCompleted ? (
+              <>
+                {isConfirmed ? (
+                  <span className="bg-emerald-900/90 backdrop-blur-sm border border-emerald-600/40 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    You Attended
+                  </span>
+                ) : (
+                  <span className="bg-black/80 backdrop-blur-sm border border-white/15 text-white/60 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    ✓ Event Completed
+                  </span>
+                )}
+                <span className="bg-black/80 backdrop-blur-sm border border-white/15 text-white/40 text-xs font-bold px-3 py-1.5 rounded-full">
+                  SOLD OUT
+                </span>
+              </>
+            ) : (
+              <>
+                {/* Confirmed badge — highest priority */}
+                {isConfirmed && (
+                  <span className="bg-emerald-600/90 backdrop-blur-sm border border-emerald-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    You&rsquo;re Attending
+                  </span>
+                )}
+                {!isConfirmed && ev.isLaunchEvent && !isSoldOut && (
+                  <span className="bg-pink-600/90 backdrop-blur-sm border border-pink-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                    🚀 Founding 15
+                  </span>
+                )}
+                {!isConfirmed && isSoldOut && (
+                  <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full">SOLD OUT</span>
+                )}
+                {!isConfirmed && isCritical && !isSoldOut && !ev.isLaunchEvent && (
+                  <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/50 text-red-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">🔥 {ev.ticketsRemaining} Left</span>
+                )}
+                {!isConfirmed && ev.isLaunchEvent && !isSoldOut && ev.ticketsRemaining <= 15 && (
+                  <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/80 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
+                    Only {ev.ticketsRemaining} Tickets
+                  </span>
+                )}
+                {!isConfirmed && !isCritical && isLow && (
+                  <span className="bg-amber-900/90 backdrop-blur-sm border border-amber-500/40 text-amber-200 text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">⚡ Limited Spots</span>
+                )}
+              </>
             )}
           </div>
 
-          {/* Price badge — bottom right */}
-          <div className="absolute bottom-4 right-4 text-right">
+          {/* Price badge — bottom right (hidden for completed events) */}
+          {!isCompleted && <div className="absolute bottom-4 right-4 text-right">
             {isConfirmed ? (
               /* Confirmed — show paid amount */
               <div className="bg-emerald-600/90 backdrop-blur-sm border border-emerald-400/30 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg">
@@ -688,7 +839,7 @@ function EventCard({
                 </div>
               )
             ) : null}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -775,8 +926,8 @@ function EventCard({
           )
         )}
 
-        {/* Capacity bar — show for everyone (context for confirmed attendees too) */}
-        {ev.capacity > 0 && !isSoldOut && (
+        {/* Capacity bar — hidden for completed events */}
+        {ev.capacity > 0 && !isSoldOut && !isCompleted && (
           <UrgencyBar capacity={ev.capacity} remaining={ev.ticketsRemaining ?? ev.capacity} />
         )}
 
@@ -785,13 +936,38 @@ function EventCard({
           <p className="text-white/45 text-sm leading-relaxed border-t border-white/5 pt-4">{ev.description}</p>
         )}
 
-        {/* Launch event: value stack + experience flow — only when NOT confirmed (confirmed state has its own list) */}
-        {ev.isLaunchEvent && !isConfirmed && <FoundingValueStack />}
-        {ev.isLaunchEvent && !isConfirmed && <ExperienceFlow ticketsRemaining={ev.ticketsRemaining} />}
+        {/* Completed event summary — launch event public view */}
+        {ev.isLaunchEvent && isCompleted && !isConfirmed && (
+          <div className="border-t border-white/5 pt-4 grid grid-cols-2 gap-2">
+            {[
+              { label: "✔ Event Completed", sub: "June 30, 2026" },
+              { label: "✔ Sold Out", sub: "15 of 15 attendees" },
+              { label: "✔ Canada Life Centre", sub: "Sea Bears Courtside" },
+              { label: "✔ Founding 15", sub: "Inaugural experience" },
+            ].map((item) => (
+              <div key={item.label} className="bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5">
+                <p className="text-white/65 font-semibold text-xs">{item.label}</p>
+                <p className="text-white/30 text-[10px] mt-0.5">{item.sub}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Launch event: value stack + experience flow — only pre-event, not confirmed, not completed */}
+        {ev.isLaunchEvent && !isConfirmed && !isCompleted && <FoundingValueStack />}
+        {ev.isLaunchEvent && !isConfirmed && !isCompleted && <ExperienceFlow ticketsRemaining={ev.ticketsRemaining} />}
 
         {/* ── Action section ── */}
         <div className="pt-1 space-y-3">
-          {isConfirmed ? (
+          {isCompleted ? (
+            isConfirmed ? (
+              ev.isLaunchEvent
+                ? <FoundingAttendedState ticket={userTicket} ev={ev} />
+                : <GenericAttendedState ticket={userTicket} />
+            ) : (
+              <CompletedEventClosed />
+            )
+          ) : isConfirmed ? (
             /* ✅ Confirmed attendee — show confirmation state */
             ev.isLaunchEvent
               ? <FoundingConfirmedState ticket={userTicket} ev={ev} />
@@ -942,6 +1118,11 @@ export default function EventsList() {
           .map((d) => ({ id: d.id, ...d.data() } as Event))
           .filter((ev) => ev.status !== "draft");
         all.sort((a, b) => {
+          // Completed events sort after all upcoming events
+          const aCompleted = a.status === "completed";
+          const bCompleted = b.status === "completed";
+          if (!aCompleted && bCompleted) return -1;
+          if (aCompleted && !bCompleted) return 1;
           if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
           if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
           if (a.status === "coming_soon" && b.status !== "coming_soon") return 1;

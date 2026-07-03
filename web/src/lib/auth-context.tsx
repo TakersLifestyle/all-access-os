@@ -23,6 +23,8 @@ interface UserProfile {
   displayName: string | null;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  isCreator?: boolean;
+  creatorStatus?: string;
 }
 
 interface AuthContextType {
@@ -65,8 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let status: UserStatus = (claims.status as UserStatus) ?? "inactive";
       let stripeCustomerId: string | undefined;
       let stripeSubscriptionId: string | undefined;
+      let isCreator: boolean | undefined;
+      let creatorStatus: string | undefined;
 
-      // Pull extra profile data from Firestore (name, stripe IDs)
+      // Pull extra profile data from Firestore (name, stripe IDs, creator flags)
       // Only if claims don't have everything yet
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
@@ -77,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!claims.status) status = data.status ?? "inactive";
           stripeCustomerId = data.stripeCustomerId;
           stripeSubscriptionId = data.stripeSubscriptionId;
+          isCreator = data.isCreator;
+          creatorStatus = data.creatorStatus;
         }
       } catch {
         // Firestore rules may block read until custom claims are set — use claim values
@@ -90,6 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         status,
         stripeCustomerId,
         stripeSubscriptionId,
+        isCreator,
+        creatorStatus,
       });
     } catch {
       setProfile({

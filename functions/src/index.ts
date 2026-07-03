@@ -251,7 +251,7 @@ export const stripeWebhook = onRequest(
       switch (event.type) {
         // ── Subscription created or updated ──────────────────
         case "checkout.session.completed": {
-          const session = event.data.object as Stripe.CheckoutSession;
+          const session = event.data.object as Stripe.Checkout.Session;
           const uid = session.client_reference_id;
           const customerId = session.customer as string;
           const subscriptionId = session.subscription as string;

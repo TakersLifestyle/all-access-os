@@ -98,10 +98,17 @@ export default function Home() {
 
         {/* Left: copy + CTAs */}
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-pink-300 font-medium flex-wrap">
-            <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
-            Winnipeg Community Event&nbsp;•&nbsp;June 30&nbsp;•&nbsp;Only {launchEvent?.ticketsRemaining ?? 5} Spots Remaining
-          </div>
+          {launchEvent?.status === "completed" ? (
+            <div className="inline-flex items-center gap-2 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-emerald-400 font-medium flex-wrap">
+              <span className="text-emerald-400">✓</span>
+              Winnipeg Community Event&nbsp;•&nbsp;June 30, 2026&nbsp;•&nbsp;Sold Out — Event Completed
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-pink-300 font-medium flex-wrap">
+              <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
+              Winnipeg Community Event&nbsp;•&nbsp;June 30&nbsp;•&nbsp;Only {launchEvent?.ticketsRemaining ?? 5} Spots Remaining
+            </div>
+          )}
 
           <div className="space-y-3">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight">
@@ -160,8 +167,12 @@ export default function Home() {
         {/* Right: Sea Bears featured card */}
         {launchEvent && (
           <Link
-            href="/events"
-            className="group block rounded-2xl overflow-hidden border border-pink-500/30 bg-pink-950/10 hover:border-pink-500/60 transition-all duration-300 hover:shadow-[0_0_40px_rgba(236,72,153,0.12)]"
+            href={launchEvent.status === "completed" ? "/memories" : "/events"}
+            className={`group block rounded-2xl overflow-hidden border transition-all duration-300 ${
+              launchEvent.status === "completed"
+                ? "border-white/15 bg-white/[0.03] hover:border-white/25"
+                : "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/60 hover:shadow-[0_0_40px_rgba(236,72,153,0.12)]"
+            }`}
           >
             {/* Image */}
             <div className="relative h-52 overflow-hidden">
@@ -183,9 +194,15 @@ export default function Home() {
                 </span>
               </div>
               <div className="absolute top-3 right-3">
-                <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/40 text-red-300 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
-                  ⚡ Only {launchEvent.ticketsRemaining} Spots Remaining
-                </span>
+                {launchEvent.status === "completed" ? (
+                  <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/60 text-xs font-bold px-3 py-1 rounded-full">
+                    ✅ SOLD OUT
+                  </span>
+                ) : (
+                  <span className="bg-red-900/90 backdrop-blur-sm border border-red-500/40 text-red-300 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                    ⚡ Only {launchEvent.ticketsRemaining} Spots Remaining
+                  </span>
+                )}
               </div>
 
               {/* Bottom overlay */}
@@ -206,11 +223,17 @@ export default function Home() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white font-bold text-lg">{fmt(launchEvent.generalPrice)}</p>
-                  <p className="text-white/30 text-xs">Founding access&nbsp;·&nbsp;Open to everyone</p>
+                  {launchEvent.status === "completed" ? (
+                    <p className="text-white/50 font-semibold text-sm">June 30, 2026 · Canada Life Centre</p>
+                  ) : (
+                    <>
+                      <p className="text-white font-bold text-lg">{fmt(launchEvent.generalPrice)}</p>
+                      <p className="text-white/30 text-xs">Founding access&nbsp;·&nbsp;Open to everyone</p>
+                    </>
+                  )}
                 </div>
                 <span className="text-pink-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
-                  Get tickets →
+                  {launchEvent.status === "completed" ? "View Memories →" : "Get tickets →"}
                 </span>
               </div>
             </div>
@@ -262,7 +285,7 @@ export default function Home() {
       {/* ── COMMUNITY IMPACT STRIP ────────────────────────────────────────── */}
       <section className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
         {[
-          { stat: `${launchEvent?.ticketsRemaining ?? 5}`, label: "Founding seats remaining", pink: true },
+          { stat: launchEvent?.status === "completed" ? "15" : `${launchEvent?.ticketsRemaining ?? 5}`, label: launchEvent?.status === "completed" ? "Founding 15 — SOLD OUT" : "Founding seats remaining", pink: true },
           { stat: "6+", label: "Community perks", pink: false },
           { stat: "WPG", label: "100% Winnipeg-based", pink: false },
         ].map((item) => (
@@ -280,8 +303,23 @@ export default function Home() {
         ))}
       </section>
 
-      {/* ── URGENCY BANNER ────────────────────────────────────────────────── */}
-      {launchEvent && launchEvent.status !== "sold_out" && (
+      {/* ── EVENT BANNER (urgency or completed) ──────────────────────────── */}
+      {launchEvent && launchEvent.status === "completed" ? (
+        <div className="flex items-center justify-between gap-4 flex-wrap bg-gradient-to-r from-emerald-950/30 via-black/40 to-emerald-950/30 border border-emerald-600/20 rounded-2xl px-6 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-emerald-400 text-lg shrink-0">✓</span>
+            <p className="text-white/70 font-semibold text-sm">
+              Sea Bears Courtside Launch — Event Completed.{" "}
+              <span className="text-emerald-400">
+                Sold out. 15 founding members. June 30, 2026.
+              </span>
+            </p>
+          </div>
+          <Link href="/memories" className="text-emerald-400 text-sm font-bold hover:translate-x-1 transition-transform shrink-0">
+            View Memories →
+          </Link>
+        </div>
+      ) : launchEvent && launchEvent.status !== "sold_out" ? (
         <Link
           href="/events"
           className="group flex items-center justify-between gap-4 flex-wrap bg-gradient-to-r from-pink-950/50 via-red-950/30 to-pink-950/50 border border-pink-500/30 rounded-2xl px-6 py-4 hover:border-pink-500/60 transition"
@@ -299,7 +337,7 @@ export default function Home() {
             Claim yours →
           </span>
         </Link>
-      )}
+      ) : null}
 
       {/* ── UPCOMING COMMUNITY EXPERIENCES ───────────────────────────────── */}
       {events.length > 0 && (
@@ -317,8 +355,10 @@ export default function Home() {
           <div className="grid sm:grid-cols-2 gap-4">
             {events.map((ev) => {
               const isComingSoon = ev.status === "coming_soon";
+              const isCompleted = ev.status === "completed";
               const spotsLow =
                 !isComingSoon &&
+                !isCompleted &&
                 ev.capacity > 0 &&
                 ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.35);
               const memberPrice = Math.round(ev.generalPrice * 0.85);
@@ -326,9 +366,9 @@ export default function Home() {
               return (
                 <Link
                   key={ev.id}
-                  href="/events"
+                  href={isCompleted ? "/memories" : "/events"}
                   className={`group rounded-2xl overflow-hidden border transition-all duration-300 ${
-                    ev.isLaunchEvent
+                    ev.isLaunchEvent && !isCompleted
                       ? "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/55 hover:shadow-[0_0_30px_rgba(236,72,153,0.1)]"
                       : isComingSoon
                       ? "border-white/10 bg-white/[0.03] hover:border-purple-500/25"
@@ -360,6 +400,11 @@ export default function Home() {
                           Coming Soon
                         </span>
                       )}
+                      {isCompleted && (
+                        <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/50 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                          ✓ Completed
+                        </span>
+                      )}
                       {spotsLow && (
                         <span className="bg-red-900/80 backdrop-blur text-xs text-red-300 border border-red-500/30 px-2.5 py-0.5 rounded-full font-semibold animate-pulse">
                           ⚡ {ev.ticketsRemaining} left
@@ -375,7 +420,9 @@ export default function Home() {
                       <span className="text-white/40 text-xs">
                         {isComingSoon ? "📅 Date TBA" : `📅 ${formatDate(ev.date)}`}
                       </span>
-                      {isComingSoon ? (
+                      {isCompleted ? (
+                        <span className="text-white/30 text-xs font-semibold">✓ Event Completed</span>
+                      ) : isComingSoon ? (
                         <span className="text-purple-400 text-xs font-semibold">Details soon</span>
                       ) : !user ? (
                         <span className="text-white/60 text-xs font-semibold">{fmt(ev.generalPrice)}</span>

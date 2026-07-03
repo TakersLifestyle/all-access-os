@@ -93,7 +93,8 @@ export default function Founding15Page() {
     }
   };
 
-  const seatsLeft = launchEvent?.ticketsRemaining ?? 15;
+  const capacity = launchEvent?.capacity ?? 15;
+  const seatsLeft = launchEvent?.ticketsRemaining ?? capacity;
   const isSoldOut = launchEvent?.status === "sold_out" || seatsLeft === 0;
   const price = launchEvent?.generalPrice ?? 300;
 
@@ -115,7 +116,7 @@ export default function Founding15Page() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 text-xs text-white/40">
               <span className="font-bold text-pink-400 text-sm">{seatsLeft}</span>
-              <span>of 15 seats left</span>
+              <span>of {capacity} seats left</span>
             </div>
             {!isSoldOut && (
               <button
@@ -189,21 +190,21 @@ export default function Founding15Page() {
 
           {/* Seat visual */}
           <div className="flex items-center justify-center gap-1.5 flex-wrap">
-            {Array.from({ length: 15 }).map((_, i) => (
+            {Array.from({ length: capacity }).map((_, i) => (
               <div
                 key={i}
                 className={`w-7 h-7 rounded-md border flex items-center justify-center text-[10px] font-bold transition-all ${
-                  i < (15 - seatsLeft)
+                  i < (capacity - seatsLeft)
                     ? "bg-white/5 border-white/10 text-white/20"
                     : "border-pink-500/50 bg-pink-600/20 text-pink-400"
                 }`}
               >
-                {i < (15 - seatsLeft) ? "✗" : "✓"}
+                {i < (capacity - seatsLeft) ? "✗" : "✓"}
               </div>
             ))}
           </div>
           <p className="text-white/30 text-xs uppercase tracking-widest">
-            {seatsLeft} of 15 founding seats remaining
+            {seatsLeft} of {capacity} founding seats remaining
           </p>
 
           {/* CTA */}
@@ -381,7 +382,7 @@ export default function Founding15Page() {
 
           {isSoldOut ? (
             <div className="space-y-3">
-              <p className="text-white/50 font-semibold">All 15 seats have been claimed.</p>
+              <p className="text-white/50 font-semibold">All {capacity} founding seats have been claimed.</p>
               <a
                 href="https://www.instagram.com/allaccesswinnipeg/"
                 target="_blank"

@@ -20,8 +20,11 @@ interface EventPurchase {
   isFoundingMember: boolean;
   quantity: number;
   totalPrice: number;
+  totalPaid?: number;
+  paymentMethod?: string;
   status: string;
   purchasedAt?: string;
+  source?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,7 +82,7 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
         { label: "Min", value: timeLeft.minutes },
         { label: "Sec", value: timeLeft.seconds },
       ].map(({ label, value }) => (
-        <div key={label} className="flex-1 flex flex-col items-center bg-black/40 border border-white/8 rounded-xl py-2">
+        <div key={label} className="flex-1 flex flex-col items-center bg-black/40 border border-white/[0.08] rounded-xl py-2">
           <span className="text-lg font-black tabular-nums text-white leading-none">
             {String(value).padStart(2, "0")}
           </span>
@@ -90,11 +93,12 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
   );
 }
 
-// ── Founding 15 purchase card ─────────────────────────────────────────────────
+// ── Founding 15 event card — premium layout ───────────────────────────────────
 function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
   const eventTarget = new Date(purchase.eventDate + "T19:00:00");
   const paidDate = purchase.purchasedAt ? formatShortDate(purchase.purchasedAt) : null;
   const shortOrderId = purchase.id.slice(-8).toUpperCase();
+  const amountPaid = purchase.totalPaid ?? purchase.totalPrice;
 
   return (
     <div className="bg-gradient-to-br from-emerald-950/40 via-black/60 to-black/80 border border-emerald-500/25 rounded-2xl overflow-hidden">
@@ -128,7 +132,6 @@ function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
         </div>
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-white/[0.06]" />
 
       {/* Details grid */}
@@ -140,7 +143,7 @@ function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
         <div className="px-4 py-3 text-center">
           <p className="text-white/25 text-[10px] uppercase tracking-widest mb-0.5">Paid</p>
           <p className="text-emerald-400 font-bold text-sm leading-none">
-            ${purchase.totalPrice.toFixed(0)}
+            ${amountPaid.toFixed(0)}
           </p>
         </div>
         <div className="px-4 py-3 text-center">
@@ -149,10 +152,9 @@ function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
         </div>
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-white/[0.06]" />
 
-      {/* What's included — compact */}
+      {/* What's included */}
       <div className="px-5 py-4 space-y-2">
         <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">Your access includes</p>
         <div className="grid grid-cols-2 gap-1.5">
@@ -186,7 +188,6 @@ function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="h-px bg-white/[0.06]" />
       <div className="px-5 py-3 flex items-center justify-between gap-3">
         {paidDate && (
@@ -204,48 +205,97 @@ function FoundingMemberCard({ purchase }: { purchase: EventPurchase }) {
   );
 }
 
-// ── Generic event purchase card ───────────────────────────────────────────────
+// ── Generic event purchase card — premium layout ──────────────────────────────
 function GenericPurchaseCard({ purchase }: { purchase: EventPurchase }) {
   const eventTarget = new Date(purchase.eventDate + "T19:00:00");
+  const paidDate = purchase.purchasedAt ? formatShortDate(purchase.purchasedAt) : null;
   const shortOrderId = purchase.id.slice(-8).toUpperCase();
+  const amountPaid = purchase.totalPaid ?? purchase.totalPrice;
 
   return (
-    <div className="bg-white/5 border border-emerald-500/20 rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-emerald-300 text-xs font-bold">Ticket Confirmed</span>
+    <div className="bg-gradient-to-br from-pink-950/20 via-black/60 to-black/80 border border-pink-500/20 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-widest">
+              Confirmed Attendee
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 text-xs font-bold">Confirmed</span>
+          </div>
         </div>
 
         <div>
-          <h3 className="text-base font-bold text-white">{purchase.eventTitle}</h3>
-          <p className="text-white/40 text-sm mt-0.5">{formatDate(purchase.eventDate)}</p>
+          <h3 className="text-lg font-black text-white leading-tight">{purchase.eventTitle}</h3>
+          <p className="text-white/40 text-sm mt-0.5">
+            {formatDate(purchase.eventDate)}
+            {purchase.eventLocation ? ` · ${purchase.eventLocation}` : ""}
+          </p>
         </div>
 
-        <CountdownTimer targetDate={eventTarget} />
+        {/* Countdown */}
+        <div className="space-y-1.5">
+          <p className="text-white/20 text-[9px] font-bold uppercase tracking-widest">Countdown to event</p>
+          <CountdownTimer targetDate={eventTarget} />
+        </div>
       </div>
 
       <div className="h-px bg-white/[0.06]" />
 
+      {/* Details grid */}
       <div className="grid grid-cols-3 divide-x divide-white/[0.06]">
         <div className="px-4 py-3 text-center">
           <p className="text-white/25 text-[10px] uppercase tracking-widest mb-0.5">Tickets</p>
-          <p className="text-white font-bold">{purchase.quantity}</p>
+          <p className="text-white font-bold text-lg leading-none">{purchase.quantity}</p>
         </div>
         <div className="px-4 py-3 text-center">
           <p className="text-white/25 text-[10px] uppercase tracking-widest mb-0.5">Paid</p>
-          <p className="text-emerald-400 font-bold text-sm">${purchase.totalPrice.toFixed(0)}</p>
+          <p className="text-emerald-400 font-bold text-sm leading-none">
+            ${amountPaid.toFixed(0)}
+          </p>
         </div>
         <div className="px-4 py-3 text-center">
           <p className="text-white/25 text-[10px] uppercase tracking-widest mb-0.5">Order</p>
-          <p className="text-white/40 font-mono text-[11px] tracking-wider">#{shortOrderId}</p>
+          <p className="text-white/40 font-mono text-[11px] leading-none tracking-wider">#{shortOrderId}</p>
         </div>
       </div>
 
       <div className="h-px bg-white/[0.06]" />
-      <div className="px-5 py-3 flex justify-end">
-        <Link href="/events" className="text-white/40 hover:text-white text-xs font-semibold flex items-center gap-1 transition">
-          View event →
+
+      {/* Access includes */}
+      <div className="px-5 py-4 space-y-2">
+        <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">Your access includes</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { emoji: "🎟️", label: "Event ticket" },
+            { emoji: "✅", label: "Confirmed entry" },
+            { emoji: "👥", label: "Community access" },
+            { emoji: "📍", label: "Venue access" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/[0.02] rounded-lg border border-white/[0.04]">
+              <span className="text-xs shrink-0">{item.emoji}</span>
+              <span className="text-white/45 text-xs">{item.label}</span>
+              <span className="text-emerald-400 text-[10px] font-bold ml-auto shrink-0">✓</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="h-px bg-white/[0.06]" />
+      <div className="px-5 py-3 flex items-center justify-between gap-3">
+        {paidDate && (
+          <p className="text-white/20 text-xs">Purchased {paidDate}</p>
+        )}
+        <Link
+          href="/events"
+          className="ml-auto text-white/50 hover:text-white text-xs font-semibold flex items-center gap-1 transition"
+        >
+          View event details
+          <span className="text-xs">→</span>
         </Link>
       </div>
     </div>
@@ -300,7 +350,7 @@ export default function ProfilePage() {
   }, [loading, user, router]);
 
   // Fetch this user's confirmed event purchases.
-  // Primary: by userId. Email fallback: covers records where userId was null.
+  // Primary: by userId. Email fallback: covers records where userId was null at write time.
   const fetchPurchases = useCallback(async () => {
     if (!user?.uid) return;
     setPurchasesLoading(true);
@@ -308,7 +358,6 @@ export default function ProfilePage() {
       const seen = new Set<string>();
       const confirmed: EventPurchase[] = [];
 
-      // Primary query: by userId
       const primarySnap = await getDocs(
         query(collection(db, "eventPurchases"), where("userId", "==", user.uid))
       );
@@ -320,7 +369,7 @@ export default function ProfilePage() {
         }
       });
 
-      // Email fallback — only run if primary returned nothing
+      // Email fallback — covers admin_manual records written before userId was known
       if (confirmed.length === 0 && user.email) {
         const emailSnap = await getDocs(
           query(
@@ -353,11 +402,17 @@ export default function ProfilePage() {
 
   if (loading || !profile) return null;
 
+  const isActive = profile.status === "active";
   const isFoundingMember = purchases.some((p) => p.isFoundingMember);
+  const isCreator = profile.isCreator === true;
   const roleLabel = profile.role === "admin" ? "Owner" : "Member";
+
+  // Badge styling — Admin=amber/orange, Active member=green, Inactive member=grey
   const roleBadgeClass =
     profile.role === "admin"
       ? "text-amber-400 bg-amber-400/10 border border-amber-400/30"
+      : isActive
+      ? "text-green-400 bg-green-400/10 border border-green-400/30"
       : "text-white/60 bg-white/5 border border-white/10";
 
   const initial = (profile.displayName ?? profile.email ?? "M")[0].toUpperCase();
@@ -370,50 +425,58 @@ export default function ProfilePage() {
 
       <h1 className="text-3xl font-bold">Your Profile</h1>
 
-      {/* Account card */}
+      {/* ── Account card ── */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
-        {/* Avatar + name */}
+        {/* Avatar + name + badges */}
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-600 to-pink-800 flex items-center justify-center text-2xl font-bold">
               {initial}
             </div>
-            {/* Founding member ring */}
-            {isFoundingMember && (
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-black flex items-center justify-center">
+            {/* Verified ring for active members */}
+            {isActive && (
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-black flex items-center justify-center">
                 <span className="text-[9px]">✓</span>
               </div>
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold text-lg">
                 {profile.displayName ?? profile.email?.split("@")[0] ?? "Member"}
               </p>
+              {/* Role badge */}
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleBadgeClass}`}>
                 {roleLabel}
               </span>
+              {/* Creator badge */}
+              {isCreator && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                  Creator
+                </span>
+              )}
+              {/* Founding 15 badge — only when they own a founding purchase */}
               {isFoundingMember && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
                   🏀 Founding 15
                 </span>
               )}
             </div>
-            <p className="text-white/40 text-sm">{profile.email}</p>
+            <p className="text-white/40 text-sm truncate">{profile.email}</p>
           </div>
         </div>
 
-        {/* Status + Role */}
+        {/* Status + Role cards */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white/5 rounded-xl p-4">
             <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Status</p>
-            <p className={`font-semibold ${profile.status === "active" ? "text-green-400" : "text-yellow-400"}`}>
-              {profile.status === "active" ? "Active Member" : "Inactive"}
+            <p className={`font-semibold ${isActive ? "text-green-400" : "text-yellow-400"}`}>
+              {isActive ? "Active Member" : profile.status === "past_due" ? "Past Due" : "Inactive"}
             </p>
           </div>
           <div className="bg-white/5 rounded-xl p-4">
             <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Role</p>
-            <p className={`font-semibold ${profile.role === "admin" ? "text-amber-400" : "text-white"}`}>
+            <p className={`font-semibold ${profile.role === "admin" ? "text-amber-400" : isActive ? "text-green-400" : "text-white"}`}>
               {roleLabel}
             </p>
           </div>
@@ -434,48 +497,50 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* ── Your Experiences ── */}
-      {(purchasesLoading || purchases.length > 0) && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold">Your Experiences</h2>
-            {purchases.length > 0 && (
-              <span className="text-white/30 text-sm">{purchases.length} upcoming</span>
-            )}
-          </div>
-
-          {purchasesLoading ? (
-            <div className="bg-white/5 border border-white/10 rounded-2xl h-48 animate-pulse" />
-          ) : (
-            <div className="space-y-4">
-              {purchases.map((purchase) =>
-                purchase.isFoundingMember ? (
-                  <FoundingMemberCard key={purchase.id} purchase={purchase} />
-                ) : (
-                  <GenericPurchaseCard key={purchase.id} purchase={purchase} />
-                )
-              )}
-            </div>
+      {/* ── Your Experiences — always visible for signed-in users ── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Your Experiences</h2>
+          {!purchasesLoading && purchases.length > 0 && (
+            <span className="text-white/30 text-sm">{purchases.length} upcoming</span>
           )}
         </div>
-      )}
 
-      {/* No experiences — gentle nudge toward events */}
-      {!purchasesLoading && purchases.length === 0 && (
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center space-y-3">
-          <p className="text-3xl">🏀</p>
-          <p className="text-white/50 font-semibold">No upcoming experiences yet</p>
-          <p className="text-white/25 text-sm">
-            Join us courtside for the ALL ACCESS Founding 15 launch on June 30.
-          </p>
-          <Link
-            href="/events"
-            className="inline-block mt-2 bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition"
-          >
-            Browse Events
-          </Link>
-        </div>
-      )}
+        {purchasesLoading ? (
+          // Loading skeleton
+          <div className="bg-white/5 border border-white/10 rounded-2xl h-48 animate-pulse" />
+        ) : purchases.length > 0 ? (
+          // Purchase cards — Founding 15 uses premium emerald card, others use pink card
+          <div className="space-y-4">
+            {purchases.map((purchase) =>
+              purchase.isFoundingMember ? (
+                <FoundingMemberCard key={purchase.id} purchase={purchase} />
+              ) : (
+                <GenericPurchaseCard key={purchase.id} purchase={purchase} />
+              )
+            )}
+          </div>
+        ) : (
+          // Empty state — shown to every active member with no purchases
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 text-center space-y-4">
+            <p className="text-4xl">🎟️</p>
+            <div className="space-y-1.5">
+              <p className="text-white/70 font-semibold text-base">
+                You haven&apos;t reserved an experience yet.
+              </p>
+              <p className="text-white/30 text-sm max-w-xs mx-auto leading-relaxed">
+                Browse upcoming events and become part of the ALL ACCESS community.
+              </p>
+            </div>
+            <Link
+              href="/events"
+              className="inline-block mt-1 bg-pink-600 hover:bg-pink-500 px-7 py-2.5 rounded-xl text-sm font-bold transition"
+            >
+              View Events
+            </Link>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

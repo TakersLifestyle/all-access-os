@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Winnipeg's community-first social platform. Safe events, real connection, premium experiences. Founding 15 — Sea Bears Courtside Launch, June 30, 2026.",
   openGraph: {
     title: "ALL ACCESS Winnipeg — Founding 15",
-    description: "15 tickets. June 30, 2026. Sea Bears Courtside Launch. $300 flat. Dinner, transport, courtside. This is how ALL ACCESS begins.",
+    description: "Sea Bears Courtside Launch — June 30, 2026. Only 5 founding spots remaining. $300 flat. Dinner, transport, courtside. Community-first. This is how ALL ACCESS begins.",
     url: "https://allaccesswinnipeg.ca",
     siteName: "ALL ACCESS Winnipeg",
     images: [
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ALL ACCESS Winnipeg — Founding 15",
-    description: "15 tickets. June 30, 2026. Sea Bears Courtside. $300 flat. This is how ALL ACCESS begins.",
+    description: "Sea Bears Courtside Launch — June 30, 2026. Only 5 founding spots remaining. $300 flat. Community-first. This is how ALL ACCESS begins.",
     images: ["https://allaccesswinnipeg.ca/opengraph-image"],
   },
 };
