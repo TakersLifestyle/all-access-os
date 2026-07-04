@@ -174,7 +174,7 @@ export default function RocafiestaPage() {
           <img
             src="/events/rocafiesta-poster.jpg"
             alt="ROCAFIESTA poster"
-            className="absolute inset-0 w-full h-full object-cover object-top"
+            className="absolute inset-0 w-full h-full object-cover [object-position:center_25%]"
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/20 z-[1]" />

@@ -697,7 +697,7 @@ function FeaturedConcertCard({ ev }: { ev: Event }) {
           <img
             src={ev.imageUrl}
             alt={ev.title}
-            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover [object-position:center_25%] group-hover:scale-105 transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
