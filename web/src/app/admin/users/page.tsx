@@ -56,12 +56,13 @@ function formatDate(raw?: Timestamp | string | null): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, user } = useAuth();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [fetching, setFetching] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [fixingAll, setFixingAll] = useState(false);
 
   // Event history per member
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
@@ -111,6 +112,48 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => { if (isAdmin) fetchMembers(); }, [isAdmin]);
+
+  const createProfile = async (member: Member) => {
+    setUpdating(member.id);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch("/api/admin/create-user-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ uid: member.id, email: member.email, displayName: member.displayName }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(`Failed: ${d.error ?? "Unknown error"}`);
+        return;
+      }
+      // Remove from orphan list — profile now exists
+      setMembers((prev) => prev.map((m) =>
+        m.id === member.id ? { ...m, _missingFirestoreDoc: false, role: "member", status: "inactive" } : m
+      ));
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const fixAllMissing = async () => {
+    const orphans = members.filter((m) => m._missingFirestoreDoc);
+    if (!orphans.length) return;
+    if (!confirm(`Create profiles for all ${orphans.length} missing users?`)) return;
+    setFixingAll(true);
+    const token = await user!.getIdToken();
+    for (const m of orphans) {
+      await fetch("/api/admin/create-user-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ uid: m.id, email: m.email, displayName: m.displayName }),
+      });
+    }
+    setFixingAll(false);
+    await fetchMembers();
+  };
 
   const toggleStatus = async (member: Member) => {
     const newStatus = member.status === "active" ? "inactive" : "active";
@@ -221,16 +264,25 @@ export default function AdminUsersPage() {
 
       {/* Warning banner for orphaned auth users */}
       {orphanCount > 0 && (
-        <div className="border border-red-700/50 bg-red-950/30 rounded-2xl px-5 py-4 flex items-start gap-3">
-          <span className="text-red-400 text-lg mt-0.5">⚠</span>
-          <div>
-            <p className="text-red-300 font-semibold text-sm">
-              {orphanCount} Auth {orphanCount === 1 ? "account" : "accounts"} missing a Firestore profile
-            </p>
-            <p className="text-red-400/70 text-xs mt-1">
-              These users signed up but have no <code className="bg-white/10 px-1 rounded">users/</code> document. They cannot access member features. Create their profile manually or re-trigger signup.
-            </p>
+        <div className="border border-red-700/50 bg-red-950/30 rounded-2xl px-5 py-4 flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <span className="text-red-400 text-lg mt-0.5">⚠</span>
+            <div>
+              <p className="text-red-300 font-semibold text-sm">
+                {orphanCount} Auth {orphanCount === 1 ? "account" : "accounts"} missing a Firestore profile
+              </p>
+              <p className="text-red-400/70 text-xs mt-1">
+                These users signed up but have no <code className="bg-white/10 px-1 rounded">users/</code> document. Click &ldquo;Fix All Missing&rdquo; to create their profiles.
+              </p>
+            </div>
           </div>
+          <button
+            onClick={fixAllMissing}
+            disabled={fixingAll}
+            className="shrink-0 text-xs px-4 py-2 rounded-xl bg-red-700/40 hover:bg-red-700/60 border border-red-600/50 text-red-200 font-semibold transition disabled:opacity-50"
+          >
+            {fixingAll ? "Fixing…" : `Fix All Missing (${orphanCount})`}
+          </button>
         </div>
       )}
 
@@ -275,8 +327,15 @@ export default function AdminUsersPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-xs text-red-400/70 text-right">
-                    Missing <code className="bg-white/10 px-1 rounded">users/{m.id}</code>
+                  <div className="flex items-center gap-3">
+                    <code className="text-[10px] text-red-400/50 hidden sm:block">users/{m.id}</code>
+                    <button
+                      onClick={() => createProfile(m)}
+                      disabled={updating === m.id}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-red-700/30 hover:bg-red-700/50 border border-red-600/50 text-red-200 font-semibold transition disabled:opacity-50 shrink-0"
+                    >
+                      {updating === m.id ? "Creating…" : "Create Profile"}
+                    </button>
                   </div>
                 </div>
               );
