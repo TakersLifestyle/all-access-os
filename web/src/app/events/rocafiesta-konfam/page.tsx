@@ -375,7 +375,7 @@ export default function RocafiestaPage() {
               </div>
               <div className="space-y-4 text-white/55 text-sm leading-relaxed">
                 <p>
-                  Born and raised in Winnipeg, Konfam has become one of the city&apos;s most recognized voices in faith-based hip hop and rap.
+                  Born in Nigeria and raised in Winnipeg, Konfam has become one of the city&apos;s most recognized voices in faith-based hip hop and rap.
                 </p>
                 <p>
                   He&apos;s shared stages with major touring artists and built a reputation as an artist who performs with conviction — every time.
