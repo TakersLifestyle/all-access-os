@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "MCzwl8mGF8P1rL5goEab";
 
-type TicketType = "student" | "regular" | "vip";
+type TicketType = "earlybird" | "regular" | "vip";
 
 const TIERS: Record<
   TicketType,
@@ -18,21 +18,21 @@ const TIERS: Record<
     recommended?: boolean;
   }
 > = {
-  student: {
-    name: "Student",
-    price: 40,
-    desc: "Valid student ID required at door.",
-    features: ["General admission", "Full concert access", "Doors open 7PM", "Valid student ID required at door"],
+  earlybird: {
+    name: "Early Bird",
+    price: 15,
+    desc: "Limited availability. Lock in the lowest price.",
+    features: ["General admission", "Full concert access", "Doors open 7PM", "Early bird pricing"],
   },
   regular: {
-    name: "Regular Admission",
-    price: 50,
+    name: "General Admission",
+    price: 20,
     desc: "General admission — doors open at 7PM.",
     features: ["General admission", "Full concert access", "Doors open 7PM"],
   },
   vip: {
     name: "VIP",
-    price: 70,
+    price: 60,
     desc: "Priority entry, premium viewing area, elevated experience.",
     features: ["Priority entry", "Premium viewing area", "VIP section access", "Full concert access", "Doors open 7PM"],
     recommended: true,
@@ -243,7 +243,7 @@ export default function RocafiestaPage() {
               <svg className="w-4 h-4 text-amber-400/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              Tickets from $40 · 19+
+              Tickets from $15 · 19+
             </span>
           </div>
 
@@ -327,7 +327,7 @@ export default function RocafiestaPage() {
                 { label: "Host", value: "Konfam" },
                 { label: "Presented by", value: "ALL ACCESS Winnipeg" },
                 { label: "Age", value: "19+ with valid ID" },
-                { label: "Tickets", value: "$40 · $50 · $70" },
+                { label: "Tickets", value: "$15 · $20 · $60" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                   <span className="text-white/30 text-sm shrink-0">{label}</span>
@@ -459,7 +459,7 @@ export default function RocafiestaPage() {
 
           {/* Tier cards */}
           <div className="grid sm:grid-cols-3 gap-4">
-            {(["student", "regular", "vip"] as TicketType[]).map((id) => {
+            {(["earlybird", "regular", "vip"] as TicketType[]).map((id) => {
               const t = TIERS[id];
               const isSelected = selectedTier === id;
               const isVip = id === "vip";
@@ -623,9 +623,9 @@ export default function RocafiestaPage() {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left py-3 pr-4 text-white/30 text-xs font-bold uppercase tracking-widest">Feature</th>
-                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Student<br /><span className="text-amber-400 font-black">$40</span></th>
-                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Regular<br /><span className="text-amber-400 font-black">$50</span></th>
-                  <th className="text-center py-3 px-3 text-amber-400 text-sm font-black">VIP<br /><span className="text-amber-400 font-black">$70</span></th>
+                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Early Bird<br /><span className="text-amber-400 font-black">$15</span></th>
+                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">General Admission<br /><span className="text-amber-400 font-black">$20</span></th>
+                  <th className="text-center py-3 px-3 text-amber-400 text-sm font-black">VIP<br /><span className="text-amber-400 font-black">$60</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -636,7 +636,7 @@ export default function RocafiestaPage() {
                   ["Priority Entry", false, false, true],
                   ["Premium Viewing Area", false, false, true],
                   ["VIP Section Access", false, false, true],
-                  ["Student ID Required", true, false, false],
+                  ["Early Bird Pricing", true, false, false],
                 ].map(([feature, student, regular, vip]) => (
                   <tr key={String(feature)}>
                     <td className="py-3.5 pr-4 text-white/55 text-sm">{feature}</td>
@@ -670,8 +670,8 @@ export default function RocafiestaPage() {
               a="Yes. ROCAFIESTA is a 19+ event. Valid government-issued photo ID is required at entry. No exceptions."
             />
             <FAQItem
-              q="What does a Student ticket include?"
-              a="Student tickets include full general admission to the concert. A valid student ID (school-issued or post-secondary) must be presented at the door alongside your photo ID."
+              q="What is the Early Bird ticket?"
+              a="Early Bird tickets are limited availability at the lowest price — $15. Same general admission access as regular tickets. First come, first served."
             />
             <FAQItem
               q="What does VIP include?"
@@ -723,7 +723,7 @@ export default function RocafiestaPage() {
             <p className="text-white/40 text-sm">September 5, 2026 · Winnipeg, MB · 19+</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            {(["student", "regular", "vip"] as TicketType[]).map((id) => {
+            {(["earlybird", "regular", "vip"] as TicketType[]).map((id) => {
               const t = TIERS[id];
               const isVip = id === "vip";
               return (
