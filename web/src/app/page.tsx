@@ -105,7 +105,7 @@ export default function Home() {
           {featuredConcert ? (
             <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-amber-400 font-medium flex-wrap">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              New Concert Event&nbsp;•&nbsp;September 5, 2026&nbsp;•&nbsp;Tickets from $40
+              New Concert Event&nbsp;•&nbsp;September 5, 2026&nbsp;•&nbsp;Tickets from $15
             </div>
           ) : launchEvent?.status === "completed" ? (
             <div className="inline-flex items-center gap-2 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-emerald-400 font-medium flex-wrap">
@@ -196,7 +196,7 @@ export default function Home() {
               </div>
               <div className="absolute top-3 right-3">
                 <span className="bg-black/80 backdrop-blur-sm border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1 rounded-full">
-                  Tickets from $40
+                  Tickets from $15
                 </span>
               </div>
               <div className="absolute bottom-3 left-4 right-4">
@@ -207,7 +207,7 @@ export default function Home() {
             </div>
             <div className="p-4 bg-black space-y-3">
               <div className="flex flex-wrap gap-1.5">
-                {["Live Music", "Faith & Culture", "VIP Available", "Community"].map((tag) => (
+                {["Live Music", "Faith & Culture", "18+", "Community"].map((tag) => (
                   <span key={tag} className="text-[11px] bg-amber-500/5 border border-amber-500/15 rounded-full px-2.5 py-0.5 text-amber-400/60 font-medium">
                     {tag}
                   </span>
@@ -215,8 +215,8 @@ export default function Home() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white font-bold text-lg">$40 – $70</p>
-                  <p className="text-white/30 text-xs">Student · Regular · VIP</p>
+                  <p className="text-white font-bold text-lg">$15 – $20</p>
+                  <p className="text-white/30 text-xs">Early Bird · General Admission</p>
                 </div>
                 <span className="text-amber-400 text-sm font-semibold group-hover:translate-x-1 transition-transform">
                   Get tickets →

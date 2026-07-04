@@ -725,7 +725,7 @@ function FeaturedConcertCard({ ev }: { ev: Event }) {
         <div className="flex gap-5 flex-wrap">
           <div>
             <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Tickets from</p>
-            <p className="text-white font-black text-lg">$40</p>
+            <p className="text-white font-black text-lg">$15</p>
           </div>
           <div className="border-l border-white/10 pl-5">
             <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Date</p>

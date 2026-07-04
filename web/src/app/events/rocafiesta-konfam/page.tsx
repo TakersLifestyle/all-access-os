@@ -237,7 +237,7 @@ export default function RocafiestaPage() {
               <svg className="w-4 h-4 text-amber-400/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              Tickets from $15 · 19+
+              Tickets from $15 · 18+
             </span>
           </div>
 
@@ -320,7 +320,7 @@ export default function RocafiestaPage() {
                 { label: "Venue", value: "To Be Announced" },
                 { label: "Host", value: "Konfam" },
                 { label: "Presented by", value: "ALL ACCESS Winnipeg" },
-                { label: "Age", value: "19+ with valid ID" },
+                { label: "Age", value: "18+ with valid ID" },
                 { label: "Tickets", value: "$15 · $20" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
@@ -443,7 +443,7 @@ export default function RocafiestaPage() {
           <div className="text-center space-y-2">
             <p className="text-amber-400/70 text-xs font-black uppercase tracking-[0.2em]">Ticket Options</p>
             <h2 className="text-3xl font-black">Choose Your Experience</h2>
-            <p className="text-white/35 text-sm">19+ event. Valid ID required at door.</p>
+            <p className="text-white/35 text-sm">18+ event. Valid ID required at door.</p>
           </div>
 
           {/* Tier cards */}
@@ -640,8 +640,8 @@ export default function RocafiestaPage() {
           </div>
           <div className="bg-white/[0.02] border border-white/8 rounded-2xl px-5 sm:px-6">
             <FAQItem
-              q="Is this a 19+ event?"
-              a="Yes. ROCAFIESTA is a 19+ event. Valid government-issued photo ID is required at entry. No exceptions."
+              q="Is this an 18+ event?"
+              a="Yes. ROCAFIESTA is an 18+ event. Valid government-issued photo ID is required at entry. No exceptions."
             />
             <FAQItem
               q="What is the Early Bird ticket?"
@@ -690,7 +690,7 @@ export default function RocafiestaPage() {
         <div className="max-w-lg mx-auto px-4 sm:px-6 space-y-6 text-center">
           <div className="space-y-2">
             <h2 className="text-3xl font-black">Ready to be there?</h2>
-            <p className="text-white/40 text-sm">September 5, 2026 · Winnipeg, MB · 19+</p>
+            <p className="text-white/40 text-sm">September 5, 2026 · Winnipeg, MB · 18+</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {(["earlybird", "regular"] as TicketType[]).map((id) => {
@@ -715,7 +715,7 @@ export default function RocafiestaPage() {
             Get Your Tickets Now →
           </a>
           <p className="text-white/15 text-xs">
-            Secure checkout via Stripe · All sales final · 19+ event
+            Secure checkout via Stripe · All sales final · 18+ event
           </p>
           <div className="pt-4 border-t border-white/5">
             <p className="text-white/20 text-xs">
