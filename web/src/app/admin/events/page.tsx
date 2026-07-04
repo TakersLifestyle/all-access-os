@@ -21,6 +21,8 @@ interface Event {
   imageUrl: string;
   generalPrice: number | string;
   memberPrice: number | string;
+  memberDiscountPercent?: number | string;
+  currency?: string;
   capacity: number | string;
   ticketsRemaining: number | string;
   isMembersOnly: boolean;
@@ -66,6 +68,8 @@ const emptyEvent = {
   imageUrl: "",
   generalPrice: "",
   memberPrice: "",
+  memberDiscountPercent: "15",
+  currency: "CAD",
   capacity: "",
   ticketsRemaining: "",
   isMembersOnly: true,
@@ -134,14 +138,19 @@ export default function AdminEventsPage() {
     setSaving(true);
     const cap = Number(form.capacity) || 0;
     const remaining = Number(form.ticketsRemaining) || cap;
+    const gp = Number(form.generalPrice) || 0;
+    const disc = Number(form.memberDiscountPercent) || 15;
+    const mp = Number(form.memberPrice) || (gp > 0 ? Math.round(gp * (1 - disc / 100)) : 0);
     const data = {
       title: form.title,
       date: form.date,
       location: form.location,
       description: form.description,
       imageUrl: form.imageUrl,
-      generalPrice: Number(form.generalPrice) || 0,
-      memberPrice: Number(form.memberPrice) || 0,
+      generalPrice: gp,
+      memberPrice: mp,
+      memberDiscountPercent: disc,
+      currency: form.currency || "CAD",
       capacity: cap,
       ticketsRemaining: remaining,
       isMembersOnly: form.isMembersOnly,
@@ -174,6 +183,8 @@ export default function AdminEventsPage() {
       imageUrl: ev.imageUrl || "",
       generalPrice: ev.generalPrice?.toString() || "",
       memberPrice: ev.memberPrice?.toString() || "",
+      memberDiscountPercent: ev.memberDiscountPercent?.toString() || "15",
+      currency: ev.currency || "CAD",
       capacity: ev.capacity?.toString() || "",
       ticketsRemaining: ev.ticketsRemaining?.toString() || "",
       isMembersOnly: ev.isMembersOnly ?? true,
@@ -372,17 +383,64 @@ export default function AdminEventsPage() {
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">General Price</label>
+            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">Public Price (CAD)</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">$</span>
-              <input value={form.generalPrice} onChange={(e) => setForm({ ...form, generalPrice: e.target.value })} placeholder="0" className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition" />
+              <input
+                value={form.generalPrice}
+                onChange={(e) => {
+                  const gp = parseFloat(e.target.value) || 0;
+                  const disc = parseFloat(form.memberDiscountPercent?.toString() || "15") || 15;
+                  const mp = gp > 0 ? Math.round(gp * (1 - disc / 100)) : 0;
+                  setForm({ ...form, generalPrice: e.target.value, memberPrice: mp > 0 ? String(mp) : "" });
+                }}
+                placeholder="0"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              />
             </div>
           </div>
           <div>
-            <label className="text-xs text-pink-400 uppercase tracking-wider pl-1 block mb-1">Member Price</label>
+            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">Currency</label>
+            <select
+              value={form.currency}
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
+            >
+              <option value="CAD">CAD</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-white/40 uppercase tracking-wider pl-1 block mb-1">Member Discount (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={form.memberDiscountPercent}
+              onChange={(e) => {
+                const disc = parseFloat(e.target.value) || 0;
+                const gp = parseFloat(form.generalPrice?.toString() || "0") || 0;
+                const mp = gp > 0 && disc > 0 ? Math.round(gp * (1 - disc / 100)) : 0;
+                setForm({ ...form, memberDiscountPercent: e.target.value, memberPrice: mp > 0 ? String(mp) : form.memberPrice });
+              }}
+              placeholder="15"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-pink-500 transition"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-pink-400 uppercase tracking-wider pl-1 block mb-1">
+              Member Price — auto-calculated, override if needed
+            </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400">$</span>
-              <input value={form.memberPrice} onChange={(e) => setForm({ ...form, memberPrice: e.target.value })} placeholder="0 = FREE" className="w-full bg-white/5 border border-pink-500/30 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition" />
+              <input
+                value={form.memberPrice}
+                onChange={(e) => setForm({ ...form, memberPrice: e.target.value })}
+                placeholder="auto"
+                className="w-full bg-white/5 border border-pink-500/30 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-pink-500 transition"
+              />
             </div>
           </div>
         </div>

@@ -102,7 +102,7 @@ export default function Nav() {
   };
 
   return (
-    <nav className="border-b border-white/10 px-6 py-4">
+    <nav className="sticky top-0 z-50 backdrop-blur-md bg-[#0e0a1a]/90 border-b border-white/10 px-6 py-4">
       <div className="flex items-center justify-between">
         <Link href="/" onClick={closeMobile} className="text-lg font-bold tracking-tight shrink-0">
           ALL ACCESS
@@ -113,6 +113,7 @@ export default function Nav() {
           {user ? (
             <>
               <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
+              <Link href="/series/sunset-sessions" className="text-[#D4AF37]/80 hover:text-[#D4AF37] transition font-medium">Sessions</Link>
               <Link href="/perks" className="text-white/70 hover:text-white transition">Perks</Link>
               <Link href="/community" className="text-white/70 hover:text-white transition">Community</Link>
               <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
@@ -141,6 +142,7 @@ export default function Nav() {
           ) : (
             <>
               <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
+              <Link href="/series/sunset-sessions" className="text-[#D4AF37]/80 hover:text-[#D4AF37] transition font-medium">Sessions</Link>
               <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
               <ConnectDropdown />
               <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
@@ -200,6 +202,9 @@ export default function Nav() {
           {user ? (
             <>
               <MobileLink href="/events" onClick={closeMobile}>Events</MobileLink>
+              <Link href="/series/sunset-sessions" onClick={closeMobile} className="px-3 py-3 text-sm text-[#D4AF37]/80 hover:text-[#D4AF37] hover:bg-white/5 rounded-xl transition font-medium">
+                Sessions
+              </Link>
               <MobileLink href="/perks" onClick={closeMobile}>Perks</MobileLink>
               <MobileLink href="/community" onClick={closeMobile}>Community</MobileLink>
               <MobileLink href="/memories" onClick={closeMobile}>Memories</MobileLink>
@@ -226,6 +231,9 @@ export default function Nav() {
           ) : (
             <>
               <MobileLink href="/events" onClick={closeMobile}>Events</MobileLink>
+              <Link href="/series/sunset-sessions" onClick={closeMobile} className="px-3 py-3 text-sm text-[#D4AF37]/80 hover:text-[#D4AF37] hover:bg-white/5 rounded-xl transition font-medium">
+                Sessions
+              </Link>
               <MobileLink href="/memories" onClick={closeMobile}>Memories</MobileLink>
               <MobileLink href="/about" onClick={closeMobile}>About</MobileLink>
               <MobileLink href="/connect" onClick={closeMobile}>Live Feed</MobileLink>

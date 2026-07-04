@@ -43,6 +43,10 @@ interface Event {
   type?: string;
   featured?: boolean;
   slug?: string;
+  heroImageUrl?: string;
+  seriesId?: string;
+  seriesVolumeLabel?: string;
+  ticketTiers?: Record<string, { name: string; price: number }>;
 }
 
 // EventPurchase — mirrors the eventPurchases Firestore collection
@@ -387,9 +391,9 @@ function FutureDropCard({ ev }: { ev: Event }) {
 
   return (
     <div className="rounded-2xl overflow-hidden border border-white/15 bg-white/5 hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(168,85,247,0.07)] transition-all duration-300 group">
-      {ev.imageUrl && (
+      {(ev.heroImageUrl || ev.imageUrl) && (
         <div className="relative w-full h-60 overflow-hidden">
-          <img src={ev.imageUrl} alt={cleanTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90" />
+          <img src={ev.heroImageUrl || ev.imageUrl} alt={cleanTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute top-4 left-4">
             <span className="bg-purple-600/90 backdrop-blur-sm border border-purple-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
@@ -405,7 +409,7 @@ function FutureDropCard({ ev }: { ev: Event }) {
       )}
 
       <div className="p-6 space-y-4">
-        {!ev.imageUrl && (
+        {!(ev.heroImageUrl || ev.imageUrl) && (
           <span className="inline-block bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-bold px-3 py-1 rounded-full mb-1">
             Future Drop
           </span>
@@ -684,6 +688,96 @@ function CompletedEventClosed() {
   );
 }
 
+// ── Series event card ────────────────────────────────────────────────────────
+function SeriesEventCard({ ev, isMember }: { ev: Event; isMember?: boolean }) {
+  const href = ev.seriesId && ev.slug ? `/series/${ev.seriesId}/${ev.slug}` : `/series/${ev.seriesId ?? "sunset-sessions"}`;
+  const heroImg = ev.heroImageUrl || ev.imageUrl;
+  const publicPrice = ev.generalPrice
+    ?? (ev.ticketTiers?.public?.price
+      ?? (ev.ticketTiers
+        ? Math.min(...Object.values(ev.ticketTiers).filter(t => t.price > 0).map((t) => t.price))
+        : 0));
+  const memberPrice = ev.memberPrice ?? (publicPrice > 0 ? Math.round(publicPrice * 0.85) : 0);
+  const minPrice = (isMember && memberPrice > 0) ? memberPrice : publicPrice;
+  const dateLabel = ev.date
+    ? new Date(ev.date + "T12:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })
+    : null;
+
+  return (
+    <Link
+      href={href}
+      className="group block rounded-2xl overflow-hidden border border-[#D4AF37]/30 bg-black hover:border-[#D4AF37]/60 hover:shadow-[0_0_50px_rgba(212,175,55,0.1)] transition-all duration-300"
+    >
+      {heroImg && (
+        <div className="relative w-full h-72 overflow-hidden">
+          <img
+            src={heroImg}
+            alt={ev.title}
+            className="w-full h-full object-cover [object-position:center_30%] group-hover:scale-105 transition-transform duration-700"
+            style={{ filter: "saturate(1.3) brightness(1.06) contrast(1.08) sepia(0.1)" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+          <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+            <span className="bg-[#D4AF37] text-black text-xs font-black px-3 py-1.5 rounded-full">
+              EVENT SERIES
+            </span>
+            {ev.seriesVolumeLabel && (
+              <span className="bg-black/80 backdrop-blur-sm border border-[#D4AF37]/30 text-[#D4AF37]/80 text-xs font-bold px-3 py-1.5 rounded-full">
+                {ev.seriesVolumeLabel}
+              </span>
+            )}
+            {dateLabel && (
+              <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+                {dateLabel}
+              </span>
+            )}
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <p className="text-[#D4AF37]/80 text-xs font-bold uppercase tracking-[0.15em]">
+              Sunset Sessions by ALL ACCESS
+            </p>
+            <h2 className="text-2xl font-black text-white mt-1 leading-tight tracking-tight line-clamp-2">
+              {ev.title}
+            </h2>
+            {ev.location && (
+              <p className="text-white/55 text-sm mt-1">{ev.location}</p>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="px-6 py-4 bg-black flex items-center justify-between gap-4 border-t border-[#D4AF37]/10">
+        <div className="flex gap-5 flex-wrap">
+          {publicPrice > 0 && (
+            <div>
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">
+                {isMember && memberPrice > 0 ? "Member Price" : "Tickets from"}
+              </p>
+              <p className={`font-black text-lg ${isMember && memberPrice > 0 ? "text-pink-400" : "text-white"}`}>
+                ${isMember && memberPrice > 0 ? memberPrice : publicPrice}
+              </p>
+            </div>
+          )}
+          {dateLabel && (
+            <div className={minPrice > 0 ? "border-l border-white/10 pl-5" : ""}>
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Date</p>
+              <p className="text-white font-semibold text-sm">{dateLabel}</p>
+            </div>
+          )}
+          {ev.location && (
+            <div className="border-l border-white/10 pl-5">
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Location</p>
+              <p className="text-white font-semibold text-sm truncate max-w-[160px]">{ev.location}</p>
+            </div>
+          )}
+        </div>
+        <span className="text-[#D4AF37] font-bold text-sm group-hover:translate-x-1 transition-transform shrink-0">
+          View Event →
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 // ── Featured concert card ────────────────────────────────────────────────────
 function FeaturedConcertCard({ ev }: { ev: Event }) {
   const href = ev.slug ? `/events/${ev.slug}` : "/events";
@@ -692,10 +786,10 @@ function FeaturedConcertCard({ ev }: { ev: Event }) {
       href={href}
       className="group block rounded-2xl overflow-hidden border border-amber-500/30 bg-black hover:border-amber-500/60 hover:shadow-[0_0_50px_rgba(245,158,11,0.1)] transition-all duration-300"
     >
-      {ev.imageUrl && (
+      {(ev.heroImageUrl || ev.imageUrl) && (
         <div className="relative w-full h-72 overflow-hidden">
           <img
-            src={ev.imageUrl}
+            src={ev.heroImageUrl || ev.imageUrl}
             alt={ev.title}
             className="w-full h-full object-cover [object-position:center_25%] group-hover:scale-105 transition-transform duration-700"
           />
@@ -811,10 +905,10 @@ function EventCard({
         : "border border-white/10 bg-white/5 hover:border-white/25 hover:shadow-[0_0_40px_rgba(236,72,153,0.06)]"
     }`}>
 
-      {ev.imageUrl && (
+      {(ev.heroImageUrl || ev.imageUrl) && (
         <div className="relative w-full h-60 overflow-hidden">
           <img
-            src={ev.imageUrl}
+            src={ev.heroImageUrl || ev.imageUrl}
             alt={ev.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
@@ -908,7 +1002,7 @@ function EventCard({
 
       <div className="p-4 sm:p-6 space-y-4">
         {/* No-image pricing row */}
-        {!ev.imageUrl && (
+        {!(ev.heroImageUrl || ev.imageUrl) && (
           <div className="flex justify-between items-start gap-3 flex-wrap">
             <div className="flex gap-2 flex-wrap">
               {!isConfirmed && isCritical && (
@@ -1282,6 +1376,8 @@ export default function EventsList() {
         {events.map((ev) =>
           ev.status === "coming_soon"
             ? <FutureDropCard key={ev.id} ev={ev} />
+            : ev.type === "series_event" && ev.status !== "completed"
+            ? <SeriesEventCard key={ev.id} ev={ev} isMember={isMember} />
             : ev.type === "concert" && ev.status !== "completed"
             ? <FeaturedConcertCard key={ev.id} ev={ev} />
             : (
