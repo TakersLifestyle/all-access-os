@@ -1,5 +1,5 @@
 // Concert ticket checkout — tiered pricing read from Firestore ticketTiers
-// Early Bird $15 | General Admission $20 | VIP $60 — server-side pricing only
+// Early Bird $15 | General Admission $20 — server-side pricing only
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -8,7 +8,7 @@ import { adminDb } from "@/lib/firebase-admin";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const APP_URL = (process.env.APP_URL ?? "https://allaccesswinnipeg.ca").replace(/\/$/, "");
 
-const VALID_TICKET_TYPES = ["earlybird", "regular", "vip"] as const;
+const VALID_TICKET_TYPES = ["earlybird", "regular"] as const;
 type TicketType = (typeof VALID_TICKET_TYPES)[number];
 
 const MIN_QUANTITY = 1;

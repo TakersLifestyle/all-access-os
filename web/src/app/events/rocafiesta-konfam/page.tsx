@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "MCzwl8mGF8P1rL5goEab";
 
-type TicketType = "earlybird" | "regular" | "vip";
+type TicketType = "earlybird" | "regular";
 
 const TIERS: Record<
   TicketType,
@@ -23,19 +23,13 @@ const TIERS: Record<
     price: 15,
     desc: "Limited availability. Lock in the lowest price.",
     features: ["General admission", "Full concert access", "Doors open 7PM", "Early bird pricing"],
+    recommended: true,
   },
   regular: {
     name: "General Admission",
     price: 20,
     desc: "General admission — doors open at 7PM.",
     features: ["General admission", "Full concert access", "Doors open 7PM"],
-  },
-  vip: {
-    name: "VIP",
-    price: 60,
-    desc: "Priority entry, premium viewing area, elevated experience.",
-    features: ["Priority entry", "Premium viewing area", "VIP section access", "Full concert access", "Doors open 7PM"],
-    recommended: true,
   },
 };
 
@@ -100,7 +94,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export default function RocafiestaPage() {
   const { user } = useAuth();
-  const [selectedTier, setSelectedTier] = useState<TicketType>("vip");
+  const [selectedTier, setSelectedTier] = useState<TicketType>("earlybird");
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -327,7 +321,7 @@ export default function RocafiestaPage() {
                 { label: "Host", value: "Konfam" },
                 { label: "Presented by", value: "ALL ACCESS Winnipeg" },
                 { label: "Age", value: "19+ with valid ID" },
-                { label: "Tickets", value: "$15 · $20 · $60" },
+                { label: "Tickets", value: "$15 · $20" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                   <span className="text-white/30 text-sm shrink-0">{label}</span>
@@ -417,11 +411,6 @@ export default function RocafiestaPage() {
                 desc: "Connect with Winnipeg&apos;s faith community, music lovers, and culture-builders in one room.",
               },
               {
-                emoji: "⚡",
-                title: "VIP Experience",
-                desc: "Priority entry, premium viewing area, and an elevated atmosphere for those who want more.",
-              },
-              {
                 emoji: "🙏",
                 title: "Purpose-Driven",
                 desc: "More than a concert. A celebration of faith, culture, and real community impact.",
@@ -429,7 +418,7 @@ export default function RocafiestaPage() {
               {
                 emoji: "🎟",
                 title: "Limited Tickets",
-                desc: "Three tiers — Student, Regular, VIP. Don&apos;t wait. These go fast.",
+                desc: "Early Bird and General Admission. Don&apos;t wait. These go fast.",
               },
             ].map((item) => (
               <div
@@ -458,22 +447,17 @@ export default function RocafiestaPage() {
           </div>
 
           {/* Tier cards */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            {(["earlybird", "regular", "vip"] as TicketType[]).map((id) => {
+          <div className="grid sm:grid-cols-2 gap-4">
+            {(["earlybird", "regular"] as TicketType[]).map((id) => {
               const t = TIERS[id];
               const isSelected = selectedTier === id;
-              const isVip = id === "vip";
               return (
                 <button
                   key={id}
                   onClick={() => setSelectedTier(id)}
                   className={`relative text-left rounded-2xl border p-5 space-y-4 transition-all duration-200 ${
                     isSelected
-                      ? isVip
-                        ? "border-amber-400/60 bg-amber-950/20 shadow-[0_0_30px_rgba(245,158,11,0.12)]"
-                        : "border-white/40 bg-white/[0.06]"
-                      : isVip
-                      ? "border-amber-500/25 bg-amber-950/5 hover:border-amber-500/45"
+                      ? "border-white/40 bg-white/[0.06]"
                       : "border-white/10 bg-white/[0.02] hover:border-white/25"
                   }`}
                 >
@@ -496,13 +480,7 @@ export default function RocafiestaPage() {
                   )}
 
                   <div className="space-y-1 pr-6">
-                    <p
-                      className={`font-black text-lg ${
-                        isVip ? "text-amber-400" : "text-white"
-                      }`}
-                    >
-                      {t.name}
-                    </p>
+                    <p className="font-black text-lg text-white">{t.name}</p>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-black text-white">{fmt(t.price)}</span>
                       <span className="text-white/30 text-sm">CAD</span>
@@ -514,7 +492,7 @@ export default function RocafiestaPage() {
                   <ul className="space-y-1.5">
                     {t.features.map((f) => (
                       <li key={f} className="flex items-center gap-2 text-xs">
-                        <span className={`shrink-0 font-bold ${isVip ? "text-amber-400" : "text-emerald-400"}`}>✓</span>
+                        <span className="shrink-0 font-bold text-emerald-400">✓</span>
                         <span className="text-white/55">{f}</span>
                       </li>
                     ))}
@@ -625,25 +603,21 @@ export default function RocafiestaPage() {
                   <th className="text-left py-3 pr-4 text-white/30 text-xs font-bold uppercase tracking-widest">Feature</th>
                   <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Early Bird<br /><span className="text-amber-400 font-black">$15</span></th>
                   <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">General Admission<br /><span className="text-amber-400 font-black">$20</span></th>
-                  <th className="text-center py-3 px-3 text-amber-400 text-sm font-black">VIP<br /><span className="text-amber-400 font-black">$60</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {[
-                  ["General Admission", true, true, true],
-                  ["Full Concert Access", true, true, true],
-                  ["Doors Open 7PM", true, true, true],
-                  ["Priority Entry", false, false, true],
-                  ["Premium Viewing Area", false, false, true],
-                  ["VIP Section Access", false, false, true],
-                  ["Early Bird Pricing", true, false, false],
-                ].map(([feature, student, regular, vip]) => (
+                  ["General Admission", true, true],
+                  ["Full Concert Access", true, true],
+                  ["Doors Open 7PM", true, true],
+                  ["Early Bird Pricing", true, false],
+                ].map(([feature, earlybird, regular]) => (
                   <tr key={String(feature)}>
                     <td className="py-3.5 pr-4 text-white/55 text-sm">{feature}</td>
-                    {[student, regular, vip].map((has, i) => (
+                    {[earlybird, regular].map((has, i) => (
                       <td key={i} className="text-center py-3.5 px-3">
                         {has ? (
-                          <span className={`font-bold text-sm ${i === 2 ? "text-amber-400" : "text-emerald-400"}`}>✓</span>
+                          <span className="font-bold text-sm text-emerald-400">✓</span>
                         ) : (
                           <span className="text-white/15 text-sm">—</span>
                         )}
@@ -672,10 +646,6 @@ export default function RocafiestaPage() {
             <FAQItem
               q="What is the Early Bird ticket?"
               a="Early Bird tickets are limited availability at the lowest price — $15. Same general admission access as regular tickets. First come, first served."
-            />
-            <FAQItem
-              q="What does VIP include?"
-              a="VIP includes priority entry (skip the general line), access to the premium viewing area with the best sightlines, and VIP section access throughout the event."
             />
             <FAQItem
               q="Where is the venue?"
@@ -722,26 +692,18 @@ export default function RocafiestaPage() {
             <h2 className="text-3xl font-black">Ready to be there?</h2>
             <p className="text-white/40 text-sm">September 5, 2026 · Winnipeg, MB · 19+</p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {(["earlybird", "regular", "vip"] as TicketType[]).map((id) => {
+          <div className="grid grid-cols-2 gap-3">
+            {(["earlybird", "regular"] as TicketType[]).map((id) => {
               const t = TIERS[id];
-              const isVip = id === "vip";
               return (
                 <a
                   key={id}
                   href="#tickets"
                   onClick={(e) => { e.preventDefault(); setSelectedTier(id); document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" }); }}
-                  className={`rounded-xl border p-4 space-y-1 transition hover:scale-105 ${
-                    isVip
-                      ? "border-amber-500/40 bg-amber-950/20 hover:border-amber-500/70"
-                      : "border-white/10 bg-white/[0.03] hover:border-white/25"
-                  }`}
+                  className="rounded-xl border p-4 space-y-1 transition hover:scale-105 border-white/10 bg-white/[0.03] hover:border-white/25"
                 >
-                  <p className={`font-black text-sm ${isVip ? "text-amber-400" : "text-white/80"}`}>{t.name}</p>
+                  <p className="font-black text-sm text-white/80">{t.name}</p>
                   <p className="text-white font-black text-xl">{fmt(t.price)}</p>
-                  {isVip && (
-                    <p className="text-amber-400/60 text-[10px] font-bold uppercase tracking-wider">Best</p>
-                  )}
                 </a>
               );
             })}
