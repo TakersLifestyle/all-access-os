@@ -472,7 +472,7 @@ export default function SeriesEventPage() {
           {/* Tier cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             {TICKET_TYPES.filter((t) => event.ticketTiers?.[t]).map((t) => {
-              const config = event.ticketTiers[t];
+              const config = event.ticketTiers[t]!;
               const eligible = canSelectTier(t);
               const active = selectedTier === t;
               const requiresLabel = t === "supporter" ? "Members only" : t === "community" ? "Community only" : null;

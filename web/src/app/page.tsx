@@ -27,6 +27,8 @@ interface EventTeaser {
   seriesId?: string;
   seriesVolumeLabel?: string;
   checkoutEnabled?: boolean;
+  homepageFeatured?: boolean;
+  homepagePriority?: number;
 }
 
 function useEventTeasers() {
@@ -95,14 +97,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const events = useEventTeasers();
 
-  const featuredSeries = events.find(
-    (e) => e.type === "series_event" && e.status === "active" && e.checkoutEnabled
-  );
   const featuredConcert = events.find(
     (e) => e.type === "concert" && e.featured && e.status === "active"
   );
   const launchEvent = events.find((e) => e.isLaunchEvent);
-  const heroEvent = featuredSeries ?? featuredConcert ?? launchEvent ?? null;
+  // Series events are NEVER the homepage hero — they live in the listings only
+  const heroEvent =
+    events.find((e) => e.homepageFeatured && e.status === "active") ??
+    featuredConcert ??
+    launchEvent ??
+    null;
 
   const urgencyEvent = events
     .filter(
@@ -135,8 +139,8 @@ export default function Home() {
 
   if (loading) return null;
 
-  const isSeries = heroEvent?.type === "series_event";
-  const isConcert = heroEvent?.type === "concert";
+  const isSeries = false; // Series events are never the homepage hero
+  const isConcert = heroEvent?.type === "concert" || (heroEvent?.homepageFeatured && heroEvent?.type !== "series_event");
   const heroMinPrice = heroEvent ? getMinPrice(heroEvent) : 0;
 
   return (
