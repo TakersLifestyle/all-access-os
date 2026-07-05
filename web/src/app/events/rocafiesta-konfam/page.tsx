@@ -99,7 +99,16 @@ export default function RocafiestaPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    if (!lightbox) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightbox]);
 
   // Handle ?order=success / ?order=cancel return from Stripe
   useEffect(() => {
@@ -343,19 +352,27 @@ export default function RocafiestaPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             {/* Left: artist photo */}
-            <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-96 bg-black">
+            <button
+              onClick={() => setLightbox({ src: "/events/konfam-railing.jpeg", alt: "Konfam" })}
+              className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-96 bg-black group focus:outline-none"
+            >
               <img
                 src="/events/konfam-railing.jpeg"
                 alt="Konfam"
-                className="w-full h-full object-cover object-[center_25%]"
+                className="w-full h-full object-cover object-[center_25%] transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+              </div>
               <div className="absolute bottom-4 left-4">
                 <span className="bg-amber-500/90 text-black text-xs font-black px-3 py-1.5 rounded-full">
                   Headline Artist
                 </span>
               </div>
-            </div>
+            </button>
 
             {/* Right: bio */}
             <div className="space-y-5">
@@ -382,18 +399,25 @@ export default function RocafiestaPage() {
 
           {/* Artist photo gallery */}
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="col-span-2 aspect-video rounded-2xl overflow-hidden">
-              <img src="/events/konfam-plane-wing.jpeg" alt="Konfam standing on plane wing" className="w-full h-full object-cover object-[center_40%]" />
-            </div>
-            <div className="aspect-square rounded-2xl overflow-hidden">
-              <img src="/events/konfam-motion-blur.jpeg" alt="Konfam in motion" className="w-full h-full object-cover object-top" />
-            </div>
-            <div className="aspect-square rounded-2xl overflow-hidden">
-              <img src="/events/konfam-urban-visor.jpeg" alt="Konfam downtown Winnipeg" className="w-full h-full object-cover object-[center_30%]" />
-            </div>
-            <div className="col-span-2 aspect-video rounded-2xl overflow-hidden">
-              <img src="/events/konfam-plane-fuselage.jpeg" alt="Konfam against plane fuselage" className="w-full h-full object-cover object-center" />
-            </div>
+            {[
+              { src: "/events/konfam-plane-wing.jpeg", alt: "Konfam standing on plane wing", cls: "col-span-2 aspect-video", pos: "object-[center_40%]" },
+              { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-top" },
+              { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_30%]" },
+              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-center" },
+            ].map(({ src, alt, cls, pos }) => (
+              <button
+                key={src}
+                onClick={() => setLightbox({ src, alt })}
+                className={`${cls} rounded-2xl overflow-hidden group relative focus:outline-none`}
+              >
+                <img src={src} alt={alt} className={`w-full h-full object-cover ${pos} transition-transform duration-300 group-hover:scale-105`} />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Artist in motion video */}
@@ -763,6 +787,49 @@ export default function RocafiestaPage() {
           message={toast.message}
           onClose={() => setToast(null)}
         />
+      )}
+
+      {/* ── LIGHTBOX ─────────────────────────────────────────────────────── */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Controls */}
+            <div className="flex items-center justify-between w-full">
+              <p className="text-white/40 text-xs tracking-widest uppercase">{lightbox.alt}</p>
+              <div className="flex items-center gap-3">
+                <a
+                  href={lightbox.src}
+                  download
+                  className="flex items-center gap-2 text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 px-4 py-2 rounded-xl transition"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition text-lg leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            {/* Image */}
+            <img
+              src={lightbox.src}
+              alt={lightbox.alt}
+              className="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl"
+            />
+          </div>
+        </div>
       )}
     </main>
   );
