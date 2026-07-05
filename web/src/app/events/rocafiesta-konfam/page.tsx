@@ -22,14 +22,14 @@ const TIERS: Record<
     name: "Early Bird",
     price: 15,
     desc: "Limited availability. Lock in the lowest price.",
-    features: ["General admission", "Full concert access", "Doors open 7PM", "Early bird pricing"],
+    features: ["General admission", "Full concert access", "Doors open 5PM", "Early bird pricing"],
     recommended: true,
   },
   regular: {
     name: "General Admission",
     price: 20,
-    desc: "General admission — doors open at 7PM.",
-    features: ["General admission", "Full concert access", "Doors open 7PM"],
+    desc: "General admission — doors open at 5PM.",
+    features: ["General admission", "Full concert access", "Doors open 5PM"],
   },
 };
 
@@ -222,13 +222,13 @@ export default function RocafiestaPage() {
               <svg className="w-4 h-4 text-amber-400/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Saturday, September 5, 2026 · 7PM
+              Saturday, September 5, 2026 · 5PM–10PM
             </span>
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-amber-400/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              Winnipeg, MB — Venue Announced Soon
+              Pyramid Cabaret · 176 Fort St, Winnipeg
             </span>
             <span className="flex items-center gap-2">
               <svg className="w-4 h-4 text-amber-400/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,19 +291,16 @@ export default function RocafiestaPage() {
               </div>
               <div className="space-y-4 text-white/55 text-base leading-relaxed">
                 <p>
-                  For years, Konfam has shared stages with some of the biggest artists to perform in Winnipeg.
+                  Introducing ROCAFIESTA — headlined by Konfam, bringing Art + Music to life through the power of a full live band.
                 </p>
                 <p>
-                  Now — the time has finally arrived.
+                  Blending infectious rhythms, soulful storytelling, and unforgettable stage production, this is more than a concert. This is a story of manifestation.
                 </p>
                 <p>
-                  This is more than another performance. This is Konfam&apos;s moment — and Winnipeg is going to witness it.
-                </p>
-                <p>
-                  ROCAFIESTA is a celebration of faith, music, culture, and purpose. Expect powerful performances, live music, high energy, special guests, community, and a night you&apos;ll remember long after the lights go down.
+                  Every energy becomes emotion. Every song becomes a shared experience.
                 </p>
                 <p className="text-white/80 font-semibold">
-                  We&apos;re proud to bring this experience to the ALL ACCESS Winnipeg community.
+                  One stage. One band. One unforgettable night.
                 </p>
               </div>
             </div>
@@ -313,12 +310,13 @@ export default function RocafiestaPage() {
               <h3 className="text-white/40 text-xs font-black uppercase tracking-[0.2em]">Event Details</h3>
               {[
                 { label: "Date", value: "Saturday, September 5, 2026" },
-                { label: "Doors", value: "7:00 PM — Winnipeg, MB" },
-                { label: "Venue", value: "To Be Announced" },
+                { label: "Time", value: "5:00 PM – 10:00 PM" },
+                { label: "Venue", value: "Pyramid Cabaret" },
+                { label: "Address", value: "176 Fort St, Winnipeg, MB R3C 1C9" },
                 { label: "Host", value: "Konfam" },
                 { label: "Presented by", value: "ALL ACCESS Winnipeg" },
                 { label: "Age", value: "18+ with valid ID" },
-                { label: "Tickets", value: "$15 · $20" },
+                { label: "Tickets", value: "$15 Early Bird · $20 GA" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                   <span className="text-white/30 text-sm shrink-0">{label}</span>
@@ -366,13 +364,13 @@ export default function RocafiestaPage() {
               </div>
               <div className="space-y-4 text-white/55 text-sm leading-relaxed">
                 <p>
-                  Born in Nigeria and raised in Winnipeg, Konfam has become one of the city&apos;s most recognized voices in faith-based hip hop and rap.
+                  Rooted in Nigerian heritage and emerging from Winnipeg, Konfam is an Afrobeat/Afro-fusion artist, producer &amp; songwriter blending African rhythm with contemporary global sound.
                 </p>
                 <p>
-                  He&apos;s shared stages with major touring artists and built a reputation as an artist who performs with conviction — every time.
+                  His music pairs smooth melodies with emotional storytelling, exploring themes of love, vulnerability, and personal growth.
                 </p>
                 <p>
-                  ROCAFIESTA is his moment. A culmination of years of craft, faith, and community investment — all on one stage.
+                  As his sound continues to evolve, he represents a new wave of Afro-fusion voices connecting cultures and emotions across borders.
                 </p>
                 <p className="text-white/75 font-semibold">
                   September 5th, 2026 — Winnipeg&apos;s stage is his.
@@ -393,29 +391,29 @@ export default function RocafiestaPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
-                emoji: "🎤",
-                title: "Historic First",
-                desc: "Be in the room when history is made. A night Winnipeg won't forget.",
+                emoji: "🎸",
+                title: "Full Live Band",
+                desc: "Not a DJ set — a real full live band. Infectious rhythms, high energy, and stage production built for the moment.",
               },
               {
-                emoji: "🎵",
-                title: "Live Performance",
-                desc: "Raw, unfiltered live music from an artist who has earned this moment.",
+                emoji: "🌍",
+                title: "Afrobeat / Afro-Fusion",
+                desc: "African rhythm meets global sound. Smooth melodies and emotional storytelling you'll feel from the first beat.",
               },
               {
-                emoji: "🫶",
-                title: "Community",
-                desc: "Connect with Winnipeg&apos;s faith community, music lovers, and culture-builders in one room.",
+                emoji: "🎨",
+                title: "Art + Music",
+                desc: "ROCAFIESTA is where creativity collides. A multi-sensory experience that goes beyond a typical concert.",
               },
               {
-                emoji: "🙏",
-                title: "Purpose-Driven",
-                desc: "More than a concert. A celebration of faith, culture, and real community impact.",
+                emoji: "✨",
+                title: "Manifestation",
+                desc: "Every energy becomes emotion. Every song becomes a shared experience. This night was built for it.",
               },
               {
                 emoji: "🎟",
                 title: "Limited Tickets",
-                desc: "Early Bird and General Admission. Don&apos;t wait. These go fast.",
+                desc: "Early Bird $15 · GA $20. Pyramid Cabaret is intimate — when it's full, it's full.",
               },
             ].map((item) => (
               <div
@@ -606,7 +604,7 @@ export default function RocafiestaPage() {
                 {[
                   ["General Admission", true, true],
                   ["Full Concert Access", true, true],
-                  ["Doors Open 7PM", true, true],
+                  ["Doors Open 5PM", true, true],
                   ["Early Bird Pricing", true, false],
                 ].map(([feature, earlybird, regular]) => (
                   <tr key={String(feature)}>
@@ -646,7 +644,7 @@ export default function RocafiestaPage() {
             />
             <FAQItem
               q="Where is the venue?"
-              a="Venue is to be announced — Winnipeg, MB. The venue will be revealed closer to September 5th, 2026. All ticket holders will receive venue details via email in advance."
+              a="ROCAFIESTA is at Pyramid Cabaret — 176 Fort St, Winnipeg, MB R3C 1C9. Doors open at 5PM."
             />
             <FAQItem
               q="Can I get a refund?"
@@ -668,15 +666,15 @@ export default function RocafiestaPage() {
             </div>
             <div className="space-y-2">
               <p className="text-amber-400/70 text-xs font-black uppercase tracking-[0.2em]">Location</p>
-              <h3 className="text-2xl font-black">Winnipeg, MB</h3>
-              <p className="text-white/40 text-sm">Venue to be announced</p>
+              <h3 className="text-2xl font-black">Pyramid Cabaret</h3>
+              <p className="text-white/40 text-sm">176 Fort St, Winnipeg, MB R3C 1C9</p>
             </div>
             <p className="text-white/35 text-sm leading-relaxed max-w-md mx-auto">
-              The venue will be announced closer to September 5th, 2026. All ticket holders will receive the venue address and event logistics via email.
+              Doors open at 5PM. The Pyramid Cabaret is one of Winnipeg&apos;s most iconic live music venues — the perfect stage for ROCAFIESTA.
             </p>
             <div className="flex items-center gap-2 justify-center">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <p className="text-amber-400/70 text-xs font-semibold">Watch for the venue announcement</p>
+              <div className="w-2 h-2 rounded-full bg-amber-400" />
+              <p className="text-amber-400/70 text-xs font-semibold">September 5, 2026 · 5PM–10PM</p>
             </div>
           </div>
         </div>
@@ -687,7 +685,7 @@ export default function RocafiestaPage() {
         <div className="max-w-lg mx-auto px-4 sm:px-6 space-y-6 text-center">
           <div className="space-y-2">
             <h2 className="text-3xl font-black">Ready to be there?</h2>
-            <p className="text-white/40 text-sm">September 5, 2026 · Winnipeg, MB · 18+</p>
+            <p className="text-white/40 text-sm">September 5, 2026 · Pyramid Cabaret · 5PM–10PM · 18+</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {(["earlybird", "regular"] as TicketType[]).map((id) => {
