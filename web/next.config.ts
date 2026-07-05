@@ -52,6 +52,12 @@ const nextConfig: NextConfig = {
         destination: "https://allaccesswinnipeg.ca/:path*",
         permanent: true,
       },
+      // Short promo URL for flyers / QR codes — never changes
+      {
+        source: "/rocafiesta",
+        destination: "/events/rocafiesta-konfam",
+        permanent: false,
+      },
     ];
   },
 };
