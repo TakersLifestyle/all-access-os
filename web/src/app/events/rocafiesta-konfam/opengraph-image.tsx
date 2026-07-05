@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "ROCAFIESTA — Konfam's First Headline Show | ALL ACCESS Winnipeg";
+export const alt = "ROCAFIESTA — A Spiritual Experience with Konfam | ALL ACCESS Winnipeg";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -106,7 +106,7 @@ export default async function Image() {
             letterSpacing: "0.5px",
           }}
         >
-          Konfam&apos;s First Headline Show — September 5, 2026
+          A Spiritual Experience with Konfam — September 5, 2026
         </div>
 
         {/* Price + Details row */}

@@ -208,7 +208,7 @@ export default function RocafiestaPage() {
           {/* Title */}
           <div className="space-y-2">
             <p className="text-amber-400/80 text-sm font-bold uppercase tracking-[0.2em]">
-              Konfam&apos;s First Headline Show
+              A Spiritual Experience with Konfam
             </p>
             <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight leading-none">
               ROCA
@@ -300,7 +300,7 @@ export default function RocafiestaPage() {
                   Now — the time has finally arrived.
                 </p>
                 <p>
-                  This is more than another performance. This is Konfam&apos;s very first official headline show.
+                  This is more than another performance. This is Konfam&apos;s moment — and Winnipeg is going to witness it.
                 </p>
                 <p>
                   ROCAFIESTA is a celebration of faith, music, culture, and purpose. Expect powerful performances, live music, high energy, special guests, community, and a night you&apos;ll remember long after the lights go down.
@@ -375,7 +375,7 @@ export default function RocafiestaPage() {
                   He&apos;s shared stages with major touring artists and built a reputation as an artist who performs with conviction — every time.
                 </p>
                 <p>
-                  ROCAFIESTA is his moment. His first official headline show. A culmination of years of craft, faith, and community investment.
+                  ROCAFIESTA is his moment. A culmination of years of craft, faith, and community investment — all on one stage.
                 </p>
                 <p className="text-white/75 font-semibold">
                   September 5th, 2026 — Winnipeg&apos;s stage is his.
@@ -398,7 +398,7 @@ export default function RocafiestaPage() {
               {
                 emoji: "🎤",
                 title: "Historic First",
-                desc: "Konfam's first ever headline show. Be in the room when history is made.",
+                desc: "Be in the room when history is made. A night Winnipeg won't forget.",
               },
               {
                 emoji: "🎵",

@@ -806,7 +806,7 @@ function FeaturedConcertCard({ ev }: { ev: Event }) {
           </div>
           <div className="absolute bottom-0 left-0 right-0 p-6">
             <p className="text-amber-400/80 text-xs font-bold uppercase tracking-[0.15em]">
-              Konfam&apos;s First Headline Show
+              Featured Concert
             </p>
             <h2 className="text-3xl font-black text-white mt-1 leading-tight tracking-tight">
               ROCAFIESTA
