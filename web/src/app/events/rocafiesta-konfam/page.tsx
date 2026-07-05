@@ -207,8 +207,8 @@ export default function RocafiestaPage() {
 
           {/* Title */}
           <div className="space-y-2">
-            <p className="text-amber-400/80 text-sm font-bold uppercase tracking-[0.2em]">
-              A Spiritual Experience with Konfam
+            <p className="text-white/50 text-sm font-semibold uppercase tracking-[0.25em]">
+              ALL ACCESS Winnipeg Presents
             </p>
             <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight leading-none">
               ROCA
