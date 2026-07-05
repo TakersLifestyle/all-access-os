@@ -418,7 +418,7 @@ export default function RocafiestaPage() {
             {[
               { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-top" },
               { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_45%]" },
-              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_85%]" },
+              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_70%]" },
             ].map(({ src, alt, cls, pos }) => (
               <button
                 key={src}
