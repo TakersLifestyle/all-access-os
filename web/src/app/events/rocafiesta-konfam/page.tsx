@@ -274,6 +274,10 @@ export default function RocafiestaPage() {
               className="w-full h-full object-cover"
             />
           </div>
+          {/* Banner */}
+          <div className="rounded-2xl overflow-hidden border border-white/10">
+            <img src="/events/rocafiesta-banner.png" alt="ROCAFIESTA — A Spiritual Experience with Konfam · Sept 5th" className="w-full" />
+          </div>
         </div>
       </section>
 
@@ -291,16 +295,16 @@ export default function RocafiestaPage() {
               </div>
               <div className="space-y-4 text-white/55 text-base leading-relaxed">
                 <p>
-                  Introducing ROCAFIESTA — headlined by Konfam, bringing Art + Music to life through the power of a full live band.
+                  ROCAFIESTA is an unforgettable spiritual experience with music, live entertainment &amp; culture.
                 </p>
                 <p>
-                  Blending infectious rhythms, soulful storytelling, and unforgettable stage production, this is more than a concert. This is a story of manifestation.
+                  Join Konfam and his live band as they bring fan favorites like &ldquo;Girl Come,&rdquo; &ldquo;Hiya,&rdquo; and &ldquo;Mona&rdquo; to life, alongside exclusive surprises and special moments.
                 </p>
                 <p>
-                  Every energy becomes emotion. Every song becomes a shared experience.
+                  Featuring a lineup of exceptional talent, surprise guest artists, and immersive live performances, ROCAFIESTA is a celebration of sound, culture, and connection.
                 </p>
                 <p className="text-white/80 font-semibold">
-                  One stage. One band. One unforgettable night.
+                  One stage. One band. An experience you&apos;ll never forget.
                 </p>
               </div>
             </div>
@@ -386,34 +390,39 @@ export default function RocafiestaPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center space-y-2">
             <p className="text-amber-400/70 text-xs font-black uppercase tracking-[0.2em]">Why Attend</p>
-            <h2 className="text-3xl font-black">Six reasons to be there.</h2>
+            <h2 className="text-3xl font-black">6 reasons to attend ROCAFIESTA.</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
-                emoji: "🎸",
-                title: "Full Live Band",
-                desc: "Not a DJ set — a real full live band. Infectious rhythms, high energy, and stage production built for the moment.",
+                emoji: "⚡",
+                title: "Feel the Energy",
+                desc: "This is a full-on live experience. Expect nonstop vibration from the moment you walk in.",
               },
               {
-                emoji: "🌍",
-                title: "Afrobeat / Afro-Fusion",
-                desc: "African rhythm meets global sound. Smooth melodies and emotional storytelling you'll feel from the first beat.",
+                emoji: "🎵",
+                title: "Soul-Stirring Live Music",
+                desc: "Konfam and his incredible live band deliver a powerful, spirit-filled performance that will move your heart and stay with you long after the music ends.",
               },
               {
-                emoji: "🎨",
-                title: "Art + Music",
-                desc: "ROCAFIESTA is where creativity collides. A multi-sensory experience that goes beyond a typical concert.",
+                emoji: "💃",
+                title: "Dance the Night Away",
+                desc: "Get lost in the rhythm as our incredible lineup of DJs, electrifying performances, and unforgettable surprise moments keep the energy sky-high from start to finish.",
               },
               {
-                emoji: "✨",
-                title: "Manifestation",
-                desc: "Every energy becomes emotion. Every song becomes a shared experience. This night was built for it.",
+                emoji: "📸",
+                title: "Capture the Moment",
+                desc: "From stunning stage production to Instagram-worthy photo spots, you'll leave with content you'll actually want to post.",
               },
               {
-                emoji: "🎟",
-                title: "Limited Tickets",
-                desc: "Early Bird $15 · GA $20. Pyramid Cabaret is intimate — when it's full, it's full.",
+                emoji: "🫶",
+                title: "Meet Your People",
+                desc: "Connect with music lovers, creatives, and good vibes only. Come with friends or make new ones.",
+              },
+              {
+                emoji: "🎤",
+                title: "Say \"I Was There\"",
+                desc: "Music, culture, and art come together in one incredible night. From the first note to the final encore — don't hear about it later. BE PART OF IT.",
               },
             ].map((item) => (
               <div
@@ -577,7 +586,7 @@ export default function RocafiestaPage() {
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              Secure checkout via Stripe · All sales final
+              Secure checkout via Stripe · Refundable up to 72 hrs before the event
             </p>
           </div>
         </div>
@@ -635,20 +644,24 @@ export default function RocafiestaPage() {
           </div>
           <div className="bg-white/[0.02] border border-white/8 rounded-2xl px-5 sm:px-6">
             <FAQItem
-              q="Is this an 18+ event?"
-              a="Yes. ROCAFIESTA is an 18+ event. Valid government-issued photo ID is required at entry. No exceptions."
+              q="What time is the event?"
+              a="ROCAFIESTA runs from 5PM to 10PM on Saturday, September 5, 2026. Doors open at 5PM — don't be late."
             />
             <FAQItem
-              q="What is the Early Bird ticket?"
-              a="Early Bird tickets are limited availability at the lowest price — $15. Same general admission access as regular tickets. First come, first served."
+              q="Are tickets refundable?"
+              a="Yes! You can request a refund up to 72 hours before ROCAFIESTA. After that, all ticket sales are final."
             />
             <FAQItem
-              q="Where is the venue?"
-              a="ROCAFIESTA is at Pyramid Cabaret — 176 Fort St, Winnipeg, MB R3C 1C9. Doors open at 5PM."
+              q="Where is ROCAFIESTA taking place?"
+              a="Winnipeg, Manitoba @ PYRAMID CABARET — 176 Fort St, Winnipeg, MB R3C 1C9."
             />
             <FAQItem
-              q="Can I get a refund?"
-              a="All sales are final. Tickets are non-refundable. If the event is cancelled or rescheduled, ticket holders will be notified directly."
+              q="Is ROCAFIESTA an all-ages event?"
+              a="No. ROCAFIESTA is strictly an 18+ event. Valid government-issued photo ID is required at entry. No exceptions."
+            />
+            <FAQItem
+              q="Is there a dress code?"
+              a="Come red carpet ready — dress to impress and make an entrance. ROCAFIESTA is all about style, confidence, and moments. Bring your best look."
             />
           </div>
         </div>
@@ -710,7 +723,7 @@ export default function RocafiestaPage() {
             Get Your Tickets Now →
           </a>
           <p className="text-white/15 text-xs">
-            Secure checkout via Stripe · All sales final · 18+ event
+            Secure checkout via Stripe · Refundable up to 72 hrs before · 18+ event
           </p>
           <div className="pt-4 border-t border-white/5">
             <p className="text-white/20 text-xs">
