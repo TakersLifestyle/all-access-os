@@ -195,9 +195,9 @@ export default function RocafiestaPage() {
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-950/40 via-black/60 to-green-950/30 z-0" />
           <img
-            src="/events/rocafiesta-poster.jpg"
+            src="/events/rocafiesta-banner.png"
             alt="ROCAFIESTA poster"
-            className="absolute inset-0 w-full h-full object-cover [object-position:center_15%]"
+            className="absolute inset-0 w-full h-full object-cover [object-position:center_30%]"
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/20 z-[1]" />
@@ -303,10 +303,7 @@ export default function RocafiestaPage() {
               className="w-full h-full object-cover"
             />
           </div>
-          {/* Banner */}
-          <div className="rounded-2xl overflow-hidden border border-white/10">
-            <img src="/events/rocafiesta-banner.png" alt="ROCAFIESTA — A Spiritual Experience with Konfam · Sept 5th" className="w-full" />
-          </div>
+
         </div>
       </section>
 
