@@ -475,7 +475,6 @@ export default function SeriesEventPage() {
               const config = event.ticketTiers[t]!;
               const eligible = canSelectTier(t);
               const active = selectedTier === t;
-              const requiresLabel = t === "supporter" ? "Members only" : t === "community" ? "Community only" : null;
               return (
                 <button
                   key={t}
@@ -486,36 +485,71 @@ export default function SeriesEventPage() {
                       ? "border-[#D4AF37]/60 bg-[#D4AF37]/8 shadow-[0_0_30px_rgba(212,175,55,0.07)]"
                       : eligible && isCheckoutEnabled
                       ? "border-white/10 bg-white/3 hover:border-white/20 hover:bg-white/5"
-                      : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
+                      : "border-white/8 bg-white/2 cursor-not-allowed"
                   }`}
                 >
+                  {/* Tier badge */}
                   {t === "supporter" && (
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-[#D4AF37] border border-[#D4AF37]/25 px-2 py-0.5 rounded-full mb-3 self-start">
+                    <span className={`text-[10px] font-bold tracking-widest uppercase border px-2 py-0.5 rounded-full mb-3 self-start ${eligible ? "text-[#D4AF37] border-[#D4AF37]/25" : "text-white/20 border-white/8"}`}>
                       Member Perk
                     </span>
                   )}
                   {t === "community" && (
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-white/50 border border-white/15 px-2 py-0.5 rounded-full mb-3 self-start">
+                    <span className={`text-[10px] font-bold tracking-widest uppercase border px-2 py-0.5 rounded-full mb-3 self-start ${eligible ? "text-white/50 border-white/15" : "text-white/20 border-white/8"}`}>
                       Community
                     </span>
                   )}
-                  <div className="text-2xl font-black text-white mb-0.5">
+
+                  {/* Price */}
+                  <div className={`text-2xl font-black mb-0.5 ${eligible ? "text-white" : "text-white/30"}`}>
                     {fmt(config.price)}
-                    <span className="text-sm font-normal text-white/30 ml-1">CAD</span>
+                    <span className="text-sm font-normal text-white/20 ml-1">CAD</span>
                   </div>
-                  <div className="text-sm font-semibold text-white/75 mb-1">{config.name}</div>
+                  <div className={`text-sm font-semibold mb-1 ${eligible ? "text-white/75" : "text-white/25"}`}>{config.name}</div>
                   {config.description && (
-                    <p className="text-xs text-white/35 leading-relaxed">{config.description}</p>
+                    <p className={`text-xs leading-relaxed ${eligible ? "text-white/35" : "text-white/20"}`}>{config.description}</p>
                   )}
-                  {!eligible && requiresLabel && (
-                    <div className="absolute bottom-3 right-3">
-                      <span className="text-[9px] text-white/20">{requiresLabel}</span>
+
+                  {/* Lock explanation for ineligible tiers */}
+                  {!eligible && (
+                    <div className="mt-3 pt-3 border-t border-white/6 flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <svg width="9" height="10" viewBox="0 0 9 10" fill="none" className="flex-shrink-0">
+                          <rect x="1" y="4.5" width="7" height="5" rx="1.2" fill="rgba(255,255,255,0.2)"/>
+                          <path d="M2.5 4.5V3a2 2 0 0 1 4 0v1.5" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round"/>
+                        </svg>
+                        <span className="text-[10px] text-white/40 font-semibold">
+                          {t === "supporter" ? "Active Supporters only" : "Past attendees only"}
+                        </span>
+                      </div>
+                      {t === "supporter" && (
+                        <span className="text-[10px] text-[#D4AF37]/50 ml-[15px]">
+                          Become a Supporter — $25/mo
+                        </span>
+                      )}
+                      {t === "community" && (
+                        <span className="text-[10px] text-white/25 ml-[15px]">
+                          Attend any ALL ACCESS event to unlock
+                        </span>
+                      )}
                     </div>
                   )}
+
+                  {/* Selected checkmark */}
                   {active && (
                     <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-[#D4AF37] flex items-center justify-center">
                       <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
                         <path d="M1 3L3 5L7 1" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Lock icon for ineligible */}
+                  {!eligible && (
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-white/6 border border-white/10 flex items-center justify-center">
+                      <svg width="8" height="9" viewBox="0 0 8 9" fill="none">
+                        <rect x="0.5" y="3.5" width="7" height="5" rx="1" fill="rgba(255,255,255,0.25)"/>
+                        <path d="M2 3.5V2.5a2 2 0 0 1 4 0v1" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round"/>
                       </svg>
                     </div>
                   )}
