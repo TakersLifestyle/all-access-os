@@ -713,7 +713,7 @@ function SeriesEventCard({ ev, isMember }: { ev: Event; isMember?: boolean }) {
           <img
             src={heroImg}
             alt={ev.title}
-            className="w-full h-full object-cover [object-position:center_30%] group-hover:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover [object-position:center_55%] group-hover:scale-105 transition-transform duration-700"
             style={{ filter: "saturate(1.3) brightness(1.06) contrast(1.08) sepia(0.1)" }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
