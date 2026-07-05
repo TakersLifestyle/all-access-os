@@ -104,7 +104,6 @@ export default function RocafiestaPage() {
 
   const GALLERY = [
     { src: "/events/konfam-railing.jpeg", alt: "Konfam" },
-    { src: "/events/konfam-plane-wing.jpeg", alt: "Konfam standing on plane wing" },
     { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion" },
     { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg" },
     { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage" },
@@ -417,10 +416,9 @@ export default function RocafiestaPage() {
           {/* Artist photo gallery */}
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { src: "/events/konfam-plane-wing.jpeg", alt: "Konfam standing on plane wing", cls: "col-span-2 aspect-video", pos: "object-[center_40%]" },
               { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-top" },
-              { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_30%]" },
-              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-center" },
+              { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_45%]" },
+              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_85%]" },
             ].map(({ src, alt, cls, pos }) => (
               <button
                 key={src}
