@@ -150,12 +150,31 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
 
           <tr><td style="height:24px;"></td></tr>
 
+          <!-- QR CODE TICKET -->
+          <tr>
+            <td style="background:#0f0f0f;border:1px solid #ffffff10;border-radius:16px;padding:28px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff30;">Your Entry QR Code</p>
+              <p style="margin:0 0 20px;font-size:12px;color:#ffffff25;">Screenshot this or show email at the door</p>
+              <div style="display:inline-block;background:#ffffff;border-radius:12px;padding:12px;margin-bottom:16px;">
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${escHtml(d.orderId)}&amp;margin=8&amp;bgcolor=ffffff&amp;color=000000"
+                  alt="Entry QR Code"
+                  width="180"
+                  height="180"
+                  style="display:block;border-radius:4px;"
+                />
+              </div>
+              <p style="margin:0;font-size:10px;font-family:monospace;color:#ffffff20;letter-spacing:0.08em;">${escHtml(d.orderId)}</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:16px;"></td></tr>
+
           <!-- REMINDER -->
           <tr>
             <td style="background:#ec489908;border:1px solid #ec489920;border-radius:12px;padding:20px 24px;">
               <p style="margin:0;font-size:13px;color:#ffffff60;line-height:1.6;">
-                <strong style="color:#f9a8d4;">Heads up:</strong> Keep this email as your proof of purchase.
-                Show it (or your Order ID) at the door. No paper tickets needed &mdash; we check you in by name.
+                <strong style="color:#f9a8d4;">At the door:</strong> Have this QR code ready on your screen &mdash; staff will scan it to check you in instantly. Keep this email as your proof of purchase.
               </p>
             </td>
           </tr>
