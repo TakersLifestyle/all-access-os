@@ -52,10 +52,15 @@ const nextConfig: NextConfig = {
         destination: "https://allaccesswinnipeg.ca/:path*",
         permanent: true,
       },
-      // Short promo URL for flyers / QR codes — never changes
+      // Short promo URLs for flyers / QR codes — never change
       {
         source: "/rocafiesta",
         destination: "/events/rocafiesta-konfam",
+        permanent: false,
+      },
+      {
+        source: "/paintsip",
+        destination: "/series/sunset-sessions/vol-01",
         permanent: false,
       },
     ];
