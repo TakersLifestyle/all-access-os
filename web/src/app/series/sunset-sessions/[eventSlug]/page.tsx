@@ -344,6 +344,9 @@ export default function SeriesEventPage() {
             </div>
           ) : params?.eventSlug === "vol-01" ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="col-span-1 sm:col-span-3 aspect-video rounded-2xl overflow-hidden">
+                <img src="/events/paint-sip/venue-hero.png" alt="Rooftop venue at golden hour" className="w-full h-full object-cover object-center" />
+              </div>
               <div className="aspect-[4/5] rounded-2xl overflow-hidden">
                 <img src="/events/paint-sip/painting-reveal.png" alt="Guests revealing their finished paintings" className="w-full h-full object-cover object-center" />
               </div>
