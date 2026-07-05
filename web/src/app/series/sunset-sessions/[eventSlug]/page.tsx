@@ -343,21 +343,15 @@ export default function SeriesEventPage() {
               ))}
             </div>
           ) : params?.eventSlug === "vol-01" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="aspect-[4/5] rounded-2xl overflow-hidden">
-                <img src="/events/paint-sip/venue-setup.png" alt="Rooftop venue setup at sunset" className="w-full h-full object-cover object-center" />
+                <img src="/events/paint-sip/painting-reveal.png" alt="Guests revealing their finished paintings" className="w-full h-full object-cover object-center" />
               </div>
               <div className="aspect-[4/5] rounded-2xl overflow-hidden">
-                <img src="/events/paint-sip/painting-reveal.png" alt="Guests revealing their paintings" className="w-full h-full object-cover object-center" />
+                <img src="/events/paint-sip/painting-session.png" alt="Guests painting at golden hour" className="w-full h-full object-cover object-center" />
               </div>
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden hidden sm:block">
-                <img src="/events/paint-sip/painting-session.png" alt="Guests painting at sunset" className="w-full h-full object-cover object-center" />
-              </div>
-              <div className="aspect-video col-span-2 rounded-2xl overflow-hidden">
-                <img src="/events/paint-sip/painting-celebration.png" alt="Group celebrating with finished paintings" className="w-full h-full object-cover object-[center_40%]" />
-              </div>
-              <div className="aspect-square rounded-2xl overflow-hidden hidden sm:block">
-                <img src="/events/paint-sip/painting-session.png" alt="Painting session atmosphere" className="w-full h-full object-cover object-[center_30%]" />
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden">
+                <img src="/events/paint-sip/painting-celebration.png" alt="Group celebrating with their paintings" className="w-full h-full object-cover object-[center_35%]" />
               </div>
             </div>
           ) : (
