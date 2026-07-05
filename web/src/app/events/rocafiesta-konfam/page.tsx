@@ -99,16 +99,36 @@ export default function RocafiestaPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Close lightbox on Escape
+  const GALLERY = [
+    { src: "/events/konfam-railing.jpeg", alt: "Konfam" },
+    { src: "/events/konfam-plane-wing.jpeg", alt: "Konfam standing on plane wing" },
+    { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion" },
+    { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg" },
+    { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage" },
+  ];
+
+  const openLightbox = (src: string) => {
+    const idx = GALLERY.findIndex((g) => g.src === src);
+    setLightboxIndex(idx >= 0 ? idx : 0);
+  };
+  const closeLightbox = () => setLightboxIndex(null);
+  const prevPhoto = () => setLightboxIndex((i) => (i === null ? 0 : (i - 1 + GALLERY.length) % GALLERY.length));
+  const nextPhoto = () => setLightboxIndex((i) => (i === null ? 0 : (i + 1) % GALLERY.length));
+
+  // Keyboard navigation
   useEffect(() => {
-    if (!lightbox) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    if (lightboxIndex === null) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") prevPhoto();
+      if (e.key === "ArrowRight") nextPhoto();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [lightbox]);
+  }, [lightboxIndex]);
 
   // Handle ?order=success / ?order=cancel return from Stripe
   useEffect(() => {
@@ -353,7 +373,7 @@ export default function RocafiestaPage() {
           <div className="grid md:grid-cols-2 gap-10 items-center">
             {/* Left: artist photo */}
             <button
-              onClick={() => setLightbox({ src: "/events/konfam-railing.jpeg", alt: "Konfam" })}
+              onClick={() => openLightbox("/events/konfam-railing.jpeg")}
               className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-96 bg-black group focus:outline-none"
             >
               <img
@@ -407,7 +427,7 @@ export default function RocafiestaPage() {
             ].map(({ src, alt, cls, pos }) => (
               <button
                 key={src}
-                onClick={() => setLightbox({ src, alt })}
+                onClick={() => openLightbox(src)}
                 className={`${cls} rounded-2xl overflow-hidden group relative focus:outline-none`}
               >
                 <img src={src} alt={alt} className={`w-full h-full object-cover ${pos} transition-transform duration-300 group-hover:scale-105`} />
@@ -790,23 +810,26 @@ export default function RocafiestaPage() {
       )}
 
       {/* ── LIGHTBOX ─────────────────────────────────────────────────────── */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
+      {lightboxIndex !== null && (() => {
+        const photo = GALLERY[lightboxIndex];
+        return (
           <div
-            className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center gap-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-black/97 flex flex-col items-center justify-center"
+            onClick={closeLightbox}
           >
-            {/* Controls */}
-            <div className="flex items-center justify-between w-full">
-              <p className="text-white/40 text-xs tracking-widest uppercase">{lightbox.alt}</p>
+            {/* Top bar */}
+            <div
+              className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-4 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-white/35 text-xs tracking-widest uppercase font-semibold">
+                {lightboxIndex + 1} / {GALLERY.length} — {photo.alt}
+              </p>
               <div className="flex items-center gap-3">
                 <a
-                  href={lightbox.src}
+                  href={photo.src}
                   download
-                  className="flex items-center gap-2 text-xs font-bold text-black bg-amber-500 hover:bg-amber-400 px-4 py-2 rounded-xl transition"
+                  className="flex items-center gap-2 text-xs font-black text-black bg-amber-500 hover:bg-amber-400 active:bg-amber-600 px-4 py-2 rounded-xl transition"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -815,22 +838,50 @@ export default function RocafiestaPage() {
                   Download
                 </a>
                 <button
-                  onClick={() => setLightbox(null)}
-                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition text-lg leading-none"
+                  onClick={closeLightbox}
+                  className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition text-xl leading-none"
                 >
                   ×
                 </button>
               </div>
             </div>
-            {/* Image */}
+
+            {/* Full image */}
             <img
-              src={lightbox.src}
-              alt={lightbox.alt}
-              className="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl"
+              key={photo.src}
+              src={photo.src}
+              alt={photo.alt}
+              className="max-h-[85vh] max-w-[90vw] object-contain select-none"
+              onClick={(e) => e.stopPropagation()}
             />
+
+            {/* Prev / Next arrows */}
+            <button
+              onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition text-xl"
+            >
+              ‹
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition text-xl"
+            >
+              ›
+            </button>
+
+            {/* Dot indicators */}
+            <div className="absolute bottom-6 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              {GALLERY.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightboxIndex(i)}
+                  className={`w-2 h-2 rounded-full transition-all duration-200 ${i === lightboxIndex ? "bg-amber-400 scale-125" : "bg-white/25 hover:bg-white/50"}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </main>
   );
 }
