@@ -416,9 +416,9 @@ export default function RocafiestaPage() {
           {/* Artist photo gallery */}
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-top" },
-              { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_45%]" },
-              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_70%]" },
+              { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-[center_60%]" },
+              { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_65%]" },
+              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_88%]" },
             ].map(({ src, alt, cls, pos }) => (
               <button
                 key={src}
