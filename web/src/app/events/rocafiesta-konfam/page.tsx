@@ -342,15 +342,12 @@ export default function RocafiestaPage() {
       <section className="bg-[#050505] py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid md:grid-cols-2 gap-10 items-center">
-            {/* Left: poster thumbnail */}
-            <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-80 bg-black">
+            {/* Left: artist photo */}
+            <div className="relative rounded-2xl overflow-hidden border border-amber-500/20 h-96 bg-black">
               <img
-                src="/events/konfam-1.jpg"
+                src="/events/konfam-railing.jpeg"
                 alt="Konfam"
-                className="w-full h-full object-cover object-center"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                className="w-full h-full object-cover object-[center_25%]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-4 left-4">
@@ -381,6 +378,34 @@ export default function RocafiestaPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Artist photo gallery */}
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="col-span-2 aspect-video rounded-2xl overflow-hidden">
+              <img src="/events/konfam-plane-wing.jpeg" alt="Konfam standing on plane wing" className="w-full h-full object-cover object-[center_40%]" />
+            </div>
+            <div className="aspect-square rounded-2xl overflow-hidden">
+              <img src="/events/konfam-motion-blur.jpeg" alt="Konfam in motion" className="w-full h-full object-cover object-top" />
+            </div>
+            <div className="aspect-square rounded-2xl overflow-hidden">
+              <img src="/events/konfam-urban-visor.jpeg" alt="Konfam downtown Winnipeg" className="w-full h-full object-cover object-[center_30%]" />
+            </div>
+            <div className="col-span-2 aspect-video rounded-2xl overflow-hidden">
+              <img src="/events/konfam-plane-fuselage.jpeg" alt="Konfam against plane fuselage" className="w-full h-full object-cover object-center" />
+            </div>
+          </div>
+
+          {/* Artist in motion video */}
+          <div className="mt-6 rounded-2xl overflow-hidden border border-white/8 bg-black aspect-video">
+            <video
+              src="/events/konfam-moving.mov"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>
@@ -669,26 +694,22 @@ export default function RocafiestaPage() {
 
       {/* ── LOCATION ────────────────────────────────────────────────────── */}
       <section className="bg-black py-16 sm:py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 text-center space-y-5">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
-              <svg className="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <div className="space-y-2">
-              <p className="text-amber-400/70 text-xs font-black uppercase tracking-[0.2em]">Location</p>
-              <h3 className="text-2xl font-black">Pyramid Cabaret</h3>
-              <p className="text-white/40 text-sm">176 Fort St, Winnipeg, MB R3C 1C9</p>
-            </div>
-            <p className="text-white/35 text-sm leading-relaxed max-w-md mx-auto">
-              Doors open at 5PM. The Pyramid Cabaret is one of Winnipeg&apos;s most iconic live music venues — the perfect stage for ROCAFIESTA.
-            </p>
-            <div className="flex items-center gap-2 justify-center">
-              <div className="w-2 h-2 rounded-full bg-amber-400" />
-              <p className="text-amber-400/70 text-xs font-semibold">September 5, 2026 · 5PM–10PM</p>
-            </div>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-6">
+          <div className="text-center space-y-1">
+            <p className="text-amber-400/70 text-xs font-black uppercase tracking-[0.2em]">Location</p>
+            <h3 className="text-2xl font-black">Pyramid Cabaret</h3>
+            <p className="text-white/40 text-sm">176 Fort St, Winnipeg, MB R3C 1C9 · Doors 5PM</p>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-white/10">
+            <img
+              src="/events/pyramid-cabaret-sign.jpeg"
+              alt="Pyramid Cabaret — Winnipeg"
+              className="w-full object-cover"
+            />
+          </div>
+          <div className="flex items-center gap-2 justify-center">
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
+            <p className="text-amber-400/70 text-xs font-semibold">September 5, 2026 · 5PM–10PM · 18+</p>
           </div>
         </div>
       </section>
