@@ -342,6 +342,24 @@ export default function SeriesEventPage() {
                 </div>
               ))}
             </div>
+          ) : params?.eventSlug === "vol-01" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden">
+                <img src="/events/paint-sip/venue-setup.png" alt="Rooftop venue setup at sunset" className="w-full h-full object-cover object-center" />
+              </div>
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden">
+                <img src="/events/paint-sip/painting-reveal.png" alt="Guests revealing their paintings" className="w-full h-full object-cover object-center" />
+              </div>
+              <div className="aspect-[4/5] rounded-2xl overflow-hidden hidden sm:block">
+                <img src="/events/paint-sip/painting-session.png" alt="Guests painting at sunset" className="w-full h-full object-cover object-center" />
+              </div>
+              <div className="aspect-video col-span-2 rounded-2xl overflow-hidden">
+                <img src="/events/paint-sip/painting-celebration.png" alt="Group celebrating with finished paintings" className="w-full h-full object-cover object-[center_40%]" />
+              </div>
+              <div className="aspect-square rounded-2xl overflow-hidden hidden sm:block">
+                <img src="/events/paint-sip/painting-session.png" alt="Painting session atmosphere" className="w-full h-full object-cover object-[center_30%]" />
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <GalleryPlaceholder label="Hero Shot" className="aspect-[4/5]" />
@@ -432,12 +450,22 @@ export default function SeriesEventPage() {
                 ))}
               </div>
             </div>
-            <div className="aspect-square rounded-3xl bg-gradient-to-br from-[#1a1200]/80 to-white/5 border border-white/8 flex items-center justify-center">
-              <div className="text-center opacity-30">
-                <div className="text-5xl mb-2">👗</div>
-                <p className="text-white/40 text-xs tracking-widest uppercase">Style Reference</p>
+            {params?.eventSlug === "vol-01" ? (
+              <div className="rounded-3xl overflow-hidden border border-white/8">
+                <img
+                  src="/events/paint-sip/dress-code.png"
+                  alt="Paint & Sip Dress Code Style Reference"
+                  className="w-full h-full object-cover object-top"
+                />
               </div>
-            </div>
+            ) : (
+              <div className="aspect-square rounded-3xl bg-gradient-to-br from-[#1a1200]/80 to-white/5 border border-white/8 flex items-center justify-center">
+                <div className="text-center opacity-30">
+                  <div className="text-5xl mb-2">👗</div>
+                  <p className="text-white/40 text-xs tracking-widest uppercase">Style Reference</p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
