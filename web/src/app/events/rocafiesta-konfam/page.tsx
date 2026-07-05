@@ -418,14 +418,14 @@ export default function RocafiestaPage() {
             {[
               { src: "/events/konfam-motion-blur.jpeg", alt: "Konfam in motion", cls: "aspect-square", pos: "object-[center_60%]" },
               { src: "/events/konfam-urban-visor.jpeg", alt: "Konfam downtown Winnipeg", cls: "aspect-square", pos: "object-[center_65%]" },
-              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2 aspect-video", pos: "object-[center_88%]" },
-            ].map(({ src, alt, cls, pos }) => (
+              { src: "/events/konfam-plane-fuselage.jpeg", alt: "Konfam against plane fuselage", cls: "col-span-2", pos: "", contain: true },
+            ].map(({ src, alt, cls, pos, contain }) => (
               <button
                 key={src}
                 onClick={() => openLightbox(src)}
-                className={`${cls} rounded-2xl overflow-hidden group relative focus:outline-none`}
+                className={`${cls} rounded-2xl overflow-hidden group relative focus:outline-none bg-black`}
               >
-                <img src={src} alt={alt} className={`w-full h-full object-cover ${pos} transition-transform duration-300 group-hover:scale-105`} />
+                <img src={src} alt={alt} className={`w-full h-full ${contain ? "object-contain" : `object-cover ${pos} transition-transform duration-300 group-hover:scale-105`}`} />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
                   <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
