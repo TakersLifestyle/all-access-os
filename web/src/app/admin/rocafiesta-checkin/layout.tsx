@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ROCAFIESTA Door Check-In | ALL ACCESS Admin",
-  description: "Scan QR codes and manage guest entry for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret, August 5, 2026.",
+  title: "Admin Check-In — ROCAFIESTA | ALL ACCESS",
+  description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret, August 5, 2026. Scan QR codes at the door.",
   robots: { index: false, follow: false },
+  openGraph: {
+    title: "Admin Check-In — ROCAFIESTA",
+    description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret · Aug 5, 2026.",
+    siteName: "ALL ACCESS Winnipeg",
+    locale: "en_CA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Admin Check-In — ROCAFIESTA",
+    description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam.",
+  },
 };
 
 export default function CheckinLayout({ children }: { children: React.ReactNode }) {
