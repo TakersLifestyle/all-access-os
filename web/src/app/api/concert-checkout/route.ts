@@ -1,5 +1,6 @@
 // Concert ticket checkout — tiered pricing read from Firestore ticketTiers
 // Early Bird $15 | General Admission $20 — server-side pricing only
+// Processing fee added as a separate line item: earlybird $0.74 | regular $0.88
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -10,6 +11,12 @@ const APP_URL = (process.env.APP_URL ?? "https://allaccesswinnipeg.ca").replace(
 
 const VALID_TICKET_TYPES = ["earlybird", "regular"] as const;
 type TicketType = (typeof VALID_TICKET_TYPES)[number];
+
+// Flat processing fee per transaction (covers Stripe's 2.9% + $0.30 CAD)
+const PROCESSING_FEE_CENTS: Record<TicketType, number> = {
+  earlybird: 74,  // $0.74
+  regular: 88,    // $0.88
+};
 
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 10;
@@ -73,6 +80,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid ticket price." }, { status: 400 });
     }
     const unitPriceCents = Math.round(unitPriceDollars * 100);
+    const processingFeeCents = PROCESSING_FEE_CENTS[ticketType as TicketType];
+    const totalPriceCents = unitPriceCents * qty + processingFeeCents;
 
     // 5. Create pending ticketOrder doc
     const orderRef = db.collection("ticketOrders").doc();
@@ -87,7 +96,9 @@ export async function POST(req: NextRequest) {
       quantity: qty,
       unitPrice: unitPriceDollars,
       unitPriceCents,
-      totalPrice: unitPriceDollars * qty,
+      processingFeeCents,
+      totalPrice: totalPriceCents / 100,
+      totalPriceCents,
       isMemberPrice: false,
       memberDiscountPct: 0,
       savingsTotal: 0,
@@ -140,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     console.log(
       `[concert-checkout] Creating session | event="${event.title}" tier=${ticketType} qty=${qty} ` +
-        `unitPriceCents=${unitPriceCents} promo=${promoId ?? "none"}`
+        `unitPriceCents=${unitPriceCents} feeCents=${processingFeeCents} totalCents=${totalPriceCents} promo=${promoId ?? "none"}`
     );
 
     const session = await stripe.checkout.sessions.create({
@@ -158,6 +169,17 @@ export async function POST(req: NextRequest) {
             },
           },
           quantity: qty,
+        },
+        {
+          price_data: {
+            currency: "cad",
+            unit_amount: processingFeeCents,
+            product_data: {
+              name: "Processing Fee",
+              description: "Covers payment processing costs",
+            },
+          },
+          quantity: 1,
         },
       ],
       success_url: successUrl,

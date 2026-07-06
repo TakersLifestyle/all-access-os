@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         eventLocation: "Pyramid Cabaret · 176 Fort St, Winnipeg, MB",
         quantity: order.quantity as number,
         unitPriceCents: order.unitPriceCents as number,
-        totalPaidCents: Math.round((order.totalPrice as number) * 100),
+        totalPaidCents: (order.totalPriceCents as number | undefined) ?? Math.round((order.totalPrice as number) * 100),
         stripePaymentIntentId: (session.payment_intent as string) ?? "",
         paidAt: new Date().toISOString(),
       }).catch((err) => console.error("[concert-confirm] email error:", err));
