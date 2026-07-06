@@ -180,7 +180,7 @@ export async function sendTicketConfirmation({
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
     to: toEmail,
-    subject: `Your ticket is confirmed — ${eventTitle} ✅`,
+    subject: `🎟 Your ROCAFIESTA Ticket — You're In for A Spiritual Experience with Konfam`,
     html,
   });
 
