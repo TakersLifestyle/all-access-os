@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   openGraph: {
     title: "Admin Check-In — ROCAFIESTA",
-    description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret · Aug 5, 2026.",
+    description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret · September 5, 2026.",
     siteName: "ALL ACCESS Winnipeg",
     locale: "en_CA",
     type: "website",
