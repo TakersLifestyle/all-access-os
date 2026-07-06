@@ -84,7 +84,7 @@ export default function AdminPage() {
           <div className="space-y-1">
             <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-amber-400/60">Door Check-In</p>
             <h2 className="text-xl font-black text-white group-hover:text-amber-400 transition">ROCAFIESTA — A Spiritual Experience with Konfam</h2>
-            <p className="text-white/40 text-sm">Pyramid Cabaret · August 5, 2026 · Scan QR codes at the door</p>
+            <p className="text-white/40 text-sm">Pyramid Cabaret · September 5, 2026 · Scan QR codes at the door</p>
           </div>
           <span className="text-3xl ml-6 group-hover:scale-110 transition-transform">📷</span>
         </Link>

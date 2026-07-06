@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Admin Check-In — ROCAFIESTA | ALL ACCESS",
-  description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret, August 5, 2026. Scan QR codes at the door.",
+  description: "Door check-in for ROCAFIESTA — A Spiritual Experience with Konfam. Pyramid Cabaret, September 5, 2026. Scan QR codes at the door.",
   robots: { index: false, follow: false },
   openGraph: {
     title: "Admin Check-In — ROCAFIESTA",

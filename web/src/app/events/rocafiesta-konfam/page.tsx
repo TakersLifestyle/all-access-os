@@ -873,7 +873,7 @@ export default function RocafiestaPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/40">Date</span>
-                <span className="text-white font-semibold">Saturday, August 5, 2026</span>
+                <span className="text-white font-semibold">Saturday, September 5, 2026</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/40">Venue</span>

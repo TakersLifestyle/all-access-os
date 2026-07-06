@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         toEmail,
         displayName: null,
         eventTitle: order.eventTitle as string,
-        eventDate: "2026-08-05",
+        eventDate: "2026-09-05",
         eventLocation: "Pyramid Cabaret · 176 Fort St, Winnipeg, MB",
         quantity: order.quantity as number,
         unitPriceCents: order.unitPriceCents as number,
