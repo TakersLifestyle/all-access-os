@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
             currency: "cad",
             unit_amount: processingFeeCents,
             product_data: {
-              name: "Processing Fee",
+              name: "Processing Fees",
               description: "Covers payment processing costs",
             },
           },
