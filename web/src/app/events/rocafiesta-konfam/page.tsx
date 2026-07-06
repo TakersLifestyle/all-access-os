@@ -98,6 +98,7 @@ export default function RocafiestaPage() {
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -156,6 +157,7 @@ export default function RocafiestaPage() {
           quantity: qty,
           uid: user?.uid ?? null,
           userEmail: user?.email ?? null,
+          promoCode: promoCode.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -608,6 +610,17 @@ export default function RocafiestaPage() {
                 <p className="text-white/35 text-xs">ROCAFIESTA · September 5, 2026</p>
               </div>
               <p className="text-amber-400 font-black text-sm shrink-0">{fmt(total)}</p>
+            </div>
+
+            {/* Promo code */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="Promo code (optional)"
+                className="flex-1 bg-white/5 border border-white/10 focus:border-amber-500/50 focus:outline-none text-white placeholder-white/25 text-sm font-mono px-4 py-3 rounded-xl transition"
+              />
             </div>
 
             {/* CTA */}

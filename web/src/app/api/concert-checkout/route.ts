@@ -17,12 +17,13 @@ const MAX_QUANTITY = 10;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventId, ticketType, quantity, uid, userEmail } = body as {
+    const { eventId, ticketType, quantity, uid, userEmail, promoCode } = body as {
       eventId: string;
       ticketType: string;
       quantity: number;
       uid?: string;
       userEmail?: string;
+      promoCode?: string;
     };
 
     // 1. Validate inputs
@@ -119,13 +120,27 @@ export async function POST(req: NextRequest) {
         ? event.imageUrl
         : null;
 
-    // 7. Create Stripe Checkout Session
+    // 7. Validate promo code server-side (if provided)
+    let promoId: string | null = null;
+    if (promoCode?.trim()) {
+      const promos = await stripe.promotionCodes.list({
+        code: promoCode.trim().toUpperCase(),
+        active: true,
+        limit: 1,
+      });
+      if (promos.data.length === 0) {
+        return NextResponse.json({ error: "Invalid or expired promo code." }, { status: 400 });
+      }
+      promoId = promos.data[0].id;
+    }
+
+    // 8. Create Stripe Checkout Session
     const successUrl = `${APP_URL}/events/rocafiesta-konfam?order=success&orderId=${orderRef.id}`;
     const cancelUrl = `${APP_URL}/events/rocafiesta-konfam?order=cancel`;
 
     console.log(
       `[concert-checkout] Creating session | event="${event.title}" tier=${ticketType} qty=${qty} ` +
-        `unitPriceCents=${unitPriceCents}`
+        `unitPriceCents=${unitPriceCents} promo=${promoId ?? "none"}`
     );
 
     const session = await stripe.checkout.sessions.create({
@@ -147,7 +162,9 @@ export async function POST(req: NextRequest) {
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: true,
+      ...(promoId
+        ? { discounts: [{ promotion_code: promoId }] }
+        : { allow_promotion_codes: true }),
       ...(uid ? { client_reference_id: uid } : {}),
       ...(userEmail ? { customer_email: userEmail } : {}),
       metadata: {
