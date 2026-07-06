@@ -65,7 +65,7 @@ function SuccessModal({ data, onClose }: { data: SuccessData; onClose: () => voi
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-white/40">Date</span>
-            <span className="text-white/80">Thursday, July 31, 2026</span>
+            <span className="text-white/80">Friday, July 31, 2026</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-white/40">Venue</span>

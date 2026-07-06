@@ -13,10 +13,16 @@ export interface TicketConfirmationData {
   transactionId: string;
   paidAt: string;
   eventsUrl: string;
+  accentColor?: string;  // e.g. "#D4AF37" for Sip & Paint, defaults to ROCAFIESTA pink
 }
 
 export function ticketConfirmationHtml(d: TicketConfirmationData): string {
   const ticketWord = d.quantity === 1 ? "ticket" : "tickets";
+  const accent = d.accentColor ?? "#ec4899";
+  const accentLight = d.accentColor ? d.accentColor + "cc" : "#f9a8d4";
+  const accentBg = d.accentColor ? d.accentColor + "12" : "#ec489912";
+  const accentBorder = d.accentColor ? d.accentColor + "30" : "#ec489930";
+  const accentDim = d.accentColor ? d.accentColor + "20" : "#ec489920";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -34,7 +40,7 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
           <!-- HEADER -->
           <tr>
             <td style="padding:0 0 32px 0;text-align:center;">
-              <span style="font-size:13px;font-weight:700;letter-spacing:0.2em;color:#ec4899;text-transform:uppercase;">ALL ACCESS</span>
+              <span style="font-size:13px;font-weight:700;letter-spacing:0.2em;color:${accent};text-transform:uppercase;">ALL ACCESS</span>
               <span style="font-size:13px;color:#ffffff30;margin:0 8px;">by</span>
               <span style="font-size:13px;font-weight:600;letter-spacing:0.05em;color:#ffffff50;text-transform:uppercase;">TakersLifestyle</span>
             </td>
@@ -42,21 +48,21 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
 
           <!-- HERO CARD -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0a121a 0%,#0f0f0f 50%,#0f0a12 100%);border:1px solid #ec489930;border-radius:20px;padding:48px 40px 40px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#0a121a 0%,#0f0f0f 50%,#0f0a12 100%);border:1px solid ${accentBorder};border-radius:20px;padding:48px 40px 40px;text-align:center;">
               <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#86efac20;border:1px solid #86efac30;border-radius:50%;margin-bottom:24px;font-size:24px;">
                 &#10003;
               </div>
               <h1 style="margin:0 0 12px;font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-0.02em;">
                 You&rsquo;re on the list, ${escHtml(d.firstName)}.
               </h1>
-              <p style="margin:0 0 8px;font-size:17px;font-weight:700;color:#ec4899;">
+              <p style="margin:0 0 8px;font-size:17px;font-weight:700;color:${accent};">
                 ${escHtml(d.eventTitle)}
               </p>
               <p style="margin:0 0 32px;font-size:15px;color:#ffffff60;line-height:1.5;">
                 ${d.quantity} ${ticketWord} confirmed &bull; Payment received
               </p>
               <a href="${d.eventsUrl}"
-                 style="display:inline-block;background:#ec4899;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;letter-spacing:0.01em;">
+                 style="display:inline-block;background:${accent};color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;letter-spacing:0.01em;">
                 View All Events &rarr;
               </a>
             </td>
@@ -172,9 +178,9 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
 
           <!-- REMINDER -->
           <tr>
-            <td style="background:#ec489908;border:1px solid #ec489920;border-radius:12px;padding:20px 24px;">
+            <td style="background:${accentBg};border:1px solid ${accentDim};border-radius:12px;padding:20px 24px;">
               <p style="margin:0;font-size:13px;color:#ffffff60;line-height:1.6;">
-                <strong style="color:#f9a8d4;">At the door:</strong> Have this QR code ready on your screen &mdash; staff will scan it to check you in instantly. Keep this email as your proof of purchase.
+                <strong style="color:${accentLight};">At the door:</strong> Have this QR code ready on your screen &mdash; staff will scan it to check you in instantly. Keep this email as your proof of purchase.
               </p>
             </td>
           </tr>
@@ -184,7 +190,7 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
           <!-- FOOTER -->
           <tr>
             <td style="text-align:center;padding:0 20px;">
-              <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.15em;color:#ec4899;text-transform:uppercase;">ALL ACCESS</p>
+              <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.15em;color:${accent};text-transform:uppercase;">ALL ACCESS</p>
               <p style="margin:0 0 16px;font-size:12px;color:#ffffff30;line-height:1.6;">
                 Questions? Reply to this email or reach us at<br/>
                 <a href="mailto:hello@allaccesswinnipeg.ca" style="color:#ffffff40;text-decoration:none;">hello@allaccesswinnipeg.ca</a>

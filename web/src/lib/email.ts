@@ -123,6 +123,7 @@ export async function sendTicketConfirmation({
   toEmail,
   displayName,
   subject,
+  accentColor,
   eventTitle,
   eventDate,
   eventLocation,
@@ -136,6 +137,7 @@ export async function sendTicketConfirmation({
   toEmail: string;
   displayName?: string | null;
   subject?: string;
+  accentColor?: string;
   eventTitle: string;
   eventDate: string;       // YYYY-MM-DD from Firestore
   eventLocation: string;
@@ -177,6 +179,7 @@ export async function sendTicketConfirmation({
     transactionId: stripePaymentIntentId,
     paidAt: formatDate(paidAt),
     eventsUrl: `${APP_URL}/events`,
+    accentColor,
   });
 
   const { error } = await resend.emails.send({

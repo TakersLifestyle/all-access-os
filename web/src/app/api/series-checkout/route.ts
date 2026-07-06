@@ -110,6 +110,13 @@ export async function POST(req: NextRequest) {
     const processingFeeCents = Math.round(unitPriceCents * 0.029 + 30);
     const totalPriceCents = unitPriceCents * qty + processingFeeCents;
 
+    // Derive email metadata from event
+    const seriesIdForEmail = (event.seriesId as string | null) ?? null;
+    const emailSubject = seriesIdForEmail === "sunset-sessions"
+      ? `🎨 You're In — ${event.title} | ALL ACCESS Sip & Paint Experience`
+      : `🎟 Your Ticket — ${event.title} | ALL ACCESS`;
+    const emailAccentColor = seriesIdForEmail === "sunset-sessions" ? "#D4AF37" : undefined;
+
     // Create ticketOrder doc
     const orderRef = db.collection("ticketOrders").doc();
     await orderRef.set({
@@ -130,6 +137,8 @@ export async function POST(req: NextRequest) {
       totalPriceCents,
       isMemberPrice,
       savingsTotal,
+      emailSubject,
+      ...(emailAccentColor ? { emailAccentColor } : {}),
       paymentStatus: "pending",
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: null,

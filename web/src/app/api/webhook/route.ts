@@ -349,6 +349,8 @@ export async function POST(req: NextRequest) {
                 orderId,
                 toEmail,
                 displayName,
+                subject: (orderData.emailSubject as string | undefined) ?? undefined,
+                accentColor: (orderData.emailAccentColor as string | undefined) ?? undefined,
                 eventTitle:
                   (orderData.eventTitle as string) ??
                   (eventData.title as string) ??
