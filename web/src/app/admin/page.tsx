@@ -78,7 +78,7 @@ export default function AdminPage() {
       <div>
         <h2 className="text-xl font-bold text-white/70 mb-4">🎪 Active Events</h2>
         <Link
-          href="/admin/checkin"
+          href="/admin/rocafiesta-checkin"
           className="flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-2xl p-6 transition group"
         >
           <div className="space-y-1">
