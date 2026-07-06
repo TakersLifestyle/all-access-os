@@ -355,17 +355,27 @@ export default function CheckinPage() {
 
           {/* Stats bar */}
           {stats && (
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Total Orders", value: stats.total },
-                { label: "Checked In", value: stats.checkedIn, gold: true },
-                { label: "Remaining", value: stats.remaining },
-              ].map(({ label, value, gold }) => (
-                <div key={label} className="bg-white/[0.03] border border-white/8 rounded-xl p-3 text-center">
-                  <p className={`text-2xl font-black ${gold ? "text-amber-400" : "text-white"}`}>{value}</p>
-                  <p className="text-white/30 text-[10px] mt-0.5">{label}</p>
+            <div className="space-y-2">
+              {/* Still expected — biggest, most important for staff */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-amber-300 text-xs font-bold tracking-widest uppercase">Still Expected</p>
+                  <p className="text-amber-400 text-4xl font-black leading-none mt-1">{stats.remaining}</p>
+                  <p className="text-amber-300/50 text-xs mt-1">guests still on their way</p>
                 </div>
-              ))}
+                <span className="text-5xl opacity-20">🎟</span>
+              </div>
+              {/* Secondary stats */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-emerald-950/30 border border-emerald-700/30 rounded-xl p-3 text-center">
+                  <p className="text-emerald-400 text-2xl font-black">{stats.checkedIn}</p>
+                  <p className="text-emerald-400/50 text-[10px] mt-0.5">✅ Checked In</p>
+                </div>
+                <div className="bg-white/[0.03] border border-white/8 rounded-xl p-3 text-center">
+                  <p className="text-white text-2xl font-black">{stats.total}</p>
+                  <p className="text-white/30 text-[10px] mt-0.5">Total Tickets</p>
+                </div>
+              </div>
             </div>
           )}
 
