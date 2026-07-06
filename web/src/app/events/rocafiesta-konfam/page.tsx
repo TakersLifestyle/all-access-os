@@ -100,6 +100,13 @@ export default function RocafiestaPage() {
   const [error, setError] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
+  const [successData, setSuccessData] = useState<{
+    email: string | null;
+    ticketTierName: string;
+    quantity: number;
+    totalPrice: number;
+    orderId: string;
+  } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -135,12 +142,38 @@ export default function RocafiestaPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const order = params.get("order");
-    if (order === "success") {
+    const orderId = params.get("orderId");
+    const sessionId = params.get("session_id");
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (order === "success" && orderId && sessionId) {
+      // Fire confirmation immediately — no waiting for webhook
+      fetch("/api/concert-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, sessionId }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok) {
+            setSuccessData({
+              email: data.email,
+              ticketTierName: data.ticketTierName,
+              quantity: data.quantity,
+              totalPrice: data.totalPrice,
+              orderId: data.orderId,
+            });
+          } else {
+            setToast({ type: "success", message: "Tickets confirmed! Check your email for details." });
+          }
+        })
+        .catch(() => {
+          setToast({ type: "success", message: "Tickets confirmed! Check your email for details." });
+        });
+    } else if (order === "success") {
       setToast({ type: "success", message: "Tickets confirmed! Check your email for details." });
-      window.history.replaceState({}, "", window.location.pathname);
     } else if (order === "cancel") {
       setToast({ type: "cancel", message: "Checkout cancelled — your spot is still available." });
-      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
@@ -815,6 +848,63 @@ export default function RocafiestaPage() {
           message={toast.message}
           onClose={() => setToast(null)}
         />
+      )}
+
+      {/* ── SUCCESS MODAL ─────────────────────────────────────────────────── */}
+      {successData && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0d0d0d] border border-white/10 rounded-3xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl">
+            {/* Icon */}
+            <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-3xl">
+              🎟
+            </div>
+
+            {/* Headline */}
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-white">You&apos;re on the list.</h2>
+              <p className="text-amber-400 font-bold text-sm">ROCAFIESTA — A Spiritual Experience with Konfam</p>
+            </div>
+
+            {/* Details */}
+            <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 text-left space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Ticket</span>
+                <span className="text-white font-semibold">{successData.quantity} × {successData.ticketTierName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Date</span>
+                <span className="text-white font-semibold">Saturday, August 5, 2026</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Venue</span>
+                <span className="text-white font-semibold text-right">Pyramid Cabaret · 176 Fort St</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-white/8 pt-3">
+                <span className="text-white/40">Total paid</span>
+                <span className="text-emerald-400 font-black">${successData.totalPrice.toFixed(2)} CAD</span>
+              </div>
+            </div>
+
+            {/* Email notice */}
+            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">
+              <p className="text-amber-300/80 text-sm">
+                📧 Confirmation + QR code sent to{" "}
+                <span className="font-bold text-amber-300">{successData.email ?? "your email"}</span>
+              </p>
+            </div>
+
+            {/* Order ID */}
+            <p className="text-white/15 text-xs font-mono">{successData.orderId}</p>
+
+            {/* Close */}
+            <button
+              onClick={() => setSuccessData(null)}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-4 rounded-xl text-base transition"
+            >
+              Done
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── LIGHTBOX ─────────────────────────────────────────────────────── */}

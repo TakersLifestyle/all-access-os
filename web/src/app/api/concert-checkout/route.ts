@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 8. Create Stripe Checkout Session
-    const successUrl = `${APP_URL}/events/rocafiesta-konfam?order=success&orderId=${orderRef.id}`;
+    const successUrl = `${APP_URL}/events/rocafiesta-konfam?order=success&orderId=${orderRef.id}&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${APP_URL}/events/rocafiesta-konfam?order=cancel`;
 
     console.log(
