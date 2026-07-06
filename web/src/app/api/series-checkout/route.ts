@@ -106,6 +106,9 @@ export async function POST(req: NextRequest) {
     const publicPrice = tiers["public"]?.price ?? unitPriceDollars;
     const isMemberPrice = ticketType !== "public";
     const savingsTotal = isMemberPrice ? (publicPrice - unitPriceDollars) * qty : 0;
+    // Processing fee: 2.9% of unit price + $0.30 CAD flat (covers Stripe cost)
+    const processingFeeCents = Math.round(unitPriceCents * 0.029 + 30);
+    const totalPriceCents = unitPriceCents * qty + processingFeeCents;
 
     // Create ticketOrder doc
     const orderRef = db.collection("ticketOrders").doc();
@@ -122,7 +125,9 @@ export async function POST(req: NextRequest) {
       quantity: qty,
       unitPrice: unitPriceDollars,
       unitPriceCents,
-      totalPrice: unitPriceDollars * qty,
+      processingFeeCents,
+      totalPrice: totalPriceCents / 100,
+      totalPriceCents,
       isMemberPrice,
       savingsTotal,
       paymentStatus: "pending",
@@ -177,8 +182,19 @@ export async function POST(req: NextRequest) {
           },
           quantity: qty,
         },
+        {
+          price_data: {
+            currency: "cad",
+            unit_amount: processingFeeCents,
+            product_data: {
+              name: "Processing Fees",
+              description: "Covers payment processing costs",
+            },
+          },
+          quantity: 1,
+        },
       ],
-      success_url: `${APP_URL}${baseEventPath}?order=success&orderId=${orderRef.id}`,
+      success_url: `${APP_URL}${baseEventPath}?order=success&orderId=${orderRef.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${APP_URL}${baseEventPath}?order=cancel`,
       allow_promotion_codes: true,
       ...(uid ? { client_reference_id: uid } : {}),

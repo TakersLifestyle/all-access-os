@@ -122,6 +122,7 @@ export async function sendTicketConfirmation({
   orderId,
   toEmail,
   displayName,
+  subject,
   eventTitle,
   eventDate,
   eventLocation,
@@ -134,6 +135,7 @@ export async function sendTicketConfirmation({
   orderId: string;
   toEmail: string;
   displayName?: string | null;
+  subject?: string;
   eventTitle: string;
   eventDate: string;       // YYYY-MM-DD from Firestore
   eventLocation: string;
@@ -180,7 +182,7 @@ export async function sendTicketConfirmation({
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
     to: toEmail,
-    subject: `🎟 Your ROCAFIESTA Ticket — You're In for A Spiritual Experience with Konfam`,
+    subject: subject ?? `🎟 Your ROCAFIESTA Ticket — You're In for A Spiritual Experience with Konfam`,
     html,
   });
 

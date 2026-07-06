@@ -74,20 +74,33 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* ROCAFIESTA Check-In — prominent shortcut for door staff */}
+      {/* Active Event Check-Ins */}
       <div>
         <h2 className="text-xl font-bold text-white/70 mb-4">🎪 Active Events</h2>
-        <Link
-          href="/admin/rocafiesta-checkin"
-          className="flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-2xl p-6 transition group"
-        >
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-amber-400/60">Door Check-In</p>
-            <h2 className="text-xl font-black text-white group-hover:text-amber-400 transition">ROCAFIESTA — A Spiritual Experience with Konfam</h2>
-            <p className="text-white/40 text-sm">Pyramid Cabaret · September 5, 2026 · Scan QR codes at the door</p>
-          </div>
-          <span className="text-3xl ml-6 group-hover:scale-110 transition-transform">📷</span>
-        </Link>
+        <div className="space-y-4">
+          <Link
+            href="/admin/sunset-session-checkin"
+            className="flex items-center justify-between bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/30 rounded-2xl p-6 transition group"
+          >
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#D4AF37]/60">Door Check-In</p>
+              <h2 className="text-xl font-black text-white group-hover:text-[#D4AF37] transition">Sunset Sessions Vol. 01 — Sip &amp; Paint</h2>
+              <p className="text-white/40 text-sm">Premium Rooftop Venue · July 31, 2026 · Scan QR codes at the door</p>
+            </div>
+            <span className="text-3xl ml-6 group-hover:scale-110 transition-transform">🎨</span>
+          </Link>
+          <Link
+            href="/admin/rocafiesta-checkin"
+            className="flex items-center justify-between bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-2xl p-6 transition group"
+          >
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-amber-400/60">Door Check-In</p>
+              <h2 className="text-xl font-black text-white group-hover:text-amber-400 transition">ROCAFIESTA — A Spiritual Experience with Konfam</h2>
+              <p className="text-white/40 text-sm">Pyramid Cabaret · September 5, 2026 · Scan QR codes at the door</p>
+            </div>
+            <span className="text-3xl ml-6 group-hover:scale-110 transition-transform">📷</span>
+          </Link>
+        </div>
       </div>
 
       {/* Tools section */}

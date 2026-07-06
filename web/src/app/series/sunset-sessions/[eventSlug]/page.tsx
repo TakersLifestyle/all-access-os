@@ -10,6 +10,15 @@ const SERIES_ID = "sunset-sessions";
 const TICKET_TYPES = ["supporter", "community", "public"] as const;
 type TicketType = (typeof TICKET_TYPES)[number];
 
+interface SuccessData {
+  email: string | null;
+  eventTitle: string;
+  ticketTierName: string;
+  quantity: number;
+  totalPrice: number;
+  orderId: string;
+}
+
 function fmt(n: number) {
   return `$${n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)}`;
 }
@@ -23,37 +32,95 @@ function formatDate(dateStr: string) {
   });
 }
 
-// ── Toast ──
-function Toast({ type, message, onClose }: { type: "success" | "cancel"; message: string; onClose: () => void }) {
+// ── Cancel Toast ──
+function CancelToast({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 7000);
     return () => clearTimeout(t);
   }, [onClose]);
   return (
-    <div
-      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-medium whitespace-nowrap ${
-        type === "success"
-          ? "bg-[#1a1200] border-[#D4AF37]/40 text-[#D4AF37]"
-          : "bg-white/10 border-white/20 text-white/60"
-      }`}
-    >
-      <span>{type === "success" ? "🌅" : "↩️"}</span>
-      <span>{message}</span>
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-medium whitespace-nowrap bg-white/10 border-white/20 text-white/60">
+      <span>↩️</span>
+      <span>No worries — your spot is still available.</span>
       <button onClick={onClose} className="ml-2 opacity-50 hover:opacity-100 transition text-lg leading-none">×</button>
     </div>
   );
 }
 
-function ToastWrapper() {
+// ── Success Modal ──
+function SuccessModal({ data, onClose }: { data: SuccessData; onClose: () => void }) {
+  const totalDisplay = `CA$${Number(data.totalPrice).toFixed(2)}`;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-[#0a0900] border border-[#D4AF37]/25 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+        <div className="text-5xl mb-4">🌅</div>
+        <p className="text-[10px] font-bold tracking-[0.2em] text-[#D4AF37]/60 uppercase mb-2">ALL ACCESS</p>
+        <h2 className="text-2xl font-black text-white mb-1">You&apos;re on the list.</h2>
+        <p className="text-[#D4AF37] font-semibold text-sm mb-6">Sunset Sessions Vol. 01 — Sip &amp; Paint</p>
+
+        <div className="bg-white/5 border border-white/8 rounded-2xl p-4 text-left space-y-3 mb-6">
+          <div className="flex justify-between text-sm">
+            <span className="text-white/40">Ticket</span>
+            <span className="text-white/80 font-semibold">{data.quantity} × {data.ticketTierName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-white/40">Date</span>
+            <span className="text-white/80">Thursday, July 31, 2026</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-white/40">Venue</span>
+            <span className="text-white/80">Premium Rooftop, Winnipeg</span>
+          </div>
+          <div className="flex justify-between text-sm border-t border-white/8 pt-3">
+            <span className="text-white/40">Total paid</span>
+            <span className="text-emerald-400 font-black">{totalDisplay}</span>
+          </div>
+        </div>
+
+        {data.email && (
+          <p className="text-white/30 text-xs mb-6">
+            Confirmation + QR code sent to <span className="text-white/50">{data.email}</span>
+          </p>
+        )}
+
+        <p className="text-white/20 text-[10px] font-mono mb-6">{data.orderId}</p>
+
+        <button
+          onClick={onClose}
+          className="w-full bg-[#D4AF37] text-black font-black py-3.5 rounded-xl hover:bg-[#c9a430] transition text-sm"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ToastWrapper({ onSuccess }: { onSuccess: (data: SuccessData) => void }) {
   const searchParams = useSearchParams();
-  const [toast, setToast] = useState<{ type: "success" | "cancel"; message: string } | null>(null);
+  const [showCancel, setShowCancel] = useState(false);
+
   useEffect(() => {
     const order = searchParams.get("order");
-    if (order === "success") setToast({ type: "success", message: "You're in. Check your email for confirmation." });
-    else if (order === "cancel") setToast({ type: "cancel", message: "No worries — your spot is still available." });
-  }, [searchParams]);
-  if (!toast) return null;
-  return <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />;
+    const orderId = searchParams.get("orderId");
+    const sessionId = searchParams.get("session_id");
+
+    if (order === "cancel") {
+      setShowCancel(true);
+    } else if (order === "success" && orderId && sessionId) {
+      fetch("/api/paint-sip-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, sessionId }),
+      })
+        .then((r) => r.json())
+        .then((data) => { if (data.ok) onSuccess(data); })
+        .catch(() => {});
+    }
+  }, [searchParams, onSuccess]);
+
+  if (showCancel) return <CancelToast onClose={() => setShowCancel(false)} />;
+  return null;
 }
 
 // ── FAQ Item ──
@@ -116,6 +183,7 @@ export default function SeriesEventPage() {
   const [quantity, setQuantity] = useState(1);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<SuccessData | null>(null);
 
   const ticketRef = useRef<HTMLDivElement>(null);
 
@@ -726,7 +794,13 @@ export default function SeriesEventPage() {
         </div>
       </footer>
 
-      <Suspense><ToastWrapper /></Suspense>
+      {successData && (
+        <SuccessModal
+          data={successData}
+          onClose={() => setSuccessData(null)}
+        />
+      )}
+      <Suspense><ToastWrapper onSuccess={setSuccessData} /></Suspense>
     </div>
   );
 }
