@@ -425,36 +425,40 @@ export default function CheckinPage() {
                 key={o.orderId}
                 className={`border rounded-xl px-4 py-3.5 flex items-center gap-3 transition ${
                   o.checkedIn
-                    ? "bg-emerald-950/20 border-emerald-700/20"
+                    ? "bg-emerald-950/30 border-emerald-600/30"
                     : "bg-white/[0.02] border-white/8"
                 }`}
               >
-                {/* Status dot */}
-                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${o.checkedIn ? "bg-emerald-400" : "bg-white/15"}`} />
+                {/* Checkmark / dot */}
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                  {o.checkedIn
+                    ? <span className="text-xl">✅</span>
+                    : <div className="w-3 h-3 rounded-full bg-white/15" />}
+                </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white/80 truncate">{o.userEmail || "—"}</p>
-                  <p className="text-xs text-white/30 mt-0.5">
+                  <p className="text-sm font-semibold text-white/90 truncate">{o.userEmail || "Guest"}</p>
+                  <p className="text-xs text-white/35 mt-0.5">
                     {o.quantity} × {o.ticketTierName}
-                    {o.checkedIn && o.checkedInAt
-                      ? <span className="text-emerald-500/60 ml-2">✓ {fmt12(o.checkedInAt)}</span>
-                      : null}
                   </p>
+                  <p className="text-[10px] font-mono text-white/20 mt-0.5 truncate">{o.orderId}</p>
+                  {o.checkedIn && o.checkedInAt && (
+                    <p className="text-[10px] text-emerald-400/70 mt-0.5">✓ Checked in at {fmt12(o.checkedInAt)}</p>
+                  )}
                 </div>
 
                 {/* Check-in button */}
-                {!o.checkedIn && (
+                {!o.checkedIn ? (
                   <button
                     onClick={() => manualCheckin(o.orderId)}
                     disabled={manualCheckinId === o.orderId}
-                    className="flex-shrink-0 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-black px-3 py-1.5 rounded-lg transition"
+                    className="flex-shrink-0 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black text-xs font-black px-3 py-2 rounded-lg transition"
                   >
                     {manualCheckinId === o.orderId ? "…" : "Check In"}
                   </button>
-                )}
-                {o.checkedIn && (
-                  <span className="flex-shrink-0 text-emerald-400/50 text-xs font-bold">IN ✓</span>
+                ) : (
+                  <span className="flex-shrink-0 text-emerald-400 text-sm font-black">IN</span>
                 )}
               </div>
             ))}
