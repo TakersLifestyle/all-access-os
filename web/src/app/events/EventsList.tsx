@@ -971,10 +971,6 @@ function EventCard({
               <div className="bg-emerald-600/90 backdrop-blur-sm border border-emerald-400/30 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg">
                 {fmt(userTicket.totalPrice)}
               </div>
-            ) : !isSignedIn ? (
-              <div className="bg-emerald-600/90 backdrop-blur-sm text-white text-sm font-bold px-4 py-2 rounded-xl border border-emerald-500/40 shadow-lg">
-                FREE
-              </div>
             ) : isMember && memberDiscountedPrice > 0 ? (
               <div className="space-y-0.5 text-right">
                 <div className="bg-pink-600 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-pink-900/50">
@@ -1022,8 +1018,6 @@ function EventCard({
               <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-600/20 border-emerald-500/30 text-emerald-400">
                 {fmt(userTicket.totalPrice)} paid
               </span>
-            ) : !isSignedIn ? (
-              <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-emerald-600/20 border-emerald-500/30 text-emerald-400">FREE</span>
             ) : isMember && memberDiscountedPrice > 0 ? (
               <div className="text-right">
                 <span className="text-sm font-bold px-3 py-1.5 rounded-xl border bg-pink-600/20 border-pink-500/30 text-pink-300">{fmt(memberDiscountedPrice)}</span>
@@ -1133,8 +1127,6 @@ function EventCard({
             <div className="w-full text-center py-3 rounded-xl border border-white/10 text-white/25 text-sm font-medium cursor-not-allowed">
               Sold Out
             </div>
-          ) : !isSignedIn ? (
-            <SignInGate isLaunchEvent={ev.isLaunchEvent} />
           ) : (
             <>
               {/* Quantity selector */}
