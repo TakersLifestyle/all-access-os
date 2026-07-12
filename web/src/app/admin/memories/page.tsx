@@ -1430,16 +1430,17 @@ function PhotoMediaItem({
   const [loaded, setLoaded] = useState(false);
   return (
     <div className="group relative aspect-square overflow-hidden rounded-xl bg-white/5">
+      {/* skeleton shown until image loads */}
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-white/[0.06]" />}
       <img
         src={imgSrc}
         alt={item.caption}
         loading="lazy"
         onLoad={() => setLoaded(true)}
         onError={() => {
-          // retry once with cache-bust then give up
           if (!imgSrc.includes("&retry=1")) setImgSrc(imgSrc + "&retry=1");
         }}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
       {/* Badges */}
       <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
