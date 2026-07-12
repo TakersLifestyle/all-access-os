@@ -342,8 +342,9 @@ export default function AdminMemoriesPage() {
     const fileArray = Array.from(files).filter(f => f.type.startsWith("video/"));
     if (fileArray.length === 0) return;
 
+    const ts = Date.now();
     const initialQueue: UploadItem[] = fileArray.map((f, i) => ({
-      id: `${Date.now()}-${i}`,
+      id: `${ts}-${i}`,
       name: f.name,
       progress: 0,
       status: "queued",
@@ -351,14 +352,13 @@ export default function AdminMemoriesPage() {
     setVideoUploadQueue(initialQueue);
     setVideoUploading(true);
 
-    for (let i = 0; i < fileArray.length; i++) {
-      const file = fileArray[i];
+    await Promise.all(fileArray.map((file, i) => {
       const queueId = initialQueue[i].id;
 
-      await new Promise<void>(resolve => {
+      return new Promise<void>(resolve => {
         setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "uploading" } : q));
 
-        const storagePath = `memories/${selectedAlbum.id}/videos/${Date.now()}_${file.name}`;
+        const storagePath = `memories/${selectedAlbum.id}/videos/${ts}_${i}_${file.name}`;
         const sRef = storageRef(storage, storagePath);
         const task = uploadBytesResumable(sRef, file);
 
@@ -399,7 +399,7 @@ export default function AdminMemoriesPage() {
           }
         );
       });
-    }
+    }));
 
     await loadMedia(selectedAlbum.id);
     setVideoUploading(false);
