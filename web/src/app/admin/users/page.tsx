@@ -155,10 +155,19 @@ export default function AdminUsersPage() {
     await fetchMembers();
   };
 
+  const syncClaims = async (uid: string, role: string, status: string) => {
+    const token = await user!.getIdToken();
+    await fetch("/api/admin/sync-claims", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ uid, role, status }),
+    });
+  };
+
   const toggleStatus = async (member: Member) => {
     const newStatus = member.status === "active" ? "inactive" : "active";
     setUpdating(member.id);
-    await updateDoc(doc(db, "users", member.id), { status: newStatus });
+    await syncClaims(member.id, member.role ?? "member", newStatus);
     setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, status: newStatus } : m));
     setUpdating(null);
   };
@@ -167,7 +176,7 @@ export default function AdminUsersPage() {
     const newRole = member.role === "admin" ? "member" : "admin";
     if (!confirm(`Set ${member.email} as ${newRole}?`)) return;
     setUpdating(member.id);
-    await updateDoc(doc(db, "users", member.id), { role: newRole });
+    await syncClaims(member.id, newRole, member.status ?? "inactive");
     setMembers((prev) => prev.map((m) => m.id === member.id ? { ...m, role: newRole } : m));
     setUpdating(null);
   };
