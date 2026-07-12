@@ -1,9 +1,12 @@
 import * as path from "path";
+import * as crypto from "crypto";
 import * as dotenv from "dotenv";
 import { onRequest } from "firebase-functions/v2/https";
+import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
+import sharp from "sharp";
 
 // Local dev only — production env vars injected by Cloud Functions runtime
 dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
@@ -17,7 +20,6 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
-const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -199,174 +201,66 @@ export const createCheckoutSession = onRequest(
   }
 );
 
+// NOTE: Stripe webhook is handled by the Next.js API route at /api/webhook (Vercel).
+// No Cloud Function needed here.
+
 // ─────────────────────────────────────────────────────────────────────────────
-// STRIPE WEBHOOK
-// Handles all subscription lifecycle events from Stripe.
-// Verifies signature → syncs user in Firestore → sets Auth custom claims.
+// MEMORY THUMBNAIL GENERATOR
+// Triggers on every new file in memories/*/photos/**
+// Resizes to max 800×800, stores in memories/*/thumbnails/, updates Firestore
 // ─────────────────────────────────────────────────────────────────────────────
-export const stripeWebhook = onRequest(
-  {
-    region: "us-central1",
-    secrets: [stripeSecretKey, stripeWebhookSecret],
-    // Raw body required for Stripe signature verification
-    invoker: "public",
-  },
-  async (req, res) => {
-    if (req.method !== "POST") {
-      res.status(405).json({ error: "Method not allowed" });
-      return;
-    }
+export const generateMemoryThumbnail = onObjectFinalized(
+  { region: "us-east1", memory: "1GiB", timeoutSeconds: 300 },
+  async (event) => {
+    const filePath = event.data.name;
+    const bucketName = event.data.bucket;
+    const contentType = event.data.contentType ?? "";
 
-    const STRIPE_SECRET_KEY =
-      stripeSecretKey.value() || process.env.STRIPE_SECRET_KEY;
-    const STRIPE_WEBHOOK_SECRET =
-      stripeWebhookSecret.value() || process.env.STRIPE_WEBHOOK_SECRET;
-
-    if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET) {
-      console.error("Missing Stripe secrets");
-      res.status(500).json({ error: "Server misconfigured" });
-      return;
-    }
-
-    const stripe = new Stripe(STRIPE_SECRET_KEY);
-    const sig = req.headers["stripe-signature"];
-
-    let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig as string,
-        STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("Webhook signature verification failed:", message);
-      res.status(400).json({ error: `Webhook error: ${message}` });
-      return;
-    }
-
-    console.log(`[webhook] event: ${event.type}`);
+    // Only handle images inside memories/*/photos/
+    if (!filePath || !filePath.match(/^memories\/[^/]+\/photos\//)) return;
+    if (!contentType.startsWith("image/")) return;
 
     try {
-      switch (event.type) {
-        // ── Subscription created or updated ──────────────────
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
-          const uid = session.client_reference_id;
-          const customerId = session.customer as string;
-          const subscriptionId = session.subscription as string;
+      const bucket = admin.storage().bucket(bucketName);
 
-          if (!uid) {
-            console.error("[webhook] checkout.session.completed — no uid in client_reference_id");
-            break;
-          }
-          if (!subscriptionId) {
-            console.error("[webhook] checkout.session.completed — no subscription id");
-            break;
-          }
+      const [buffer] = await bucket.file(filePath).download();
 
-          // Retrieve full subscription to get status
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const resized = await sharp(buffer)
+        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 82, progressive: true })
+        .toBuffer();
 
-          await syncUserSubscription({
-            uid,
-            stripeCustomerId: customerId,
-            stripeSubscriptionId: subscriptionId,
-            stripeStatus: subscription.status,
-            stripeCurrentPeriodEnd: subscription.current_period_end,
-            stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
-          });
-          break;
-        }
+      const thumbPath = filePath.replace("/photos/", "/thumbnails/");
+      const thumbFile = bucket.file(thumbPath);
+      const token = crypto.randomUUID();
 
-        // ── Subscription renewed / updated (billing cycle, plan change) ──
-        case "customer.subscription.updated": {
-          const subscription = event.data.object as Stripe.Subscription;
-          const uid = await uidFromCustomerId(subscription.customer as string);
-          if (!uid) break;
+      await thumbFile.save(resized, {
+        metadata: {
+          contentType: "image/jpeg",
+          metadata: { firebaseStorageDownloadTokens: token },
+        },
+      });
 
-          await syncUserSubscription({
-            uid,
-            stripeCustomerId: subscription.customer as string,
-            stripeSubscriptionId: subscription.id,
-            stripeStatus: subscription.status,
-            stripeCurrentPeriodEnd: subscription.current_period_end,
-            stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
-          });
-          break;
-        }
+      const encodedPath = encodeURIComponent(thumbPath);
+      const thumbnailUrl =
+        `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${token}`;
 
-        // ── Subscription cancelled ────────────────────────────
-        case "customer.subscription.deleted": {
-          const subscription = event.data.object as Stripe.Subscription;
-          const uid = await uidFromCustomerId(subscription.customer as string);
-          if (!uid) break;
+      // Update the Firestore memoryMedia doc for this original path
+      const snap = await db
+        .collection("memoryMedia")
+        .where("storagePath", "==", filePath)
+        .limit(1)
+        .get();
 
-          await syncUserSubscription({
-            uid,
-            stripeCustomerId: subscription.customer as string,
-            stripeSubscriptionId: subscription.id,
-            stripeStatus: "canceled",
-            stripeCurrentPeriodEnd: subscription.current_period_end,
-            stripeCancelAtPeriodEnd: false,
-          });
-          break;
-        }
-
-        // ── Invoice paid (renewal confirmed) ─────────────────
-        case "invoice.payment_succeeded": {
-          const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.billing_reason === "subscription_create") break; // Already handled above
-          const subId = invoice.subscription as string;
-          if (!subId) break;
-
-          const subscription = await stripe.subscriptions.retrieve(subId);
-          const uid = await uidFromCustomerId(invoice.customer as string);
-          if (!uid) break;
-
-          await syncUserSubscription({
-            uid,
-            stripeCustomerId: invoice.customer as string,
-            stripeSubscriptionId: subId,
-            stripeStatus: subscription.status,
-            stripeCurrentPeriodEnd: subscription.current_period_end,
-            stripeCancelAtPeriodEnd: subscription.cancel_at_period_end,
-          });
-          break;
-        }
-
-        // ── Payment failed (past_due) ─────────────────────────
-        case "invoice.payment_failed": {
-          const invoice = event.data.object as Stripe.Invoice;
-          const subId = invoice.subscription as string;
-          if (!subId) break;
-
-          const uid = await uidFromCustomerId(invoice.customer as string);
-          if (!uid) break;
-
-          await syncUserSubscription({
-            uid,
-            stripeCustomerId: invoice.customer as string,
-            stripeSubscriptionId: subId,
-            stripeStatus: "past_due",
-            stripeCurrentPeriodEnd: undefined,
-            stripeCancelAtPeriodEnd: false,
-          });
-          break;
-        }
-
-        default:
-          console.log(`[webhook] unhandled event: ${event.type}`);
+      if (!snap.empty) {
+        await snap.docs[0].ref.update({ thumbnailUrl });
+        console.log(`[thumbnail] ✓ ${filePath}`);
+      } else {
+        console.warn(`[thumbnail] no Firestore doc for: ${filePath}`);
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[webhook] handler error:", message);
-      // Return 200 to prevent Stripe retrying — log the issue for manual review
-      res.status(200).json({ received: true, warning: message });
-      return;
+    } catch (err) {
+      console.error(`[thumbnail] error for ${filePath}:`, err);
     }
-
-    res.status(200).json({ received: true });
   }
 );
 

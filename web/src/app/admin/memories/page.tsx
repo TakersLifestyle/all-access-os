@@ -39,8 +39,8 @@ interface MemoryMedia {
   albumId: string;
   type: "photo" | "video" | "creator_content";
   url: string;
-  storagePath?: string;
   thumbnailUrl?: string;
+  storagePath?: string;
   caption: string;
   isPinned: boolean;
   isFeatured?: boolean;
@@ -1426,7 +1426,7 @@ function PhotoMediaItem({
   onMove: () => void;
 }) {
   const canFeature = item.isFeatured || featuredCount < 10;
-  const [imgSrc, setImgSrc] = useState(item.url);
+  const [imgSrc, setImgSrc] = useState(item.thumbnailUrl || item.url);
   const [loaded, setLoaded] = useState(false);
   return (
     <div className="group relative aspect-square overflow-hidden rounded-xl bg-white/5">
