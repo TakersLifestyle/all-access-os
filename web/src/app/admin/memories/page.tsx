@@ -139,8 +139,11 @@ export default function AdminMemoriesPage() {
   const [moving, setMoving] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadOpen, setPendingUploadOpen] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadQueue, setVideoUploadQueue] = useState<UploadItem[]>([]);
 
   useEffect(() => {
     if (!loading && !isAdmin) router.push("/");
@@ -335,6 +338,76 @@ export default function AdminMemoriesPage() {
     setTimeout(() => setUploadQueue([]), 5000);
   }, [selectedAlbum, user, profile]);
 
+  const handleVideoUpload = useCallback(async (files: FileList | File[]) => {
+    if (!selectedAlbum || !user) return;
+
+    const fileArray = Array.from(files).filter(f => f.type.startsWith("video/"));
+    if (fileArray.length === 0) return;
+
+    const initialQueue: UploadItem[] = fileArray.map((f, i) => ({
+      id: `${Date.now()}-${i}`,
+      name: f.name,
+      progress: 0,
+      status: "queued",
+    }));
+    setVideoUploadQueue(initialQueue);
+    setVideoUploading(true);
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const queueId = initialQueue[i].id;
+
+      await new Promise<void>(resolve => {
+        setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "uploading" } : q));
+
+        const storagePath = `memories/${selectedAlbum.id}/videos/${Date.now()}_${file.name}`;
+        const sRef = storageRef(storage, storagePath);
+        const task = uploadBytesResumable(sRef, file);
+
+        task.on("state_changed",
+          snapshot => {
+            const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, progress: pct } : q));
+          },
+          () => {
+            setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "error" } : q));
+            resolve();
+          },
+          async () => {
+            try {
+              const url = await getDownloadURL(task.snapshot.ref);
+              await addDoc(collection(db, "memoryMedia"), {
+                albumId: selectedAlbum.id,
+                type: "video",
+                url,
+                storagePath,
+                caption: "",
+                isPinned: false,
+                isFeatured: false,
+                downloadEnabled: true,
+                likesCount: 0,
+                commentsCount: 0,
+                uploadedBy: user.uid,
+                uploadedByName: profile?.displayName ?? profile?.email ?? "Admin",
+                createdAt: serverTimestamp(),
+                likedBy: [],
+              });
+              await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { videoCount: increment(1) });
+              setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "done", progress: 100 } : q));
+            } catch {
+              setVideoUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "error" } : q));
+            }
+            resolve();
+          }
+        );
+      });
+    }
+
+    await loadMedia(selectedAlbum.id);
+    setVideoUploading(false);
+    setTimeout(() => setVideoUploadQueue([]), 5000);
+  }, [selectedAlbum, user, profile]);
+
   const setAsCover = async (url: string) => {
     if (!selectedAlbum) return;
     await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { coverImageUrl: url });
@@ -489,10 +562,12 @@ export default function AdminMemoriesPage() {
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (!selectedAlbum || mediaTab !== "photo") return;
+    if (!selectedAlbum) return;
     const files = e.dataTransfer.files;
-    if (files.length > 0) handlePhotoUpload(files);
-  }, [selectedAlbum, mediaTab, handlePhotoUpload]);
+    if (files.length === 0) return;
+    if (mediaTab === "photo") handlePhotoUpload(files);
+    else if (mediaTab === "video") handleVideoUpload(files);
+  }, [selectedAlbum, mediaTab, handlePhotoUpload, handleVideoUpload]);
 
   if (loading || !isAdmin) return null;
 
@@ -505,7 +580,7 @@ export default function AdminMemoriesPage() {
   return (
     <main
       className="max-w-6xl mx-auto px-6 py-12 space-y-8"
-      onDragOver={e => { e.preventDefault(); if (selectedAlbum && mediaTab === "photo") setIsDragOver(true); }}
+      onDragOver={e => { e.preventDefault(); if (selectedAlbum && (mediaTab === "photo" || mediaTab === "video")) setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={onDrop}
     >
@@ -552,8 +627,8 @@ export default function AdminMemoriesPage() {
       {isDragOver && (
         <div className="fixed inset-0 z-50 bg-pink-950/80 border-4 border-dashed border-pink-400/60 flex items-center justify-center pointer-events-none">
           <div className="text-center space-y-3">
-            <p className="text-6xl">📸</p>
-            <p className="text-white text-2xl font-bold">Drop photos to upload</p>
+            <p className="text-6xl">{mediaTab === "video" ? "🎥" : "📸"}</p>
+            <p className="text-white text-2xl font-bold">Drop {mediaTab === "video" ? "videos" : "photos"} to upload</p>
             <p className="text-white/50 text-sm">to {selectedAlbum?.title}</p>
           </div>
         </div>
@@ -726,7 +801,7 @@ export default function AdminMemoriesPage() {
         {/* Right panel */}
         {selectedAlbum ? (
           <div className="space-y-5">
-            {/* Always-rendered hidden file input — keeps ref stable */}
+            {/* Always-rendered hidden file inputs — keeps refs stable */}
             <input
               type="file"
               ref={photoInputRef}
@@ -734,10 +809,17 @@ export default function AdminMemoriesPage() {
               multiple
               className="hidden"
               onChange={e => {
-                if (e.target.files) {
-                  handlePhotoUpload(e.target.files);
-                  e.target.value = "";
-                }
+                if (e.target.files) { handlePhotoUpload(e.target.files); e.target.value = ""; }
+              }}
+            />
+            <input
+              type="file"
+              ref={videoInputRef}
+              accept="video/*"
+              multiple
+              className="hidden"
+              onChange={e => {
+                if (e.target.files) { handleVideoUpload(e.target.files); e.target.value = ""; }
               }}
             />
             {/* Album info bar */}
@@ -1032,22 +1114,77 @@ export default function AdminMemoriesPage() {
 
             {/* Add video */}
             {mediaTab === "video" && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-4">
-                <div>
-                  <h3 className="font-semibold text-white/70 text-sm">Add Video</h3>
-                  <p className="text-white/25 text-xs mt-1">Paste a YouTube, TikTok, Instagram, or direct video URL</p>
-                </div>
-                <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Direct file upload */}
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={videoUploading}
+                  className={`w-full border-2 border-dashed rounded-2xl py-8 flex flex-col items-center gap-3 transition disabled:cursor-not-allowed ${
+                    videoUploading
+                      ? "border-pink-500/30 bg-pink-950/10"
+                      : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
+                  }`}
+                >
+                  {videoUploading ? (
+                    <>
+                      <div className="w-8 h-8 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin" />
+                      <p className="text-white/50 text-sm">
+                        {videoUploadQueue.filter(q => q.status === "done").length} / {videoUploadQueue.length} uploaded
+                        {videoUploadQueue.filter(q => q.status === "error").length > 0
+                          ? ` · ${videoUploadQueue.filter(q => q.status === "error").length} failed` : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl">🎥</span>
+                      <div className="text-center">
+                        <p className="text-white/60 text-sm font-medium">Click to select videos</p>
+                        <p className="text-white/25 text-xs mt-1">Or drag &amp; drop · MP4, MOV, AVI, WEBM supported</p>
+                      </div>
+                    </>
+                  )}
+                </button>
+
+                {/* Per-file progress */}
+                {videoUploadQueue.length > 0 && (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {videoUploadQueue.map(item => (
+                      <div key={item.id} className="flex items-center gap-3 px-3 py-2 bg-white/[0.03] rounded-xl">
+                        <span className="text-sm shrink-0">
+                          {item.status === "done" ? "✅" : item.status === "error" ? "❌" : item.status === "uploading" ? "⬆️" : "⏳"}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/60 text-xs truncate">{item.name}</p>
+                          {item.status === "uploading" && (
+                            <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-pink-500 rounded-full transition-all duration-150" style={{ width: `${item.progress}%` }} />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-white/30 text-xs shrink-0">
+                          {item.status === "uploading" ? `${item.progress}%` : item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* URL paste option */}
+                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-white/70 text-sm">Or paste a URL</h3>
+                    <p className="text-white/25 text-xs mt-0.5">YouTube, TikTok, Instagram, or direct video link</p>
+                  </div>
                   <input
                     value={videoUrl}
                     onChange={e => setVideoUrl(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=... or direct .mp4 URL"
+                    placeholder="https://youtube.com/watch?v=..."
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-pink-500/50"
                   />
                   <input
                     value={videoThumbnail}
                     onChange={e => setVideoThumbnail(e.target.value)}
-                    placeholder="Thumbnail image URL (shown in Featured Moments strip)"
+                    placeholder="Thumbnail image URL (optional)"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-pink-500/50"
                   />
                   <input
