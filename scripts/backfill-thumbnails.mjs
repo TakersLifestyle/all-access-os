@@ -10,25 +10,28 @@
 
 import { createRequire } from "module";
 import crypto from "crypto";
-
-const require = createRequire(import.meta.url);
-const admin = require("firebase-admin");
-const sharp = require("sharp");
-
-// Load service account credentials from the functions .env.local
-import { config } from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(__dirname, "../functions/.env.local") });
+// Resolve packages from functions/ where firebase-admin, sharp, dotenv are installed
+const require = createRequire(new URL("../functions/package.json", import.meta.url));
+
+const dotenv = require("dotenv");
+// Try web/.env.local first (has FIREBASE_SERVICE_ACCOUNT_KEY), then functions/.env.local
+dotenv.config({ path: resolve(__dirname, "../web/.env.local") });
+dotenv.config({ path: resolve(__dirname, "../functions/.env.local") });
+
+const admin = require("firebase-admin");
+const sharp = require("sharp");
 
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  });
+  const bucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    || process.env.FIREBASE_STORAGE_BUCKET;
+  if (!bucket) throw new Error("Set NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET in web/.env.local");
+  // Use Application Default Credentials (gcloud auth application-default login)
+  // or GOOGLE_APPLICATION_CREDENTIALS pointing to a service account key file
+  admin.initializeApp({ storageBucket: bucket });
 }
 
 const db = admin.firestore();

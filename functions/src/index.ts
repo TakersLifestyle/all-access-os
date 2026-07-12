@@ -303,3 +303,73 @@ export const forceTokenRefresh = onRequest(
     res.status(200).json({ message: "Refresh your ID token with user.getIdToken(true)" });
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BACKFILL THUMBNAILS (one-time utility — call once, then redeploy to remove)
+// GET /backfillThumbnails?secret=<BACKFILL_SECRET>&offset=0&limit=20
+// Generates thumbnails for existing memoryMedia photos that don't have one yet.
+// Process in batches by incrementing offset until processed === 0.
+// ─────────────────────────────────────────────────────────────────────────────
+export const backfillThumbnails = onRequest(
+  { region: "us-central1", memory: "2GiB", timeoutSeconds: 540, invoker: "public" },
+  async (req, res) => {
+    if (req.query["secret"] !== (process.env.BACKFILL_SECRET || "allaccess2026")) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const offset = parseInt(String(req.query["offset"] || "0"), 10);
+    const limit = parseInt(String(req.query["limit"] || "20"), 10);
+
+    try {
+      const snap = await db.collection("memoryMedia")
+        .where("type", "==", "photo")
+        .limit(limit)
+        .offset(offset)
+        .get();
+
+      const missing = snap.docs.filter(d => !d.data().thumbnailUrl);
+      const results: string[] = [];
+
+      for (const doc of missing) {
+        const data = doc.data();
+        const filePath: string = data.storagePath;
+        if (!filePath) { results.push(`skip(no path):${doc.id}`); continue; }
+
+        try {
+          const bucket = admin.storage().bucket(data.bucketName || undefined);
+          const [buffer] = await bucket.file(filePath).download();
+          const resized = await sharp(buffer)
+            .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 82, progressive: true })
+            .toBuffer();
+
+          const thumbPath = filePath.replace("/photos/", "/thumbnails/");
+          const thumbFile = bucket.file(thumbPath);
+          const token = crypto.randomUUID();
+          await thumbFile.save(resized, {
+            metadata: { contentType: "image/jpeg", metadata: { firebaseStorageDownloadTokens: token } },
+          });
+
+          const bucketName = bucket.name;
+          const encodedPath = encodeURIComponent(thumbPath);
+          const thumbnailUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${token}`;
+          await doc.ref.update({ thumbnailUrl });
+          results.push(`✓ ${filePath}`);
+        } catch (err: unknown) {
+          results.push(`✗ ${filePath}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      res.status(200).json({
+        offset,
+        fetched: snap.docs.length,
+        processed: missing.length,
+        results,
+        nextOffset: snap.docs.length < limit ? null : offset + limit,
+      });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+);
