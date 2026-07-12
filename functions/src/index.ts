@@ -318,6 +318,22 @@ export const backfillThumbnails = onRequest(
       return;
     }
 
+    // mode=cleanup — delete broken docs (no thumbnailUrl) for a given albumId
+    if (req.query["mode"] === "cleanup") {
+      const albumId = String(req.query["albumId"] || "");
+      if (!albumId) { res.status(400).json({ error: "albumId required" }); return; }
+      const snap = await db.collection("memoryMedia")
+        .where("albumId", "==", albumId)
+        .where("type", "==", "photo")
+        .get();
+      const broken = snap.docs.filter(d => !d.data().thumbnailUrl);
+      const batch = db.batch();
+      broken.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      res.status(200).json({ deleted: broken.length, total: snap.docs.length });
+      return;
+    }
+
     const offset = parseInt(String(req.query["offset"] || "0"), 10);
     const limit = parseInt(String(req.query["limit"] || "20"), 10);
 
