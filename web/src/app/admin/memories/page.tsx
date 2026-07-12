@@ -140,6 +140,7 @@ export default function AdminMemoriesPage() {
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [pendingUploadOpen, setPendingUploadOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAdmin) router.push("/");
@@ -173,7 +174,7 @@ export default function AdminMemoriesPage() {
     setMedia(result);
   };
 
-  const selectAlbum = async (album: MemoryAlbum) => {
+  const selectAlbum = async (album: MemoryAlbum, openFilePicker = false) => {
     setSelectedAlbum(album);
     setMedia([]);
     setFeaturedLimitError(false);
@@ -183,8 +184,16 @@ export default function AdminMemoriesPage() {
     setEditFocalX(album.focalX ?? 50);
     setEditFocalY(album.focalY ?? 50);
     setEditZoom(album.zoom ?? 1);
+    if (openFilePicker) setPendingUploadOpen(true);
     await loadMedia(album.id);
   };
+
+  useEffect(() => {
+    if (pendingUploadOpen && selectedAlbum && photoInputRef.current) {
+      setPendingUploadOpen(false);
+      photoInputRef.current.click();
+    }
+  }, [pendingUploadOpen, selectedAlbum]);
 
   const uploadCoverImage = async (file: File, albumId: string): Promise<string> => {
     const sRef = storageRef(storage, `memories/${albumId}/covers/${Date.now()}_${file.name}`);
@@ -706,7 +715,7 @@ export default function AdminMemoriesPage() {
                 album={album}
                 isSelected={selectedAlbum?.id === album.id}
                 onSelect={() => selectAlbum(album)}
-                onUpload={() => { selectAlbum(album); setMediaTab("photo"); }}
+                onUpload={() => selectAlbum(album, true)}
                 onToggleStatus={() => toggleAlbumStatus(album)}
                 onDelete={() => deleteAlbum(album)}
               />
@@ -717,6 +726,20 @@ export default function AdminMemoriesPage() {
         {/* Right panel */}
         {selectedAlbum ? (
           <div className="space-y-5">
+            {/* Always-rendered hidden file input — keeps ref stable */}
+            <input
+              type="file"
+              ref={photoInputRef}
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => {
+                if (e.target.files) {
+                  handlePhotoUpload(e.target.files);
+                  e.target.value = "";
+                }
+              }}
+            />
             {/* Album info bar */}
             <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
               <div className="flex items-start gap-4 flex-wrap">
@@ -950,14 +973,6 @@ export default function AdminMemoriesPage() {
             {/* Photo upload zone */}
             {mediaTab === "photo" && (
               <div className="space-y-4">
-                <input
-                  type="file"
-                  ref={photoInputRef}
-                  accept="image/*"
-                  multiple
-                  onChange={e => e.target.files && handlePhotoUpload(e.target.files)}
-                  className="hidden"
-                />
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploading}
