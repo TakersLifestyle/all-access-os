@@ -233,6 +233,12 @@ function MasonryPhotoGrid({
               src={photo.thumbnailUrl || photo.url}
               alt={photo.caption ?? ""}
               loading="lazy"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (photo.thumbnailUrl && img.src !== photo.url) {
+                  img.src = photo.url;
+                }
+              }}
               className="w-full block transition-transform duration-300 group-hover:scale-[1.02]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

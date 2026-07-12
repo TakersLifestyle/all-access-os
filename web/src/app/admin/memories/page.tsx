@@ -1430,7 +1430,6 @@ function PhotoMediaItem({
   const [loaded, setLoaded] = useState(false);
   return (
     <div className="group relative aspect-square overflow-hidden rounded-xl bg-white/5">
-      {/* skeleton shown until image loads */}
       {!loaded && <div className="absolute inset-0 animate-pulse bg-white/[0.06]" />}
       <img
         src={imgSrc}
@@ -1438,7 +1437,12 @@ function PhotoMediaItem({
         loading="lazy"
         onLoad={() => setLoaded(true)}
         onError={() => {
-          if (!imgSrc.includes("&retry=1")) setImgSrc(imgSrc + "&retry=1");
+          if (item.thumbnailUrl && imgSrc === item.thumbnailUrl) {
+            // Thumbnail broken → fall back to original
+            setImgSrc(item.url);
+          } else if (!imgSrc.includes("&retry=1")) {
+            setImgSrc(imgSrc + "&retry=1");
+          }
         }}
         className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
