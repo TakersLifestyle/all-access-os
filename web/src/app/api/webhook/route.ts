@@ -292,13 +292,14 @@ export async function POST(req: NextRequest) {
               `[webhook] eventPurchases written | orderId=${orderId} userId=${purchaseUserId ?? "null"}`
             );
 
-            // Grant hasCommunityAccess + accountType — event attendees become Community Members
+            // Grant full member access — ticket purchase = active member on the platform
             if (purchaseUserId) {
               try {
                 const auth = adminAuth();
                 const existingRecord = await auth.getUser(purchaseUserId);
                 const existingClaims = (existingRecord.customClaims ?? {}) as Record<string, unknown>;
-                // Preserve supporter status if already a $25/mo subscriber
+                // Preserve admin role and supporter status if already a $25/mo subscriber
+                const preservedRole = existingClaims.role === "admin" ? "admin" : "member";
                 const isAlreadySupporter =
                   existingClaims.accountType === "supporter" ||
                   existingClaims.status === "active";
@@ -306,20 +307,24 @@ export async function POST(req: NextRequest) {
 
                 await auth.setCustomUserClaims(purchaseUserId, {
                   ...existingClaims,
+                  role: preservedRole,
+                  status: "active",
                   hasCommunityAccess: true,
                   accountType: newAccountType,
                 });
                 await db.collection("users").doc(purchaseUserId).set(
                   {
+                    role: preservedRole,
+                    status: "active",
                     hasCommunityAccess: true,
                     accountType: newAccountType,
                     updatedAt: new Date().toISOString(),
                   },
                   { merge: true }
                 );
-                console.log(`[webhook] community access granted | uid=${purchaseUserId} accountType=${newAccountType}`);
+                console.log(`[webhook] full access granted | uid=${purchaseUserId} role=${preservedRole} accountType=${newAccountType}`);
               } catch (err) {
-                console.error("[webhook] community access claim grant failed:", err);
+                console.error("[webhook] access claim grant failed:", err);
               }
             }
 
