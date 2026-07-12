@@ -445,6 +445,65 @@ export default function RocafiestaPage() {
                   September 5th, 2026 — Winnipeg&apos;s stage is his.
                 </p>
               </div>
+
+              {/* Social links */}
+              <div className="space-y-3 pt-1">
+                {/* YouTube — primary */}
+                <a
+                  href="https://www.youtube.com/@konfam"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 bg-red-950/40 hover:bg-red-950/60 border border-red-700/30 hover:border-red-600/50 rounded-xl px-4 py-3.5 transition group"
+                >
+                  <svg className="w-5 h-5 text-red-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold text-sm">Watch on YouTube</p>
+                    <p className="text-white/35 text-xs">@konfam</p>
+                  </div>
+                  <svg className="w-4 h-4 text-white/20 group-hover:text-white/50 transition shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+
+                {/* Other socials */}
+                <div className="flex gap-2">
+                  <a
+                    href="https://www.instagram.com/konfam/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center gap-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 transition group"
+                  >
+                    <svg className="w-4 h-4 text-pink-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                    <span className="text-white/70 text-xs font-semibold">Instagram</span>
+                  </a>
+                  <a
+                    href="https://www.threads.com/@konfam"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center gap-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 transition group"
+                  >
+                    <svg className="w-4 h-4 text-white/60 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.822-2.047 1.679-1.621 1.594-3.583 1.062-4.799-.303-.7-.953-1.236-1.795-1.585-.2.857-.545 1.806-1.11 2.562-1.002 1.357-2.498 2.072-4.44 2.124-1.552.04-3.012-.404-4.104-1.252-1.27-.978-1.953-2.41-1.914-4.035.038-1.546.73-2.916 1.945-3.861 1.207-.939 2.852-1.423 4.756-1.403 1.39.014 2.677.329 3.837.933.09-.592.134-1.207.134-1.837V8.5c0-2.485-2.019-4.504-4.504-4.504h-.012C8.507 4.01 6.5 6.015 6.5 8.5v.012c0 .552-.448 1-1 1s-1-.448-1-1V8.5C4.5 4.91 7.41 2 11 2h.012c3.59.014 6.488 2.924 6.488 6.512v.488c0 .948-.112 1.877-.329 2.777.733.417 1.352.994 1.806 1.708.845 1.319 1.003 2.922.441 4.333C18.012 19.853 15.706 24 12.193 24h-.007z"/>
+                    </svg>
+                    <span className="text-white/70 text-xs font-semibold">Threads</span>
+                  </a>
+                  <a
+                    href="https://linktr.ee/rocboy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center gap-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 transition group"
+                  >
+                    <svg className="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.953 15.066c-.08.163-.08.324-.08.486.08.517.528.897 1.052.897h5.897c.528 0 .975-.38 1.052-.897.016-.162 0-.323-.08-.486l-3.035-5.632 3.198-5.84c.08-.163.098-.325.08-.487-.077-.517-.525-.897-1.052-.897H9.088c-.527 0-.975.38-1.052.897-.016.162 0 .324.08.487l3.197 5.84zm4.489 3.282l-.44-.813-.438.813c-.08.162-.08.324-.08.486.08.517.528.897 1.052.897h.884c.528 0 .975-.38 1.052-.897.016-.162 0-.324-.08-.486l-.438-.813-.44.813zm5.32-11.53l-2.795 5.15 2.63 4.88c.08.163.098.325.08.487-.077.516-.525.896-1.052.896h-.884c-.365 0-.692-.2-.87-.517l-.44-.813-.438.813c-.178.316-.504.517-.87.517H9.977c-.366 0-.692-.2-.87-.517l-.44-.813-.438.813c-.178.316-.504.517-.87.517h-.884c-.527 0-.975-.38-1.052-.897-.016-.162 0-.323.08-.486l2.63-4.88L5.337 6.82c-.08-.163-.098-.325-.08-.487.077-.517.525-.897 1.052-.897h11.295c.527 0 .975.38 1.052.897.016.162 0 .324-.08.487z"/>
+                    </svg>
+                    <span className="text-white/70 text-xs font-semibold">Linktree</span>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
