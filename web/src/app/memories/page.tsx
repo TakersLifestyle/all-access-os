@@ -172,7 +172,8 @@ export default function MemoriesPage() {
   const founding15 = albums
     .filter(a => a.category === "Founding 15")
     .sort((a, b) => (a.episodeNumber ?? 99) - (b.episodeNumber ?? 99));
-  const eventAlbums = albums.filter(a => a.category !== "Founding 15");
+  const communitySpotlight = albums.filter(a => a.category === "Community Spotlight");
+  const eventAlbums = albums.filter(a => a.category !== "Founding 15" && a.category !== "Community Spotlight");
   const featuredAlbum = albums.find(a => a.isFeatured);
   const isSearching = searchQuery.trim().length > 0;
   const isFiltering = activeFilter !== "all";
@@ -345,6 +346,19 @@ export default function MemoriesPage() {
               </div>
               <div className="flex gap-4 overflow-x-auto pb-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
                 {founding15.map(a => <EpisodeCard key={a.id} album={a} />)}
+              </div>
+            </section>
+          )}
+
+          {/* Community Spotlight */}
+          {communitySpotlight.length > 0 && (
+            <section className="space-y-5">
+              <div>
+                <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">Community Spotlight</p>
+                <h2 className="text-xl font-bold text-white mt-1">Community Moments</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                {communitySpotlight.map(a => <AlbumCard key={a.id} album={a} />)}
               </div>
             </section>
           )}
