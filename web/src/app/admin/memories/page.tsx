@@ -1059,38 +1059,43 @@ export default function AdminMemoriesPage() {
             {/* Photo upload zone */}
             {mediaTab === "photo" && (
               <div className="space-y-4">
-                <button
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={uploading}
-                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setIsPhotoDragOver(true); }}
-                  onDragLeave={e => { e.preventDefault(); setIsPhotoDragOver(false); }}
-                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsPhotoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handlePhotoUpload(e.dataTransfer.files); }}
-                  className={`w-full border-2 border-dashed rounded-2xl py-8 flex flex-col items-center gap-3 transition disabled:cursor-not-allowed ${
+                <div
+                  onClick={() => !uploading && photoInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setIsPhotoDragOver(true); }}
+                  onDragEnter={e => { e.preventDefault(); setIsPhotoDragOver(true); }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsPhotoDragOver(false); }}
+                  onDrop={e => { e.preventDefault(); setIsPhotoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handlePhotoUpload(e.dataTransfer.files); }}
+                  className={`w-full border-2 border-dashed rounded-2xl py-10 flex flex-col items-center gap-3 transition select-none ${
                     uploading
-                      ? "border-pink-500/30 bg-pink-950/10"
+                      ? "border-pink-500/30 bg-pink-950/10 cursor-default"
                       : isPhotoDragOver
-                        ? "border-pink-400 bg-pink-950/20 scale-[1.01]"
-                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
+                        ? "border-pink-400 bg-pink-950/25 cursor-copy"
+                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02] cursor-pointer"
                   }`}
                 >
                   {uploading ? (
                     <>
-                      <div className="w-8 h-8 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin" />
-                      <p className="text-white/50 text-sm">
+                      <div className="w-8 h-8 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin pointer-events-none" />
+                      <p className="text-white/50 text-sm pointer-events-none">
                         {doneCount} / {uploadQueue.length} uploaded
                         {errorCount > 0 ? ` · ${errorCount} failed` : ""}
                       </p>
                     </>
+                  ) : isPhotoDragOver ? (
+                    <>
+                      <span className="text-5xl pointer-events-none">📸</span>
+                      <p className="text-pink-300 text-sm font-bold pointer-events-none">Drop to upload</p>
+                    </>
                   ) : (
                     <>
-                      <span className="text-4xl">📸</span>
-                      <div className="text-center">
-                        <p className="text-white/60 text-sm font-medium">Click to select photos</p>
-                        <p className="text-white/25 text-xs mt-1">Or drag &amp; drop anywhere on this page · JPG, PNG, WEBP · 50+ photos supported</p>
+                      <span className="text-4xl pointer-events-none">📸</span>
+                      <div className="text-center pointer-events-none">
+                        <p className="text-white/60 text-sm font-medium">Click to select or drag &amp; drop photos</p>
+                        <p className="text-white/25 text-xs mt-1">JPG, PNG, WEBP, HEIC · 50+ photos supported</p>
                       </div>
                     </>
                   )}
-                </button>
+                </div>
 
                 {/* Per-file progress */}
                 {uploadQueue.length > 0 && (
@@ -1125,39 +1130,44 @@ export default function AdminMemoriesPage() {
             {mediaTab === "video" && (
               <div className="space-y-4">
                 {/* Direct file upload */}
-                <button
-                  onClick={() => videoInputRef.current?.click()}
-                  disabled={videoUploading}
-                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setIsVideoDragOver(true); }}
-                  onDragLeave={e => { e.preventDefault(); setIsVideoDragOver(false); }}
-                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsVideoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handleVideoUpload(e.dataTransfer.files); }}
-                  className={`w-full border-2 border-dashed rounded-2xl py-8 flex flex-col items-center gap-3 transition disabled:cursor-not-allowed ${
+                <div
+                  onClick={() => !videoUploading && videoInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setIsVideoDragOver(true); }}
+                  onDragEnter={e => { e.preventDefault(); setIsVideoDragOver(true); }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsVideoDragOver(false); }}
+                  onDrop={e => { e.preventDefault(); setIsVideoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handleVideoUpload(e.dataTransfer.files); }}
+                  className={`w-full border-2 border-dashed rounded-2xl py-10 flex flex-col items-center gap-3 transition select-none ${
                     videoUploading
-                      ? "border-pink-500/30 bg-pink-950/10"
+                      ? "border-pink-500/30 bg-pink-950/10 cursor-default"
                       : isVideoDragOver
-                        ? "border-pink-400 bg-pink-950/20 scale-[1.01]"
-                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
+                        ? "border-pink-400 bg-pink-950/25 cursor-copy"
+                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02] cursor-pointer"
                   }`}
                 >
                   {videoUploading ? (
                     <>
-                      <div className="w-8 h-8 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin" />
-                      <p className="text-white/50 text-sm">
+                      <div className="w-8 h-8 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin pointer-events-none" />
+                      <p className="text-white/50 text-sm pointer-events-none">
                         {videoUploadQueue.filter(q => q.status === "done").length} / {videoUploadQueue.length} uploaded
                         {videoUploadQueue.filter(q => q.status === "error").length > 0
                           ? ` · ${videoUploadQueue.filter(q => q.status === "error").length} failed` : ""}
                       </p>
                     </>
+                  ) : isVideoDragOver ? (
+                    <>
+                      <span className="text-5xl pointer-events-none">🎥</span>
+                      <p className="text-pink-300 text-sm font-bold pointer-events-none">Drop to upload</p>
+                    </>
                   ) : (
                     <>
-                      <span className="text-4xl">🎥</span>
-                      <div className="text-center">
-                        <p className="text-white/60 text-sm font-medium">Click to select videos</p>
-                        <p className="text-white/25 text-xs mt-1">Or drag &amp; drop · MP4, MOV, AVI, WEBM supported</p>
+                      <span className="text-4xl pointer-events-none">🎥</span>
+                      <div className="text-center pointer-events-none">
+                        <p className="text-white/60 text-sm font-medium">Click to select or drag &amp; drop videos</p>
+                        <p className="text-white/25 text-xs mt-1">MP4, MOV, AVI, WEBM supported</p>
                       </div>
                     </>
                   )}
-                </button>
+                </div>
 
                 {/* Per-file progress */}
                 {videoUploadQueue.length > 0 && (
