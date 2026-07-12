@@ -96,6 +96,8 @@ export default function AdminMemoriesPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isPhotoDragOver, setIsPhotoDragOver] = useState(false);
+  const [isVideoDragOver, setIsVideoDragOver] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mediaTab, setMediaTab] = useState<"photo" | "video" | "creator_content">("photo");
   const [featuredLimitError, setFeaturedLimitError] = useState(false);
@@ -562,6 +564,8 @@ export default function AdminMemoriesPage() {
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    setIsPhotoDragOver(false);
+    setIsVideoDragOver(false);
     if (!selectedAlbum) return;
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
@@ -581,7 +585,7 @@ export default function AdminMemoriesPage() {
     <main
       className="max-w-6xl mx-auto px-6 py-12 space-y-8"
       onDragOver={e => { e.preventDefault(); if (selectedAlbum && (mediaTab === "photo" || mediaTab === "video")) setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false); }}
       onDrop={onDrop}
     >
       {/* Move Photo Modal */}
@@ -1058,10 +1062,15 @@ export default function AdminMemoriesPage() {
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploading}
+                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setIsPhotoDragOver(true); }}
+                  onDragLeave={e => { e.preventDefault(); setIsPhotoDragOver(false); }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsPhotoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handlePhotoUpload(e.dataTransfer.files); }}
                   className={`w-full border-2 border-dashed rounded-2xl py-8 flex flex-col items-center gap-3 transition disabled:cursor-not-allowed ${
                     uploading
                       ? "border-pink-500/30 bg-pink-950/10"
-                      : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
+                      : isPhotoDragOver
+                        ? "border-pink-400 bg-pink-950/20 scale-[1.01]"
+                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
                   }`}
                 >
                   {uploading ? (
@@ -1119,10 +1128,15 @@ export default function AdminMemoriesPage() {
                 <button
                   onClick={() => videoInputRef.current?.click()}
                   disabled={videoUploading}
+                  onDragOver={e => { e.preventDefault(); e.stopPropagation(); setIsVideoDragOver(true); }}
+                  onDragLeave={e => { e.preventDefault(); setIsVideoDragOver(false); }}
+                  onDrop={e => { e.preventDefault(); e.stopPropagation(); setIsVideoDragOver(false); setIsDragOver(false); if (e.dataTransfer.files.length > 0) handleVideoUpload(e.dataTransfer.files); }}
                   className={`w-full border-2 border-dashed rounded-2xl py-8 flex flex-col items-center gap-3 transition disabled:cursor-not-allowed ${
                     videoUploading
                       ? "border-pink-500/30 bg-pink-950/10"
-                      : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
+                      : isVideoDragOver
+                        ? "border-pink-400 bg-pink-950/20 scale-[1.01]"
+                        : "border-white/15 hover:border-pink-500/40 hover:bg-white/[0.02]"
                   }`}
                 >
                   {videoUploading ? (
