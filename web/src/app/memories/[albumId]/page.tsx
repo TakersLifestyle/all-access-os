@@ -131,7 +131,7 @@ function FeaturedCard({
   onVideoClick: () => void;
 }) {
   const isPhoto = item.type === "photo";
-  const imageSrc = isPhoto ? item.url : item.thumbnailUrl;
+  const imageSrc = isPhoto ? (item.thumbnailUrl || item.url) : item.thumbnailUrl;
 
   return (
     <div
