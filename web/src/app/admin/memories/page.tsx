@@ -1426,9 +1426,21 @@ function PhotoMediaItem({
   onMove: () => void;
 }) {
   const canFeature = item.isFeatured || featuredCount < 10;
+  const [imgSrc, setImgSrc] = useState(item.url);
+  const [loaded, setLoaded] = useState(false);
   return (
     <div className="group relative aspect-square overflow-hidden rounded-xl bg-white/5">
-      <img src={item.url} alt={item.caption} className="w-full h-full object-cover" />
+      <img
+        src={imgSrc}
+        alt={item.caption}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          // retry once with cache-bust then give up
+          if (!imgSrc.includes("&retry=1")) setImgSrc(imgSrc + "&retry=1");
+        }}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
       {/* Badges */}
       <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
         {isCover && (
