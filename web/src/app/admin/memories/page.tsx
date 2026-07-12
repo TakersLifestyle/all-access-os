@@ -266,8 +266,9 @@ export default function AdminMemoriesPage() {
     const fileArray = Array.from(files).filter(f => f.type.startsWith("image/"));
     if (fileArray.length === 0) return;
 
+    const ts = Date.now();
     const initialQueue: UploadItem[] = fileArray.map((f, i) => ({
-      id: `${Date.now()}-${i}`,
+      id: `${ts}-${i}`,
       name: f.name,
       progress: 0,
       status: "queued",
@@ -276,61 +277,56 @@ export default function AdminMemoriesPage() {
     setUploading(true);
 
     let completedCount = 0;
-    const BATCH_SIZE = 5;
 
-    for (let batchStart = 0; batchStart < fileArray.length; batchStart += BATCH_SIZE) {
-      const batch = fileArray.slice(batchStart, batchStart + BATCH_SIZE);
-      await Promise.all(batch.map((file, batchIdx) => {
-        const idx = batchStart + batchIdx;
-        const queueId = initialQueue[idx].id;
+    await Promise.all(fileArray.map((file, i) => {
+      const queueId = initialQueue[i].id;
 
-        return new Promise<void>(resolve => {
-          setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "uploading" } : q));
+      return new Promise<void>(resolve => {
+        setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "uploading" } : q));
 
-          const storagePath = `memories/${selectedAlbum.id}/photos/${Date.now()}_${file.name}`;
-          const sRef = storageRef(storage, storagePath);
-          const task = uploadBytesResumable(sRef, file);
+        const storagePath = `memories/${selectedAlbum.id}/photos/${ts}_${i}_${file.name}`;
+        const sRef = storageRef(storage, storagePath);
+        const task = uploadBytesResumable(sRef, file);
 
-          task.on("state_changed",
-            snapshot => {
-              const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, progress: pct } : q));
-            },
-            () => {
+        task.on("state_changed",
+          snapshot => {
+            const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, progress: pct } : q));
+          },
+          () => {
+            setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "error" } : q));
+            resolve();
+          },
+          async () => {
+            try {
+              const url = await getDownloadURL(task.snapshot.ref);
+              await addDoc(collection(db, "memoryMedia"), {
+                albumId: selectedAlbum.id,
+                type: "photo",
+                url,
+                storagePath,
+                caption: "",
+                isPinned: false,
+                isFeatured: false,
+                downloadEnabled: true,
+                likesCount: 0,
+                commentsCount: 0,
+                uploadedBy: user.uid,
+                uploadedByName: profile?.displayName ?? profile?.email ?? "Admin",
+                createdAt: serverTimestamp(),
+                likedBy: [],
+              });
+              await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { photoCount: increment(1) });
+              completedCount++;
+              setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "done", progress: 100 } : q));
+            } catch {
               setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "error" } : q));
-              resolve();
-            },
-            async () => {
-              try {
-                const url = await getDownloadURL(task.snapshot.ref);
-                await addDoc(collection(db, "memoryMedia"), {
-                  albumId: selectedAlbum.id,
-                  type: "photo",
-                  url,
-                  storagePath,
-                  caption: "",
-                  isPinned: false,
-                  isFeatured: false,
-                  downloadEnabled: true,
-                  likesCount: 0,
-                  commentsCount: 0,
-                  uploadedBy: user.uid,
-                  uploadedByName: profile?.displayName ?? profile?.email ?? "Admin",
-                  createdAt: serverTimestamp(),
-                  likedBy: [],
-                });
-                await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { photoCount: increment(1) });
-                completedCount++;
-                setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "done", progress: 100 } : q));
-              } catch {
-                setUploadQueue(prev => prev.map(q => q.id === queueId ? { ...q, status: "error" } : q));
-              }
-              resolve();
             }
-          );
-        });
-      }));
-    }
+            resolve();
+          }
+        );
+      });
+    }));
 
     await loadMedia(selectedAlbum.id);
     setAlbums(prev => prev.map(a =>
