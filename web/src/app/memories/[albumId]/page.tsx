@@ -96,9 +96,13 @@ function formatCommentTime(ts: Timestamp | string) {
   } catch { return ""; }
 }
 
-function getVideoEmbed(url: string): { isYoutube: boolean; embedSrc: string } {
+function getVideoEmbed(url: string): { isYoutube: boolean; embedSrc: string; ytThumbnail?: string } {
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/);
-  if (ytMatch) return { isYoutube: true, embedSrc: `https://www.youtube.com/embed/${ytMatch[1]}` };
+  if (ytMatch) return {
+    isYoutube: true,
+    embedSrc: `https://www.youtube.com/embed/${ytMatch[1]}`,
+    ytThumbnail: `https://img.youtube.com/vi/${ytMatch[1]}/maxresdefault.jpg`,
+  };
   return { isYoutube: false, embedSrc: url };
 }
 
@@ -286,10 +290,11 @@ function VideoGrid({
   return (
     <div className="space-y-6">
       {videos.map(video => {
-        const { isYoutube, embedSrc } = getVideoEmbed(video.url);
+        const { isYoutube, embedSrc, ytThumbnail } = getVideoEmbed(video.url);
         const liked = (video.likedBy ?? []).includes(userId);
         const likeCount = (video.likedBy ?? []).length;
         const isOpen = expanded === video.id;
+        const coverImage = video.thumbnailUrl || ytThumbnail;
         return (
           <div key={video.id} className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
             {isOpen ? (
@@ -310,9 +315,10 @@ function VideoGrid({
                 onClick={() => setExpanded(video.id)}
                 className="w-full aspect-video bg-gradient-to-br from-pink-950/30 to-purple-950/30 flex items-center justify-center group relative overflow-hidden"
               >
-                {video.thumbnailUrl && (
-                  <img src={video.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+                {coverImage && (
+                  <img src={coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
                 )}
+                <div className="absolute inset-0 bg-black/30" />
                 <div className="relative z-10 w-16 h-16 rounded-full bg-white/20 group-hover:bg-white/30 backdrop-blur-sm border border-white/20 flex items-center justify-center transition">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="white" className="ml-1">
                     <path d="M8 5v14l11-7z" />
