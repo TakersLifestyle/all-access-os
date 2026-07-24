@@ -16,6 +16,7 @@ const TIERS: Record<
     desc: string;
     features: string[];
     recommended?: boolean;
+    soldOut?: boolean;
   }
 > = {
   earlybird: {
@@ -24,6 +25,7 @@ const TIERS: Record<
     desc: "Limited availability. Lock in the lowest price.",
     features: ["General admission", "Full concert access", "Doors open 5PM", "Early bird pricing"],
     recommended: true,
+    soldOut: true,
   },
   regular: {
     name: "General Admission",
@@ -94,7 +96,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export default function RocafiestaPage() {
   const { user } = useAuth();
-  const [selectedTier, setSelectedTier] = useState<TicketType>("earlybird");
+  const [selectedTier, setSelectedTier] = useState<TicketType>("regular");
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -613,18 +615,31 @@ export default function RocafiestaPage() {
             {(["earlybird", "regular"] as TicketType[]).map((id) => {
               const t = TIERS[id];
               const isSelected = selectedTier === id;
+              const isSoldOut = !!t.soldOut;
               return (
                 <button
                   key={id}
-                  onClick={() => setSelectedTier(id)}
+                  onClick={() => !isSoldOut && setSelectedTier(id)}
+                  disabled={isSoldOut}
                   className={`relative text-left rounded-2xl border p-5 space-y-4 transition-all duration-200 ${
-                    isSelected
+                    isSoldOut
+                      ? "border-white/10 bg-white/[0.02] cursor-not-allowed opacity-60"
+                      : isSelected
                       ? "border-white/40 bg-white/[0.06]"
                       : "border-white/10 bg-white/[0.02] hover:border-white/25"
                   }`}
                 >
+                  {/* Sold out overlay */}
+                  {isSoldOut && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl z-10 bg-black/40">
+                      <span className="bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full tracking-widest uppercase">
+                        SOLD OUT
+                      </span>
+                    </div>
+                  )}
+
                   {/* Recommended badge */}
-                  {t.recommended && (
+                  {t.recommended && !isSoldOut && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <span className="bg-amber-500 text-black text-[10px] font-black px-3 py-1 rounded-full whitespace-nowrap">
                         RECOMMENDED
@@ -633,7 +648,7 @@ export default function RocafiestaPage() {
                   )}
 
                   {/* Selection indicator */}
-                  {isSelected && (
+                  {isSelected && !isSoldOut && (
                     <div className="absolute top-4 right-4 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
                       <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
