@@ -227,36 +227,80 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right: ALL ACCESS brand visual — always */}
-        <div className="rounded-2xl overflow-hidden border border-pink-500/20 bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 p-8 flex flex-col justify-between min-h-[320px]">
-          <div className="space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-pink-600/20 border border-pink-500/30 flex items-center justify-center text-xl">
-                🌆
+        {/* Right: hero event card — shows next active event (never completed/sold-out) */}
+        {heroEvent && (
+          <Link
+            href={getEventHref(heroEvent)}
+            className={`group block rounded-2xl overflow-hidden border transition-all duration-300 ${
+              isSeries
+                ? "border-[#D4AF37]/30 bg-black hover:border-[#D4AF37]/60 hover:shadow-[0_0_40px_rgba(212,175,55,0.12)]"
+                : isConcert
+                ? "border-amber-500/30 bg-black hover:border-amber-500/60 hover:shadow-[0_0_40px_rgba(245,158,11,0.12)]"
+                : "border-pink-500/30 bg-pink-950/10 hover:border-pink-500/60 hover:shadow-[0_0_40px_rgba(236,72,153,0.12)]"
+            }`}
+          >
+            <div className="relative h-52 overflow-hidden bg-black">
+              {getEventImage(heroEvent) ? (
+                <img
+                  src={getEventImage(heroEvent)}
+                  alt={cleanTitle(heroEvent.title)}
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-pink-900/50 to-purple-900/40" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+              <div className="absolute top-3 left-3">
+                {isSeries ? (
+                  <span className="bg-[#D4AF37] text-black text-xs font-black px-3 py-1 rounded-full">SUNSET SESSIONS</span>
+                ) : isConcert ? (
+                  <span className="bg-amber-500 text-black text-xs font-black px-3 py-1 rounded-full">FEATURED CONCERT</span>
+                ) : (
+                  <span className="bg-pink-600/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">Community Event</span>
+                )}
               </div>
-              <p className="text-pink-400 text-xs font-bold uppercase tracking-[0.2em]">ALL ACCESS Winnipeg</p>
+
+              <div className="absolute top-3 right-3">
+                {heroEvent.capacity > 0 && heroEvent.ticketsRemaining <= Math.ceil(heroEvent.capacity * 0.35) ? (
+                  <span className="bg-black/80 backdrop-blur-sm border border-red-500/40 text-red-400 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                    {heroEvent.ticketsRemaining} left
+                  </span>
+                ) : heroMinPrice > 0 ? (
+                  <span className="bg-black/80 backdrop-blur-sm border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1 rounded-full">
+                    From {fmt(heroMinPrice)}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="absolute bottom-3 left-4 right-4">
+                <p className="text-white font-bold text-lg leading-tight">{cleanTitle(heroEvent.title)}</p>
+                <p className="text-white/55 text-xs mt-0.5">
+                  {heroEvent.date ? formatDate(heroEvent.date) : "Date TBA"}&nbsp;·&nbsp;{heroEvent.location}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white text-3xl font-bold leading-snug">Winnipeg,<br /><span className="text-pink-500">together.</span></h3>
-            </div>
-            <p className="text-white/45 text-sm leading-relaxed">
-              Safe spaces. Real experiences. A non-profit community built on connection, belonging, and shared growth — for everyone in Winnipeg.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {["Community First", "Safe Spaces", "Open to All", "Non-Profit", "100% Winnipeg"].map((tag) => (
-                <span key={tag} className="bg-pink-600/10 border border-pink-500/20 rounded-full px-3 py-1 text-pink-300/60 text-xs font-medium">
-                  {tag}
+
+            <div className="p-4 bg-black">
+              <div className="flex items-center justify-between">
+                <div>
+                  {heroMinPrice > 0 ? (
+                    <>
+                      <p className="text-white font-bold text-lg">{fmt(heroMinPrice)}</p>
+                      <p className="text-white/30 text-xs">Open to everyone</p>
+                    </>
+                  ) : (
+                    <p className="text-white/50 font-semibold text-sm">Tickets TBA</p>
+                  )}
+                </div>
+                <span className={`text-sm font-semibold group-hover:translate-x-1 transition-transform ${isConcert ? "text-amber-400" : "text-pink-400"}`}>
+                  Get tickets →
                 </span>
-              ))}
+              </div>
             </div>
-          </div>
-          <div className="pt-6 border-t border-white/5 mt-6 flex items-center justify-between">
-            <p className="text-white/20 text-xs uppercase tracking-[0.2em] font-bold">Built in Winnipeg</p>
-            <Link href="/about" className="text-pink-400 hover:text-pink-300 text-xs font-semibold transition">
-              Our Mission →
-            </Link>
-          </div>
-        </div>
+          </Link>
+        )}
       </section>
 
       {/* ── WHY ALL ACCESS WINNIPEG ───────────────────────────────────────── */}

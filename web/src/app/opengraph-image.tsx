@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "ALL ACCESS Winnipeg — Sea Bears Courtside Launch";
+export const alt = "ALL ACCESS Winnipeg — Community Events & Experiences";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -31,8 +31,7 @@ export default async function Image() {
             right: "-150px",
             width: "700px",
             height: "700px",
-            background:
-              "radial-gradient(circle, rgba(255,0,127,0.28) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(255,0,127,0.28) 0%, transparent 70%)",
             borderRadius: "50%",
           }}
         />
@@ -44,8 +43,7 @@ export default async function Image() {
             left: "-100px",
             width: "400px",
             height: "400px",
-            background:
-              "radial-gradient(circle, rgba(255,0,127,0.12) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(255,0,127,0.12) 0%, transparent 70%)",
             borderRadius: "50%",
           }}
         />
@@ -91,7 +89,8 @@ export default async function Image() {
             textTransform: "uppercase",
           }}
         >
-          FOUNDING 15
+          BUILT FOR THE<br />
+          <span style={{ color: "#ff007f" }}>COMMUNITY</span>
         </div>
 
         {/* Sub */}
@@ -104,50 +103,43 @@ export default async function Image() {
             letterSpacing: "0.5px",
           }}
         >
-          Sea Bears Courtside Launch — June 30, 2026
+          Safe spaces. Real experiences. Winnipeg, together.
         </div>
 
-        {/* Price + Details row */}
-        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-          <div
-            style={{
-              fontSize: "56px",
-              fontWeight: "900",
-              color: "#ff007f",
-              letterSpacing: "-1px",
-            }}
-          >
-            $300
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
+        {/* Tags row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {["Community First", "Open to Everyone", "Non-Profit", "100% Winnipeg"].map((tag) => (
             <div
+              key={tag}
               style={{
-                color: "rgba(255,255,255,0.35)",
+                background: "rgba(255,0,127,0.12)",
+                border: "1px solid rgba(255,0,127,0.25)",
+                borderRadius: "100px",
+                padding: "8px 20px",
                 fontSize: "14px",
                 fontWeight: "700",
-                letterSpacing: "3px",
-                textTransform: "uppercase",
+                color: "rgba(255,100,180,0.9)",
+                letterSpacing: "1px",
               }}
             >
-              15 TICKETS ONLY
+              {tag}
             </div>
-            <div
-              style={{
-                color: "rgba(255,255,255,0.25)",
-                fontSize: "14px",
-                fontWeight: "600",
-                letterSpacing: "2px",
-              }}
-            >
-              allaccesswinnipeg.ca
-            </div>
-          </div>
+          ))}
+        </div>
+
+        {/* Bottom URL */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "32px",
+            right: "60px",
+            color: "rgba(255,255,255,0.20)",
+            fontSize: "16px",
+            fontWeight: "600",
+            letterSpacing: "2px",
+          }}
+        >
+          allaccesswinnipeg.ca
         </div>
 
         {/* Bottom rule */}
@@ -158,8 +150,7 @@ export default async function Image() {
             left: "0",
             right: "0",
             height: "3px",
-            background:
-              "linear-gradient(to right, transparent, #ff007f 20%, #ff007f 80%, transparent)",
+            background: "linear-gradient(to right, transparent, #ff007f 20%, #ff007f 80%, transparent)",
           }}
         />
       </div>
