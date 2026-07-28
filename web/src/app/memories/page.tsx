@@ -16,6 +16,8 @@ interface MemoryAlbum {
   location?: string;
   category?: string;
   episodeNumber?: number;
+  focalX?: number;
+  focalY?: number;
   status: string;
   photoCount: number;
   videoCount: number;
@@ -42,6 +44,7 @@ function AlbumCard({ album }: { album: MemoryAlbum }) {
                 src={album.coverImageUrl}
                 alt={album.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                style={{ objectPosition: `${album.focalX ?? 50}% ${album.focalY ?? 50}%` }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
             </>
@@ -71,7 +74,7 @@ function AlbumCard({ album }: { album: MemoryAlbum }) {
           )}
         </div>
         <div className="p-4 space-y-1.5 bg-white/[0.02]">
-          <h3 className="font-bold text-white text-base leading-tight line-clamp-1">{album.title}</h3>
+          <h3 className="font-bold text-white text-base leading-tight line-clamp-2">{album.title}</h3>
           <p className="text-white/30 text-xs">
             {formatDate(album.eventDate)}{album.location ? ` · ${album.location}` : ""}
           </p>
