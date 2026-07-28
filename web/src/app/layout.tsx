@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import Nav from "@/components/Nav";
 import Link from "next/link";
 import OpenClaw from "@/components/OpenClaw";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex-1">{children}</div>
           <Footer />
           <OpenClaw />
+          <Analytics />
         </AuthProvider>
       </body>
     </html>
