@@ -323,23 +323,40 @@ export default function RocafiestaPage() {
 
       {/* ── PROMO VIDEO ─────────────────────────────────────────────────── */}
       <section className="bg-[#050505] py-12 sm:py-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-5">
-          <p className="text-center text-white/20 text-xs font-black uppercase tracking-[0.25em]">
-            Watch the Promo
-          </p>
-          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video">
-            <video
-              ref={videoRef}
-              src="/events/rocafiesta-promo.mov"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              className="w-full h-full object-cover"
-            />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-10">
+          {/* ROCAFIESTA promo */}
+          <div className="space-y-5">
+            <p className="text-center text-white/20 text-xs font-black uppercase tracking-[0.25em]">
+              Watch the Promo
+            </p>
+            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video">
+              <video
+                ref={videoRef}
+                src="/events/rocafiesta-promo.mov"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
 
+          {/* Konfam live video */}
+          <div className="space-y-5">
+            <p className="text-center text-white/20 text-xs font-black uppercase tracking-[0.25em]">
+              Konfam Live
+            </p>
+            <div className="relative rounded-2xl overflow-hidden border border-amber-500/15 bg-black aspect-video">
+              <video
+                src="/events/konfam-live.mov"
+                playsInline
+                controls
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
