@@ -30,7 +30,7 @@ const TIERS: Record<
   regular: {
     name: "General Admission",
     price: 20,
-    desc: "General admission — doors open at 5PM.",
+    desc: "Limited availability. General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
   },
 };
