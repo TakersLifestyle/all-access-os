@@ -13,6 +13,7 @@ const TIERS: Record<
   {
     name: string;
     price: number;
+    notice?: string;
     desc: string;
     features: string[];
     recommended?: boolean;
@@ -22,7 +23,7 @@ const TIERS: Record<
   earlybird: {
     name: "Early Bird",
     price: 15,
-    desc: "Limited availability. Lock in the lowest price.",
+    desc: "Lock in the lowest price.",
     features: ["General admission", "Full concert access", "Doors open 5PM", "Early bird pricing"],
     recommended: true,
     soldOut: true,
@@ -30,7 +31,8 @@ const TIERS: Record<
   regular: {
     name: "General Admission",
     price: 20,
-    desc: "Limited availability. General admission — doors open at 5PM.",
+    notice: "Limited availability.",
+    desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
   },
 };
@@ -671,6 +673,9 @@ export default function RocafiestaPage() {
                     </div>
                   </div>
 
+                  {t.notice && (
+                    <p className="text-red-500 text-xs font-bold">{t.notice}</p>
+                  )}
                   <p className="text-white/40 text-xs leading-relaxed">{t.desc}</p>
 
                   <ul className="space-y-1.5">
