@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { auth } from "@/lib/firebase";
@@ -9,14 +9,27 @@ import { useRouter } from "next/navigation";
 
 function ConnectDropdown() {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button className="flex items-center gap-1 text-white/70 hover:text-white transition text-sm">
+    <div ref={ref} className="relative" onMouseLeave={() => setOpen(false)}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        onMouseEnter={() => setOpen(true)}
+        className="flex items-center gap-1 text-white/70 hover:text-white transition text-sm"
+      >
         Connect
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}>
           <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none" />
@@ -25,10 +38,10 @@ function ConnectDropdown() {
 
       {open && (
         <div
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 rounded-xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden z-50 min-w-[160px]"
-          style={{ background: "#0e0a1a" }}
+          className="absolute top-full left-1/2 -translate-x-1/2 z-50 min-w-[160px]"
+          style={{ paddingTop: "8px", marginTop: "-8px" }}
         >
-          <div className="py-1">
+          <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/60 py-1" style={{ background: "#0e0a1a" }}>
             <a
               href="https://www.instagram.com/allaccesswinnipeg/"
               target="_blank"
