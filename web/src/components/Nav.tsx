@@ -130,6 +130,7 @@ export default function Nav() {
               <Link href="/perks" className="text-white/70 hover:text-white transition">Perks</Link>
               <Link href="/community" className="text-white/70 hover:text-white transition">Community</Link>
               <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
+              <Link href="/our-culture" className="text-white/70 hover:text-white transition">Our Culture</Link>
               <ConnectDropdown />
               <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
               {isAdmin && (
@@ -157,6 +158,7 @@ export default function Nav() {
               <Link href="/events" className="text-white/70 hover:text-white transition">Events</Link>
               <Link href="/series/sunset-sessions" className="text-[#D4AF37]/80 hover:text-[#D4AF37] transition font-medium">Sessions</Link>
               <Link href="/memories" className="text-white/70 hover:text-white transition">Memories</Link>
+              <Link href="/our-culture" className="text-white/70 hover:text-white transition">Our Culture</Link>
               <ConnectDropdown />
               <Link href="/about" className="text-white/70 hover:text-white transition">About</Link>
               <div className="flex items-center gap-3">
@@ -221,6 +223,7 @@ export default function Nav() {
               <MobileLink href="/perks" onClick={closeMobile}>Perks</MobileLink>
               <MobileLink href="/community" onClick={closeMobile}>Community</MobileLink>
               <MobileLink href="/memories" onClick={closeMobile}>Memories</MobileLink>
+              <MobileLink href="/our-culture" onClick={closeMobile}>Our Culture</MobileLink>
               <MobileLink href="/about" onClick={closeMobile}>About</MobileLink>
               <div className="h-px bg-white/5 my-2" />
               <MobileLink href="/connect" onClick={closeMobile}>Live Feed</MobileLink>
@@ -248,6 +251,7 @@ export default function Nav() {
                 Sessions
               </Link>
               <MobileLink href="/memories" onClick={closeMobile}>Memories</MobileLink>
+              <MobileLink href="/our-culture" onClick={closeMobile}>Our Culture</MobileLink>
               <MobileLink href="/about" onClick={closeMobile}>About</MobileLink>
               <MobileLink href="/connect" onClick={closeMobile}>Live Feed</MobileLink>
               <div className="h-px bg-white/5 my-2" />
