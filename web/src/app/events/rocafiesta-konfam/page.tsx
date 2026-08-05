@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "MCzwl8mGF8P1rL5goEab";
 
-type TicketType = "earlybird" | "regular" | "tier2";
+type TicketType = "earlybird" | "regular" | "tier2" | "bundle3" | "bundle5";
 
 const TIERS: Record<
   TicketType,
@@ -19,6 +19,8 @@ const TIERS: Record<
     recommended?: boolean;
     soldOut?: boolean;
     unavailable?: boolean;
+    bundleQty?: number;
+    bundleSavings?: number;
   }
 > = {
   earlybird: {
@@ -42,6 +44,22 @@ const TIERS: Record<
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
     unavailable: true,
+  },
+  bundle3: {
+    name: "Group of 3",
+    price: 50,
+    desc: "3 tickets for $50 — save $10.",
+    features: ["3 tickets included", "General admission", "Full concert access", "Doors open 5PM"],
+    bundleQty: 3,
+    bundleSavings: 10,
+  },
+  bundle5: {
+    name: "Group of 5",
+    price: 80,
+    desc: "5 tickets for $80 — save $20.",
+    features: ["5 tickets included", "General admission", "Full concert access", "Doors open 5PM"],
+    bundleQty: 5,
+    bundleSavings: 20,
   },
 };
 
@@ -189,6 +207,9 @@ export default function RocafiestaPage() {
     }
   }, []);
 
+  const isBundle = selectedTier === "bundle3" || selectedTier === "bundle5";
+  const checkoutQty = isBundle ? 1 : qty;
+
   const handleCheckout = useCallback(async () => {
     setError(null);
     setLoading(true);
@@ -199,7 +220,7 @@ export default function RocafiestaPage() {
         body: JSON.stringify({
           eventId: EVENT_ID,
           ticketType: selectedTier,
-          quantity: qty,
+          quantity: checkoutQty,
           uid: user?.uid ?? null,
           userEmail: user?.email ?? null,
           promoCode: promoCode.trim() || undefined,
@@ -213,10 +234,10 @@ export default function RocafiestaPage() {
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
     }
-  }, [selectedTier, qty, user]);
+  }, [selectedTier, checkoutQty, user]);
 
   const tier = TIERS[selectedTier];
-  const total = tier.price * qty;
+  const total = isBundle ? tier.price : tier.price * qty;
 
   return (
     <main className="bg-black text-white min-h-screen">
@@ -717,44 +738,110 @@ export default function RocafiestaPage() {
             🔒 Tier 2 unlocks as Tier 1 sells out — price goes up closer to the event.
           </p>
 
+          {/* ── GROUP PRICING ── */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/8" />
+              <p className="text-white/30 text-xs font-black uppercase tracking-[0.2em]">Group Pricing</p>
+              <div className="h-px flex-1 bg-white/8" />
+            </div>
+            <p className="text-center text-white/35 text-xs">Bring your people, save more.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {/* Solo */}
+              <button
+                onClick={() => { setSelectedTier("regular"); setQty(1); }}
+                className={`relative text-left rounded-xl border p-4 space-y-0.5 transition-all duration-200 ${
+                  !isBundle && selectedTier === "regular"
+                    ? "border-amber-500/50 bg-amber-500/[0.06]"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                }`}
+              >
+                <p className="font-black text-sm text-white">Solo</p>
+                <p className="text-white font-black text-xl">$20</p>
+                <p className="text-white/30 text-[10px]">1 ticket</p>
+              </button>
+              {/* Group of 3 */}
+              <button
+                onClick={() => setSelectedTier("bundle3")}
+                className={`relative text-left rounded-xl border p-4 space-y-0.5 transition-all duration-200 ${
+                  selectedTier === "bundle3"
+                    ? "border-emerald-500/50 bg-emerald-500/[0.06]"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                }`}
+              >
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $10</span>
+                </div>
+                <p className="font-black text-sm text-white">Group of 3</p>
+                <p className="text-white font-black text-xl">$50</p>
+                <p className="text-white/30 text-[10px]">3 tickets</p>
+              </button>
+              {/* Group of 5 */}
+              <button
+                onClick={() => setSelectedTier("bundle5")}
+                className={`relative text-left rounded-xl border p-4 space-y-0.5 transition-all duration-200 ${
+                  selectedTier === "bundle5"
+                    ? "border-emerald-500/50 bg-emerald-500/[0.06]"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                }`}
+              >
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $20</span>
+                </div>
+                <p className="font-black text-sm text-white">Group of 5</p>
+                <p className="text-white font-black text-xl">$80</p>
+                <p className="text-white/30 text-[10px]">5 tickets</p>
+              </button>
+            </div>
+          </div>
+
           {/* Quantity + checkout */}
           <div className="max-w-lg mx-auto space-y-4">
-            {/* Qty selector */}
-            <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-xl px-5 py-4 gap-4">
-              <span className="text-white/50 text-sm font-semibold">Quantity</span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  disabled={qty <= 1}
-                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center font-black text-xl tabular-nums">{qty}</span>
-                <button
-                  onClick={() => setQty((q) => Math.min(10, q + 1))}
-                  disabled={qty >= 10}
-                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                >
-                  +
-                </button>
+            {/* Qty selector — hidden for bundles */}
+            {!isBundle && (
+              <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-xl px-5 py-4 gap-4">
+                <span className="text-white/50 text-sm font-semibold">Quantity</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    disabled={qty <= 1}
+                    className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center font-black text-xl tabular-nums">{qty}</span>
+                  <button
+                    onClick={() => setQty((q) => Math.min(10, q + 1))}
+                    disabled={qty >= 10}
+                    className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="text-right">
+                  <p className="text-white font-black text-xl">{fmt(total)}</p>
+                  {qty > 1 && (
+                    <p className="text-white/30 text-xs">{fmt(tier.price)} × {qty}</p>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-white font-black text-xl">{fmt(total)}</p>
-                {qty > 1 && (
-                  <p className="text-white/30 text-xs">{fmt(tier.price)} × {qty}</p>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Selected tier summary */}
             <div className="flex items-center gap-3 px-4 py-3 bg-amber-950/20 border border-amber-500/20 rounded-xl">
               <span className="text-amber-400 text-lg shrink-0">🎟</span>
               <div className="flex-1 min-w-0">
-                <p className="text-white/80 text-sm font-bold">{tier.name}</p>
+                <p className="text-white/80 text-sm font-bold">
+                  {isBundle ? `${tier.name} — ${tier.bundleQty} tickets` : tier.name}
+                </p>
                 <p className="text-white/35 text-xs">ROCAFIESTA · September 5, 2026</p>
               </div>
-              <p className="text-amber-400 font-black text-sm shrink-0">{fmt(total)}</p>
+              <div className="text-right shrink-0">
+                <p className="text-amber-400 font-black text-sm">{fmt(total)}</p>
+                {isBundle && tier.bundleSavings && (
+                  <p className="text-emerald-400 text-[10px] font-bold">Save ${tier.bundleSavings}</p>
+                )}
+              </div>
             </div>
 
             {/* Promo code */}
@@ -781,7 +868,7 @@ export default function RocafiestaPage() {
                 </>
               ) : (
                 <>
-                  Get {tier.name} Tickets — {fmt(total)}
+                  {isBundle ? `Get ${tier.name} (${tier.bundleQty} Tickets) — ${fmt(total)}` : `Get ${tier.name} Tickets — ${fmt(total)}`}
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>

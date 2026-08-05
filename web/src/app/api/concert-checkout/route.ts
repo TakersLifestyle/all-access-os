@@ -9,7 +9,7 @@ import { adminDb } from "@/lib/firebase-admin";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const APP_URL = (process.env.APP_URL ?? "https://allaccesswinnipeg.ca").replace(/\/$/, "");
 
-const VALID_TICKET_TYPES = ["earlybird", "regular", "tier2"] as const;
+const VALID_TICKET_TYPES = ["earlybird", "regular", "tier2", "bundle3", "bundle5"] as const;
 type TicketType = (typeof VALID_TICKET_TYPES)[number];
 
 // Flat processing fee per transaction (covers Stripe's 2.9% + $0.30 CAD)
@@ -17,7 +17,12 @@ const PROCESSING_FEE_CENTS: Record<TicketType, number> = {
   earlybird: 74,   // $0.74
   regular: 88,     // $0.88
   tier2: 103,      // $1.03
+  bundle3: 175,    // $1.75 (on $50 flat)
+  bundle5: 262,    // $2.62 (on $80 flat)
 };
+
+// Bundle types always checkout as qty=1 (price is flat)
+const BUNDLE_TYPES = new Set(["bundle3", "bundle5"]);
 
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 10;
@@ -41,13 +46,17 @@ export async function POST(req: NextRequest) {
     if (!VALID_TICKET_TYPES.includes(ticketType as TicketType)) {
       return NextResponse.json({ error: "Invalid ticket type." }, { status: 400 });
     }
-    const qty = Math.floor(Number(quantity));
-    if (isNaN(qty) || qty < MIN_QUANTITY || qty > MAX_QUANTITY) {
+    // Bundles are always qty=1 at checkout (price is flat — never unitPrice × qty)
+    const isBundle = BUNDLE_TYPES.has(ticketType);
+    const qty = isBundle ? 1 : Math.floor(Number(quantity));
+    if (!isBundle && (isNaN(qty) || qty < MIN_QUANTITY || qty > MAX_QUANTITY)) {
       return NextResponse.json(
         { error: `Quantity must be between ${MIN_QUANTITY} and ${MAX_QUANTITY}.` },
         { status: 400 }
       );
     }
+    // Actual ticket count included in the bundle (for order records and metadata)
+    const bundleTicketCount = ticketType === "bundle3" ? 3 : ticketType === "bundle5" ? 5 : null;
 
     // 2. Load event from Firestore
     const db = adminDb();
@@ -82,6 +91,8 @@ export async function POST(req: NextRequest) {
     }
     const unitPriceCents = Math.round(unitPriceDollars * 100);
     const processingFeeCents = PROCESSING_FEE_CENTS[ticketType as TicketType];
+    // Bundles: flat price (unitPriceCents is the whole bundle price, qty=1)
+    // Regular: per-ticket price × qty
     const totalPriceCents = unitPriceCents * qty + processingFeeCents;
 
     // 5. Create pending ticketOrder doc
@@ -95,6 +106,7 @@ export async function POST(req: NextRequest) {
       ticketType,
       ticketTierName: tier.name,
       quantity: qty,
+      ...(bundleTicketCount !== null ? { bundleTicketCount } : {}),
       unitPrice: unitPriceDollars,
       unitPriceCents,
       processingFeeCents,
@@ -195,6 +207,7 @@ export async function POST(req: NextRequest) {
         eventId,
         ticketType,
         quantity: String(qty),
+        ...(bundleTicketCount !== null ? { bundleTicketCount: String(bundleTicketCount) } : {}),
         userId: uid ?? "",
         type: "event_ticket",
         isMemberPrice: "false",
@@ -206,6 +219,7 @@ export async function POST(req: NextRequest) {
           eventId,
           ticketType,
           quantity: String(qty),
+          ...(bundleTicketCount !== null ? { bundleTicketCount: String(bundleTicketCount) } : {}),
           userId: uid ?? "",
           type: "event_ticket",
         },
