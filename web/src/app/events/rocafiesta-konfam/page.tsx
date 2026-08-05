@@ -746,20 +746,7 @@ export default function RocafiestaPage() {
               <div className="h-px flex-1 bg-white/8" />
             </div>
             <p className="text-center text-white/35 text-xs">Bring your people, save more.</p>
-            <div className="grid grid-cols-3 gap-3">
-              {/* Solo */}
-              <button
-                onClick={() => { setSelectedTier("regular"); setQty(1); }}
-                className={`relative text-left rounded-xl border p-4 space-y-0.5 transition-all duration-200 ${
-                  !isBundle && selectedTier === "regular"
-                    ? "border-amber-500/50 bg-amber-500/[0.06]"
-                    : "border-white/10 bg-white/[0.02] hover:border-white/20"
-                }`}
-              >
-                <p className="font-black text-sm text-white">Solo</p>
-                <p className="text-white font-black text-xl">$20</p>
-                <p className="text-white/30 text-[10px]">1 ticket</p>
-              </button>
+            <div className="grid grid-cols-2 gap-3">
               {/* Group of 3 */}
               <button
                 onClick={() => setSelectedTier("bundle3")}
