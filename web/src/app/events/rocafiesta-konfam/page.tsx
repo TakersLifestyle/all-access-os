@@ -350,12 +350,11 @@ export default function RocafiestaPage() {
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="rounded-2xl overflow-hidden border border-white/10 bg-black">
-            <video
-              src="/events/konfam-live.mov"
-              playsInline
-              controls
-              className="w-full"
+          <div className="rounded-2xl overflow-hidden border border-white/10">
+            <img
+              src="/events/rocafiesta-poster.jpg"
+              alt="ROCAFIESTA — A Spiritual Experience with Konfam"
+              className="w-full object-cover"
             />
           </div>
         </div>
