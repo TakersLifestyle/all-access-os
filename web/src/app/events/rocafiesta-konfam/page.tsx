@@ -41,6 +41,7 @@ const TIERS: Record<
     price: 25,
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
+    unavailable: true,
   },
 };
 
