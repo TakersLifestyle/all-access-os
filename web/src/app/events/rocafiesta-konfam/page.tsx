@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "MCzwl8mGF8P1rL5goEab";
 
-type TicketType = "earlybird" | "regular";
+type TicketType = "earlybird" | "regular" | "tier2";
 
 const TIERS: Record<
   TicketType,
@@ -18,6 +18,7 @@ const TIERS: Record<
     features: string[];
     recommended?: boolean;
     soldOut?: boolean;
+    unavailable?: boolean;
   }
 > = {
   earlybird: {
@@ -29,9 +30,15 @@ const TIERS: Record<
     soldOut: true,
   },
   regular: {
-    name: "General Admission",
+    name: "Tier 1 — General Admission",
     price: 20,
     notice: "Limited availability.",
+    desc: "General admission — doors open at 5PM.",
+    features: ["General admission", "Full concert access", "Doors open 5PM"],
+  },
+  tier2: {
+    name: "Tier 2 — General Admission",
+    price: 25,
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
   },
@@ -620,19 +627,20 @@ export default function RocafiestaPage() {
           </div>
 
           {/* Tier cards */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            {(["earlybird", "regular"] as TicketType[]).map((id) => {
+          <div className="grid sm:grid-cols-3 gap-4">
+            {(["earlybird", "regular", "tier2"] as TicketType[]).map((id) => {
               const t = TIERS[id];
               const isSelected = selectedTier === id;
               const isSoldOut = !!t.soldOut;
+              const isUnavailable = !!t.unavailable;
               return (
                 <button
                   key={id}
-                  onClick={() => !isSoldOut && setSelectedTier(id)}
-                  disabled={isSoldOut}
+                  onClick={() => !isSoldOut && !isUnavailable && setSelectedTier(id)}
+                  disabled={isSoldOut || isUnavailable}
                   className={`relative text-left rounded-2xl border p-5 space-y-4 transition-all duration-200 ${
-                    isSoldOut
-                      ? "border-white/10 bg-white/[0.02] cursor-not-allowed opacity-60"
+                    isSoldOut || isUnavailable
+                      ? "border-white/8 bg-white/[0.015] cursor-not-allowed opacity-50"
                       : isSelected
                       ? "border-white/40 bg-white/[0.06]"
                       : "border-white/10 bg-white/[0.02] hover:border-white/25"
@@ -647,6 +655,16 @@ export default function RocafiestaPage() {
                     </div>
                   )}
 
+                  {/* Unavailable / coming soon overlay */}
+                  {isUnavailable && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl z-10 bg-black/50 gap-2">
+                      <svg className="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span className="text-white/40 text-[10px] font-black uppercase tracking-widest">Unlocks Soon</span>
+                    </div>
+                  )}
+
                   {/* Recommended badge */}
                   {t.recommended && !isSoldOut && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -657,7 +675,7 @@ export default function RocafiestaPage() {
                   )}
 
                   {/* Selection indicator */}
-                  {isSelected && !isSoldOut && (
+                  {isSelected && !isSoldOut && !isUnavailable && (
                     <div className="absolute top-4 right-4 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
                       <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -666,7 +684,7 @@ export default function RocafiestaPage() {
                   )}
 
                   <div className="space-y-1 pr-6">
-                    <p className="font-black text-lg text-white">{t.name}</p>
+                    <p className="font-black text-base text-white">{t.name}</p>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-black text-white">{fmt(t.price)}</span>
                       <span className="text-white/30 text-sm">CAD</span>
@@ -690,6 +708,11 @@ export default function RocafiestaPage() {
               );
             })}
           </div>
+
+          {/* Price-rising urgency note */}
+          <p className="text-center text-white/25 text-xs tracking-wide">
+            🔒 Tier 2 unlocks as Tier 1 sells out — price goes up closer to the event.
+          </p>
 
           {/* Quantity + checkout */}
           <div className="max-w-lg mx-auto space-y-4">
@@ -802,22 +825,23 @@ export default function RocafiestaPage() {
                 <tr className="border-b border-white/10">
                   <th className="text-left py-3 pr-4 text-white/30 text-xs font-bold uppercase tracking-widest">Feature</th>
                   <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Early Bird<br /><span className="text-amber-400 font-black">$15</span></th>
-                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">General Admission<br /><span className="text-amber-400 font-black">$20</span></th>
+                  <th className="text-center py-3 px-3 text-white/60 text-sm font-bold">Tier 1<br /><span className="text-amber-400 font-black">$20</span></th>
+                  <th className="text-center py-3 px-3 text-white/30 text-sm font-bold">Tier 2<br /><span className="text-white/30 font-black">$25</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {[
-                  ["General Admission", true, true],
-                  ["Full Concert Access", true, true],
-                  ["Doors Open 5PM", true, true],
-                  ["Early Bird Pricing", true, false],
-                ].map(([feature, earlybird, regular]) => (
+                  ["General Admission", true, true, true],
+                  ["Full Concert Access", true, true, true],
+                  ["Doors Open 5PM", true, true, true],
+                  ["Early Bird Pricing", true, false, false],
+                ].map(([feature, earlybird, tier1, tier2]) => (
                   <tr key={String(feature)}>
                     <td className="py-3.5 pr-4 text-white/55 text-sm">{feature}</td>
-                    {[earlybird, regular].map((has, i) => (
+                    {[earlybird, tier1, tier2].map((has, i) => (
                       <td key={i} className="text-center py-3.5 px-3">
                         {has ? (
-                          <span className="font-bold text-sm text-emerald-400">✓</span>
+                          <span className={`font-bold text-sm ${i === 2 ? "text-emerald-400/30" : "text-emerald-400"}`}>✓</span>
                         ) : (
                           <span className="text-white/15 text-sm">—</span>
                         )}
@@ -892,18 +916,30 @@ export default function RocafiestaPage() {
             <h2 className="text-3xl font-black">Ready to be there?</h2>
             <p className="text-white/40 text-sm">September 5, 2026 · Pyramid Cabaret · 5PM–10PM · 18+</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {(["earlybird", "regular"] as TicketType[]).map((id) => {
+          <div className="grid grid-cols-3 gap-3">
+            {(["earlybird", "regular", "tier2"] as TicketType[]).map((id) => {
               const t = TIERS[id];
+              const isUnavailable = !!t.unavailable || !!t.soldOut;
               return (
                 <a
                   key={id}
                   href="#tickets"
-                  onClick={(e) => { e.preventDefault(); setSelectedTier(id); document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" }); }}
-                  className="rounded-xl border p-4 space-y-1 transition hover:scale-105 border-white/10 bg-white/[0.03] hover:border-white/25"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!isUnavailable) {
+                      setSelectedTier(id);
+                      document.getElementById("tickets")?.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  className={`rounded-xl border p-4 space-y-1 transition ${
+                    isUnavailable
+                      ? "border-white/6 bg-white/[0.015] opacity-40 cursor-default"
+                      : "hover:scale-105 border-white/10 bg-white/[0.03] hover:border-white/25 cursor-pointer"
+                  }`}
                 >
-                  <p className="font-black text-sm text-white/80">{t.name}</p>
-                  <p className="text-white font-black text-xl">{fmt(t.price)}</p>
+                  <p className="font-black text-xs text-white/60">{t.name}</p>
+                  <p className={`font-black text-xl ${isUnavailable ? "text-white/30" : "text-white"}`}>{fmt(t.price)}</p>
+                  {t.unavailable && <p className="text-white/25 text-[10px] font-semibold">🔒 Coming soon</p>}
                 </a>
               );
             })}

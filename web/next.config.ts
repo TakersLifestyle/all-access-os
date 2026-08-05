@@ -30,8 +30,11 @@ const nextConfig: NextConfig = {
   // 301 Permanent redirects — SEO-safe, HTTPS-enforced
   //
   // allaccesswinnipeg.com  →  allaccesswinnipeg.ca  (all paths preserved)
-  // takerslifestyle.com    →  allaccesswinnipeg.ca  (brand consolidation)
-  // takerslifestyle.ca     →  allaccesswinnipeg.ca
+  //
+  // takerslifestyle.ca / .com are their own independent site (TakersLifestyle
+  // photography & creative agency) — not redirected here. Do not add a
+  // takerslifestyle.* redirect to this file; that domain must stay separate
+  // from ALL ACCESS Winnipeg.
   //
   // Vercel handles HTTPS automatically. This redirect fires at the edge
   // before any page renders — fastest possible redirect, no JS needed.

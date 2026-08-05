@@ -61,7 +61,7 @@ function NominationForm() {
         </div>
         <h3 className="text-xl font-black text-white">Nomination received.</h3>
         <p className="text-white/50 text-sm max-w-sm mx-auto leading-relaxed">
-          Thank you for nominating someone worth documenting. We review every submission and reach out when the timing is right.
+          Thank you for taking the time. Every nomination gets read personally — if the person you&apos;ve shared resonates with where we&apos;re headed, we&apos;ll take it from there.
         </p>
         <button
           onClick={() => { setSubmitted(false); setForm(EMPTY_FORM); }}

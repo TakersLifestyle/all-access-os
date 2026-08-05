@@ -1,6 +1,6 @@
 // Concert ticket checkout — tiered pricing read from Firestore ticketTiers
-// Early Bird $15 | General Admission $20 — server-side pricing only
-// Processing fee added as a separate line item: earlybird $0.74 | regular $0.88
+// Early Bird $15 | Tier 1 GA $20 | Tier 2 GA $25 — server-side pricing only
+// Processing fee added as a separate line item: earlybird $0.74 | regular $0.88 | tier2 $1.03
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -9,13 +9,14 @@ import { adminDb } from "@/lib/firebase-admin";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const APP_URL = (process.env.APP_URL ?? "https://allaccesswinnipeg.ca").replace(/\/$/, "");
 
-const VALID_TICKET_TYPES = ["earlybird", "regular"] as const;
+const VALID_TICKET_TYPES = ["earlybird", "regular", "tier2"] as const;
 type TicketType = (typeof VALID_TICKET_TYPES)[number];
 
 // Flat processing fee per transaction (covers Stripe's 2.9% + $0.30 CAD)
 const PROCESSING_FEE_CENTS: Record<TicketType, number> = {
-  earlybird: 74,  // $0.74
-  regular: 88,    // $0.88
+  earlybird: 74,   // $0.74
+  regular: 88,     // $0.88
+  tier2: 103,      // $1.03
 };
 
 const MIN_QUANTITY = 1;
