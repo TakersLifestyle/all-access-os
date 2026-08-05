@@ -30,14 +30,14 @@ const TIERS: Record<
     soldOut: true,
   },
   regular: {
-    name: "Tier 1 — General Admission",
+    name: "General Admission Tier 1",
     price: 20,
     notice: "Limited availability.",
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
   },
   tier2: {
-    name: "Tier 2 — General Admission",
+    name: "General Admission Tier 2",
     price: 25,
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
