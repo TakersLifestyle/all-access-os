@@ -237,16 +237,17 @@ export default function RocafiestaPage() {
 
       {/* ── HERO ───────────────────────────────────────────────────────── */}
       <section className="relative min-h-[92vh] flex flex-col justify-end overflow-hidden">
-        {/* Poster background */}
+        {/* Video background */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-950/40 via-black/60 to-green-950/30 z-0" />
-          <img
-            src="/events/rocafiesta-banner.png"
-            alt="ROCAFIESTA poster"
-            className="absolute inset-0 w-full h-full object-cover [object-position:center_30%]"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          <video
+            src="/events/rocafiesta-promo.mov"
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/20 z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-black/30 z-[1]" />
         </div>
 
         {/* Animated spotlights */}
