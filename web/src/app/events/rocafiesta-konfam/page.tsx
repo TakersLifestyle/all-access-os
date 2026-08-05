@@ -352,7 +352,7 @@ export default function RocafiestaPage() {
           </div>
           <div className="rounded-2xl overflow-hidden border border-white/10">
             <img
-              src="/events/rocafiesta-poster.jpg"
+              src="/events/rocafiesta-flyer.png"
               alt="ROCAFIESTA — A Spiritual Experience with Konfam"
               className="w-full object-cover"
             />
