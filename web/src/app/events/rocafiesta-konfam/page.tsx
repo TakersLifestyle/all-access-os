@@ -124,7 +124,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export default function RocafiestaPage() {
   const { user } = useAuth();
-  const [selectedTier, setSelectedTier] = useState<TicketType>("regular");
+  const [selectedTier, setSelectedTier] = useState<TicketType>("tier2");
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
