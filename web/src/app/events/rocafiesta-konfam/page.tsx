@@ -34,32 +34,32 @@ const TIERS: Record<
   regular: {
     name: "General Admission Tier 1",
     price: 20,
-    notice: "Limited availability.",
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
+    soldOut: true,
   },
   tier2: {
     name: "General Admission Tier 2",
     price: 25,
     desc: "General admission — doors open at 5PM.",
     features: ["General admission", "Full concert access", "Doors open 5PM"],
-    unavailable: true,
+    recommended: true,
   },
   bundle3: {
     name: "Group of 3",
-    price: 50,
-    desc: "3 tickets for $50 — save $10.",
+    price: 60,
+    desc: "3 tickets for $60 — save $15.",
     features: ["3 tickets included", "General admission", "Full concert access", "Doors open 5PM"],
     bundleQty: 3,
-    bundleSavings: 10,
+    bundleSavings: 15,
   },
   bundle5: {
     name: "Group of 5",
-    price: 80,
-    desc: "5 tickets for $80 — save $20.",
+    price: 100,
+    desc: "5 tickets for $100 — save $25.",
     features: ["5 tickets included", "General admission", "Full concert access", "Doors open 5PM"],
     bundleQty: 5,
-    bundleSavings: 20,
+    bundleSavings: 25,
   },
 };
 
@@ -735,7 +735,7 @@ export default function RocafiestaPage() {
 
           {/* Price-rising urgency note */}
           <p className="text-center text-white/25 text-xs tracking-wide">
-            🔒 Tier 2 unlocks as Tier 1 sells out — price goes up closer to the event.
+            🔒 Tier 1 is sold out — Tier 2 is now live. Price goes up closer to the event.
           </p>
 
           {/* ── GROUP PRICING ── */}
@@ -749,15 +749,15 @@ export default function RocafiestaPage() {
             <div className="grid grid-cols-3 gap-3">
               {/* Solo */}
               <button
-                onClick={() => { setSelectedTier("regular"); setQty(1); }}
+                onClick={() => { setSelectedTier("tier2"); setQty(1); }}
                 className={`relative text-left rounded-xl border p-4 space-y-0.5 transition-all duration-200 ${
-                  !isBundle && selectedTier === "regular"
+                  !isBundle && selectedTier === "tier2"
                     ? "border-amber-500/50 bg-amber-500/[0.06]"
                     : "border-white/10 bg-white/[0.02] hover:border-white/20"
                 }`}
               >
                 <p className="font-black text-sm text-white">Solo</p>
-                <p className="text-white font-black text-xl">$20</p>
+                <p className="text-white font-black text-xl">$25</p>
                 <p className="text-white/30 text-[10px]">1 ticket</p>
               </button>
               {/* Group of 3 */}
@@ -770,10 +770,10 @@ export default function RocafiestaPage() {
                 }`}
               >
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $10</span>
+                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $15</span>
                 </div>
                 <p className="font-black text-sm text-white">Group of 3</p>
-                <p className="text-white font-black text-xl">$50</p>
+                <p className="text-white font-black text-xl">$60</p>
                 <p className="text-white/30 text-[10px]">3 tickets</p>
               </button>
               {/* Group of 5 */}
@@ -786,10 +786,10 @@ export default function RocafiestaPage() {
                 }`}
               >
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $20</span>
+                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">SAVE $25</span>
                 </div>
                 <p className="font-black text-sm text-white">Group of 5</p>
-                <p className="text-white font-black text-xl">$80</p>
+                <p className="text-white font-black text-xl">$100</p>
                 <p className="text-white/30 text-[10px]">5 tickets</p>
               </button>
             </div>
