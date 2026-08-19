@@ -854,19 +854,19 @@ function DJLankzConcertCard({ ev }: { ev: Event }) {
       className="group block rounded-2xl overflow-hidden border border-[#84cc16]/30 bg-black hover:border-[#84cc16]/60 hover:shadow-[0_0_50px_rgba(132,204,22,0.10)] transition-all duration-300"
     >
       {/* Hero image */}
-      <div className="relative w-full h-72 overflow-hidden">
+      <div className="relative w-full h-72 sm:h-80 md:h-[420px] overflow-hidden">
         <img
           src={ev.heroImageUrl || ev.imageUrl || "/events/skales-hero.jpg"}
           alt="SKALES LIVE IN WINNIPEG — DJ LANKZ & FRIENDS"
-          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+          className="w-full h-full object-cover [object-position:center_18%] group-hover:scale-105 transition-transform duration-700"
           style={{ filter: "brightness(0.65) saturate(1.1)" }}
         />
         {/* Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         {/* Lime tint at bottom */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{ background: "linear-gradient(to top, rgba(132,204,22,0.06) 0%, transparent 100%)" }}
+          className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
+          style={{ background: "linear-gradient(to top, rgba(132,204,22,0.07) 0%, transparent 100%)" }}
         />
 
         {/* Top badges */}
