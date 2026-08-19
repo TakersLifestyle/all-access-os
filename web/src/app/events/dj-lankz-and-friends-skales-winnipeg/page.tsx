@@ -171,24 +171,6 @@ export default function DJLankzSkalesPage() {
             </div>
           </div>
 
-          {/* Right column: Skales press photo — desktop only */}
-          <div className="hidden lg:block relative flex-shrink-0" style={{ width: "300px", height: "500px" }}>
-            <div className="absolute inset-0 rounded-2xl overflow-hidden">
-              <img
-                src="/events/skales-hero.jpg"
-                alt="SKALES"
-                className="w-full h-full object-cover object-top"
-                style={{ filter: "brightness(0.9) saturate(1.1)" }}
-              />
-              {/* Blend left edge into the video background */}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 45%)" }} />
-              {/* Blend bottom into page bg */}
-              <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 100%)" }} />
-            </div>
-            {/* Lime border glow */}
-            <div className="absolute -inset-px rounded-2xl border border-[#84cc16]/25 pointer-events-none" />
-          </div>
-
         </div>
       </section>
 
