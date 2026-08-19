@@ -46,12 +46,12 @@ export default function DJLankzSkalesPage() {
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="relative w-full overflow-hidden" style={{ minHeight: "580px" }}>
-        {/* Skales photo — full bleed hero */}
+        {/* Skales live performance — full bleed hero */}
         <img
-          src="/events/skales-hero.jpg"
+          src="/events/skales-live-1.jpg"
           alt="SKALES — DJ LANKZ & FRIENDS, October 9, 2026"
-          className="absolute inset-0 w-full h-full object-cover object-top"
-          style={{ filter: "brightness(0.55) saturate(1.1)" }}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ filter: "brightness(0.6) saturate(1.15) contrast(1.05)" }}
         />
 
         {/* Lime-green gradient overlay from bottom */}
@@ -199,16 +199,25 @@ export default function DJLankzSkalesPage() {
         {/* ── Headline Artist — SKALES ───────────────────────────────────── */}
         <section className={`rounded-2xl border ${LIME.border} overflow-hidden`}>
           <div className="grid sm:grid-cols-[280px_1fr]">
-            {/* Artist photo */}
-            <div className="relative h-64 sm:h-auto overflow-hidden">
-              <img
-                src="/events/skales-hero.jpg"
-                alt="SKALES"
-                className="w-full h-full object-cover object-top"
-                style={{ filter: "brightness(0.8) saturate(1.1)" }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/60 hidden sm:block" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent sm:hidden" />
+            {/* Artist photos — press shot + live */}
+            <div className="relative h-64 sm:h-auto overflow-hidden grid grid-cols-2 sm:grid-cols-1 sm:grid-rows-2">
+              <div className="relative overflow-hidden">
+                <img
+                  src="/events/skales-hero.jpg"
+                  alt="SKALES"
+                  className="w-full h-full object-cover object-top"
+                  style={{ filter: "brightness(0.85) saturate(1.1)" }}
+                />
+              </div>
+              <div className="relative overflow-hidden">
+                <img
+                  src="/events/skales-live-2.jpg"
+                  alt="SKALES performing live"
+                  className="w-full h-full object-cover object-center"
+                  style={{ filter: "brightness(0.85) saturate(1.1)" }}
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/50 hidden sm:block" />
             </div>
 
             {/* Artist info */}
