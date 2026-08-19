@@ -838,6 +838,92 @@ function FeaturedConcertCard({ ev }: { ev: Event }) {
   );
 }
 
+// ── DJ LANKZ & FRIENDS concert card (type: "live_concert") ──────────────────
+// Lime-green accent only — completely separate from FeaturedConcertCard (ROCAFIESTA).
+function DJLankzConcertCard({ ev }: { ev: Event }) {
+  const href = ev.slug ? `/events/${ev.slug}` : "/events";
+  const dateLabel = ev.date
+    ? new Date(ev.date + "T12:00:00").toLocaleDateString("en-CA", {
+        month: "short", day: "numeric", year: "numeric",
+      })
+    : null;
+
+  return (
+    <a
+      href={href}
+      className="group block rounded-2xl overflow-hidden border border-[#84cc16]/30 bg-black hover:border-[#84cc16]/60 hover:shadow-[0_0_50px_rgba(132,204,22,0.10)] transition-all duration-300"
+    >
+      {/* Hero image */}
+      <div className="relative w-full h-72 overflow-hidden">
+        <img
+          src={ev.heroImageUrl || ev.imageUrl || "/events/skales-hero.jpg"}
+          alt="SKALES LIVE IN WINNIPEG — DJ LANKZ & FRIENDS"
+          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+          style={{ filter: "brightness(0.65) saturate(1.1)" }}
+        />
+        {/* Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
+        {/* Lime tint at bottom */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+          style={{ background: "linear-gradient(to top, rgba(132,204,22,0.06) 0%, transparent 100%)" }}
+        />
+
+        {/* Top badges */}
+        <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
+          <span className="bg-[#84cc16] text-black text-xs font-black px-3 py-1.5 rounded-full">
+            LIVE CONCERT
+          </span>
+          {dateLabel && (
+            <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+              {dateLabel}
+            </span>
+          )}
+          <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+            18+
+          </span>
+        </div>
+
+        {/* Bottom text overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <p className="text-[#84cc16]/70 text-xs font-bold uppercase tracking-[0.15em]">
+            DJ LANKZ & FRIENDS · {ev.location || "Winnipeg, MB"}
+          </p>
+          <h2 className="text-3xl font-black text-white mt-1 leading-tight tracking-tight">
+            SKALES
+          </h2>
+          <p className="text-white/60 text-base font-bold mt-0.5 tracking-wide">LIVE IN WINNIPEG</p>
+          <p className="text-white/40 text-sm mt-0.5">WITH SPECIAL GUEST DANAGOG</p>
+        </div>
+      </div>
+
+      {/* Footer strip */}
+      <div className="px-6 py-4 bg-black flex items-center justify-between gap-4 border-t border-[#84cc16]/10">
+        <div className="flex gap-5 flex-wrap">
+          <div>
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Tickets</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#84cc16] animate-pulse" />
+              <p className="text-[#84cc16] font-bold text-sm">Dropping Soon</p>
+            </div>
+          </div>
+          <div className="border-l border-white/10 pl-5">
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Date</p>
+            <p className="text-white font-semibold text-sm">October 9, 2026</p>
+          </div>
+          <div className="border-l border-white/10 pl-5">
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Doors</p>
+            <p className="text-white font-semibold text-sm">10 PM</p>
+          </div>
+        </div>
+        <span className="text-[#84cc16] font-bold text-sm group-hover:translate-x-1 transition-transform shrink-0">
+          View Event →
+        </span>
+      </div>
+    </a>
+  );
+}
+
 // ── Event card ───────────────────────────────────────────────────────────────
 function EventCard({
   ev,
@@ -1372,6 +1458,8 @@ export default function EventsList() {
             ? <SeriesEventCard key={ev.id} ev={ev} isMember={isMember} />
             : ev.type === "concert" && ev.status !== "completed"
             ? <FeaturedConcertCard key={ev.id} ev={ev} />
+            : ev.type === "live_concert" && ev.status !== "completed"
+            ? <DJLankzConcertCard key={ev.id} ev={ev} />
             : (
               <EventCard
                 key={ev.id}
