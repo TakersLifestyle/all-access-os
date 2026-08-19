@@ -96,20 +96,33 @@ export default function CheckInPage() {
 
   const submitPin = async (p: string) => {
     setLoading(true);
-    const res = await fetch(`/api/checkin?pin=${encodeURIComponent(p)}`);
-    if (res.status === 401) {
-      setPinError(true);
+    try {
+      const res = await fetch(`/api/checkin?pin=${encodeURIComponent(p)}`);
+      if (res.status === 401) {
+        setPinError(true);
+        setPin("");
+        return;
+      }
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `Server error (${res.status})`);
+        setFetchError(`Server error — try again. (${res.status})`);
+        console.error("[checkin] submitPin error:", errText);
+        setPin("");
+        return;
+      }
+      const data = await res.json();
+      setOrders(data.orders ?? []);
+      setTotal(data.total ?? 0);
+      setCheckedInCount(data.checkedInCount ?? 0);
+      setLastRefresh(new Date());
+      setUnlocked(true);
+    } catch (e) {
+      setFetchError("Network error — check connection and try again.");
       setPin("");
+      console.error("[checkin] submitPin threw:", e);
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setOrders(data.orders ?? []);
-    setTotal(data.total ?? 0);
-    setCheckedInCount(data.checkedInCount ?? 0);
-    setLastRefresh(new Date());
-    setUnlocked(true);
-    setLoading(false);
   };
 
   // ── Check in ─────────────────────────────────────────────────────────────
@@ -229,6 +242,11 @@ export default function CheckInPage() {
             <span className="w-4 h-4 border-2 border-white/20 border-t-[#84cc16] rounded-full animate-spin" />
             Verifying…
           </div>
+        )}
+        {fetchError && !loading && (
+          <p className="mt-6 text-red-400 text-sm font-semibold text-center max-w-xs">
+            {fetchError}
+          </p>
         )}
       </div>
     );
