@@ -226,7 +226,16 @@ export async function POST(req: NextRequest) {
         discountPct: isMember ? "15" : "0",
       },
       payment_intent_data: {
-        description: `${event.title} — Event Ticket × ${qty}`,
+        // Ticket number = sold so far + 1 (capacity - remaining = sold)
+        description: (() => {
+          const cap = typeof event.capacity === "number" ? event.capacity : 0;
+          const rem = typeof event.ticketsRemaining === "number" ? event.ticketsRemaining : cap;
+          const sold = cap - rem;
+          const ticketStart = sold + 1;
+          const ticketEnd = sold + qty;
+          const range = qty === 1 ? `#${ticketStart}` : `#${ticketStart}–#${ticketEnd}`;
+          return `${event.title} — Ticket ${range}`;
+        })(),
         metadata: {
           orderId: orderRef.id,
           eventId,
