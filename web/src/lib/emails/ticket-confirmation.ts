@@ -1,5 +1,6 @@
 // Event ticket confirmation email HTML template
 // Sent once after checkout.session.completed confirms an event_ticket purchase
+// Simple physical-ticket style — no QR code, show email at the door
 
 export interface TicketConfirmationData {
   firstName: string;
@@ -7,195 +8,171 @@ export interface TicketConfirmationData {
   eventDate: string;
   eventLocation: string;
   quantity: number;
-  unitPrice: string;     // e.g. "$45.00"
-  totalPaid: string;     // e.g. "$90.00"
+  unitPrice: string;     // e.g. "$25.00"
+  totalPaid: string;     // e.g. "$50.00"
   orderId: string;
   transactionId: string;
   paidAt: string;
   eventsUrl: string;
-  accentColor?: string;  // e.g. "#D4AF37" for Sip & Paint, defaults to ROCAFIESTA pink
+  accentColor?: string;  // e.g. "#84cc16" for Skales, "#ec4899" for ROCAFIESTA
 }
 
 export function ticketConfirmationHtml(d: TicketConfirmationData): string {
   const ticketWord = d.quantity === 1 ? "ticket" : "tickets";
-  const accent = d.accentColor ?? "#ec4899";
-  const accentLight = d.accentColor ? d.accentColor + "cc" : "#f9a8d4";
-  const accentBg = d.accentColor ? d.accentColor + "12" : "#ec489912";
-  const accentBorder = d.accentColor ? d.accentColor + "30" : "#ec489930";
-  const accentDim = d.accentColor ? d.accentColor + "20" : "#ec489920";
+  const accent = d.accentColor ?? "#84cc16";
+  const accentBorder = accent + "35";
+  const accentBg = accent + "12";
+  const accentDim = accent + "22";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ticket Confirmed &mdash; ${escHtml(d.eventTitle)}</title>
+  <title>Your Ticket &mdash; ${escHtml(d.eventTitle)}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#ffffff;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:40px 0;">
     <tr>
       <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <table width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;">
 
           <!-- HEADER -->
           <tr>
-            <td style="padding:0 0 32px 0;text-align:center;">
-              <span style="font-size:13px;font-weight:700;letter-spacing:0.2em;color:${accent};text-transform:uppercase;">ALL ACCESS</span>
-              <span style="font-size:13px;color:#ffffff30;margin:0 8px;">by</span>
-              <span style="font-size:13px;font-weight:600;letter-spacing:0.05em;color:#ffffff50;text-transform:uppercase;">TakersLifestyle</span>
+            <td style="padding:0 0 28px 0;text-align:center;">
+              <span style="font-size:13px;font-weight:700;letter-spacing:0.18em;color:${accent};text-transform:uppercase;">ALL ACCESS</span>
+              <span style="font-size:13px;color:#ffffff20;margin:0 8px;">&bull;</span>
+              <span style="font-size:12px;font-weight:500;letter-spacing:0.06em;color:#ffffff35;text-transform:uppercase;">Winnipeg</span>
             </td>
           </tr>
 
-          <!-- HERO CARD -->
+          <!-- TICKET CARD -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0a121a 0%,#0f0f0f 50%,#0f0a12 100%);border:1px solid ${accentBorder};border-radius:20px;padding:48px 40px 40px;text-align:center;">
-              <div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:#86efac20;border:1px solid #86efac30;border-radius:50%;margin-bottom:24px;font-size:24px;">
-                &#10003;
+            <td style="background:#111111;border:1px solid ${accentBorder};border-radius:20px;overflow:hidden;">
+
+              <!-- Top strip -->
+              <div style="background:${accent};padding:18px 36px;text-align:center;">
+                <p style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.22em;color:#000000;text-transform:uppercase;">&#10003;&nbsp; Ticket Confirmed</p>
               </div>
-              <h1 style="margin:0 0 12px;font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-0.02em;">
-                You&rsquo;re on the list, ${escHtml(d.firstName)}.
-              </h1>
-              <p style="margin:0 0 8px;font-size:17px;font-weight:700;color:${accent};">
-                ${escHtml(d.eventTitle)}
-              </p>
-              <p style="margin:0 0 32px;font-size:15px;color:#ffffff60;line-height:1.5;">
-                ${d.quantity} ${ticketWord} confirmed &bull; Payment received
-              </p>
-              <a href="${d.eventsUrl}"
-                 style="display:inline-block;background:${accent};color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:12px;letter-spacing:0.01em;">
-                View All Events &rarr;
-              </a>
+
+              <!-- Main content -->
+              <div style="padding:36px 36px 32px;">
+
+                <!-- Event title -->
+                <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;line-height:1.2;letter-spacing:-0.01em;color:#ffffff;">
+                  ${escHtml(d.eventTitle)}
+                </h1>
+                <p style="margin:0 0 28px;font-size:14px;color:#ffffff50;">
+                  ${d.quantity} ${ticketWord} &bull; ${escHtml(d.totalPaid)} paid
+                </p>
+
+                <!-- Dotted divider -->
+                <div style="border-top:1px dashed #ffffff15;margin-bottom:24px;"></div>
+
+                <!-- Event details grid -->
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:9px 0;vertical-align:top;">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff30;">Date</span>
+                    </td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span style="font-size:13px;font-weight:600;color:#ffffff90;">${escHtml(d.eventDate)}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 0;vertical-align:top;">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff30;">Location</span>
+                    </td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span style="font-size:13px;font-weight:600;color:#ffffff90;">${escHtml(d.eventLocation)}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 0;vertical-align:top;">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff30;">Tickets</span>
+                    </td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span style="font-size:13px;font-weight:600;color:#ffffff90;">${d.quantity} &times; ${escHtml(d.unitPrice)}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:9px 0;vertical-align:top;">
+                      <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff30;">Total Paid</span>
+                    </td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span style="font-size:16px;font-weight:800;color:${accent};">${escHtml(d.totalPaid)}</span>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Dotted divider -->
+                <div style="border-top:1px dashed #ffffff15;margin:24px 0;"></div>
+
+                <!-- Order number (prominent — show at door) -->
+                <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff25;">Order Confirmation</p>
+                <p style="margin:0;font-size:14px;font-family:monospace;font-weight:600;letter-spacing:0.06em;color:#ffffff60;word-break:break-all;">${escHtml(d.orderId)}</p>
+
+              </div>
+
+              <!-- Bottom CTA strip -->
+              <div style="background:${accentBg};border-top:1px solid ${accentDim};padding:18px 36px;text-align:center;">
+                <p style="margin:0;font-size:13px;font-weight:700;color:${accent};letter-spacing:0.03em;">
+                  Show this email at the door &mdash; that&rsquo;s your ticket.
+                </p>
+                <p style="margin:6px 0 0;font-size:12px;color:#ffffff30;">
+                  Staff will pull up your order by name or email.
+                </p>
+              </div>
+
             </td>
           </tr>
 
           <tr><td style="height:24px;"></td></tr>
 
-          <!-- EVENT DETAILS -->
+          <!-- ORDER REFERENCE (compact) -->
           <tr>
-            <td style="background:#0f0f0f;border:1px solid #ffffff10;border-radius:16px;padding:28px 32px;">
-              <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff30;">Event Details</p>
+            <td style="background:#0f0f0f;border:1px solid #ffffff08;border-radius:14px;padding:18px 24px;">
+              <p style="margin:0 0 12px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff20;">Receipt</p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:13px;color:#ffffff50;">Event</span>
+                  <td style="padding:6px 0;">
+                    <span style="font-size:12px;color:#ffffff30;">Order ID</span>
                   </td>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:14px;font-weight:700;color:#ffffff;">${escHtml(d.eventTitle)}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:13px;color:#ffffff50;">Date</span>
-                  </td>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:13px;color:#ffffff80;">${escHtml(d.eventDate)}</span>
+                  <td style="padding:6px 0;text-align:right;">
+                    <span style="font-size:11px;font-family:monospace;color:#ffffff40;letter-spacing:0.03em;">${escHtml(d.orderId)}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:13px;color:#ffffff50;">Location</span>
+                  <td style="padding:6px 0;">
+                    <span style="font-size:12px;color:#ffffff30;">Transaction</span>
                   </td>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:13px;color:#ffffff80;">${escHtml(d.eventLocation)}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:13px;color:#ffffff50;">Tickets</span>
-                  </td>
-                  <td style="padding:10px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:13px;color:#ffffff80;">${d.quantity} &times; ${escHtml(d.unitPrice)}</span>
+                  <td style="padding:6px 0;text-align:right;">
+                    <span style="font-size:11px;font-family:monospace;color:#ffffff40;letter-spacing:0.03em;">${escHtml(d.transactionId)}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:10px 0;">
-                    <span style="font-size:13px;color:#ffffff50;">Total paid</span>
+                  <td style="padding:6px 0;">
+                    <span style="font-size:12px;color:#ffffff30;">Date</span>
                   </td>
-                  <td style="padding:10px 0;text-align:right;">
-                    <span style="font-size:16px;font-weight:800;color:#86efac;">${escHtml(d.totalPaid)}</span>
+                  <td style="padding:6px 0;text-align:right;">
+                    <span style="font-size:12px;color:#ffffff40;">${escHtml(d.paidAt)}</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <tr><td style="height:16px;"></td></tr>
-
-          <!-- ORDER REFERENCE -->
-          <tr>
-            <td style="background:#0f0f0f;border:1px solid #ffffff10;border-radius:16px;padding:20px 32px;">
-              <p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff30;">Order Reference</p>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:8px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:12px;color:#ffffff40;">Order ID</span>
-                  </td>
-                  <td style="padding:8px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:11px;font-family:monospace;color:#ffffff50;letter-spacing:0.03em;">${escHtml(d.orderId)}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;border-bottom:1px solid #ffffff08;">
-                    <span style="font-size:12px;color:#ffffff40;">Transaction ID</span>
-                  </td>
-                  <td style="padding:8px 0;border-bottom:1px solid #ffffff08;text-align:right;">
-                    <span style="font-size:11px;font-family:monospace;color:#ffffff50;letter-spacing:0.03em;">${escHtml(d.transactionId)}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;">
-                    <span style="font-size:12px;color:#ffffff40;">Purchase date</span>
-                  </td>
-                  <td style="padding:8px 0;text-align:right;">
-                    <span style="font-size:12px;color:#ffffff50;">${escHtml(d.paidAt)}</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr><td style="height:24px;"></td></tr>
-
-          <!-- QR CODE TICKET -->
-          <tr>
-            <td style="background:#0f0f0f;border:1px solid #ffffff10;border-radius:16px;padding:28px 32px;text-align:center;">
-              <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff30;">Your Entry QR Code</p>
-              <p style="margin:0 0 20px;font-size:12px;color:#ffffff25;">Screenshot this or show email at the door</p>
-              <div style="display:inline-block;background:#ffffff;border-radius:12px;padding:12px;margin-bottom:16px;">
-                <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&amp;data=${escHtml(d.orderId)}&amp;margin=8&amp;bgcolor=ffffff&amp;color=000000"
-                  alt="Entry QR Code"
-                  width="180"
-                  height="180"
-                  style="display:block;border-radius:4px;"
-                />
-              </div>
-              <p style="margin:0;font-size:10px;font-family:monospace;color:#ffffff20;letter-spacing:0.08em;">${escHtml(d.orderId)}</p>
-            </td>
-          </tr>
-
-          <tr><td style="height:16px;"></td></tr>
-
-          <!-- REMINDER -->
-          <tr>
-            <td style="background:${accentBg};border:1px solid ${accentDim};border-radius:12px;padding:20px 24px;">
-              <p style="margin:0;font-size:13px;color:#ffffff60;line-height:1.6;">
-                <strong style="color:${accentLight};">At the door:</strong> Have this QR code ready on your screen &mdash; staff will scan it to check you in instantly. Keep this email as your proof of purchase.
-              </p>
-            </td>
-          </tr>
-
-          <tr><td style="height:32px;"></td></tr>
+          <tr><td style="height:28px;"></td></tr>
 
           <!-- FOOTER -->
           <tr>
-            <td style="text-align:center;padding:0 20px;">
-              <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.15em;color:${accent};text-transform:uppercase;">ALL ACCESS</p>
-              <p style="margin:0 0 16px;font-size:12px;color:#ffffff30;line-height:1.6;">
-                Questions? Reply to this email or reach us at<br/>
-                <a href="mailto:hello@allaccesswinnipeg.ca" style="color:#ffffff40;text-decoration:none;">hello@allaccesswinnipeg.ca</a>
+            <td style="text-align:center;padding:0 16px;">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.15em;color:${accent};text-transform:uppercase;">ALL ACCESS</p>
+              <p style="margin:0 0 14px;font-size:12px;color:#ffffff25;line-height:1.6;">
+                Questions? Reach us at&nbsp;
+                <a href="mailto:hello@allaccesswinnipeg.ca" style="color:#ffffff35;text-decoration:none;">hello@allaccesswinnipeg.ca</a>
               </p>
-              <p style="margin:0;font-size:11px;color:#ffffff20;line-height:1.6;">
+              <p style="margin:0;font-size:11px;color:#ffffff18;line-height:1.6;">
                 You&rsquo;re receiving this because you purchased a ticket through ALL ACCESS.<br/>
                 Winnipeg, MB, Canada
               </p>

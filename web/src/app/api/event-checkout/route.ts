@@ -153,6 +153,9 @@ export async function POST(req: NextRequest) {
       paymentStatus: "pending",
       stripeCheckoutSessionId: null,
       stripePaymentIntentId: null,
+      // Email customization — pulled from event doc so each event can brand its own email
+      emailAccentColor: (event.emailAccentColor as string | undefined) ?? null,
+      emailSubject: (event.emailSubject as string | undefined) ?? null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

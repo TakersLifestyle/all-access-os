@@ -185,7 +185,7 @@ export async function sendTicketConfirmation({
   const { error } = await resend.emails.send({
     from: FROM_ADDRESS,
     to: toEmail,
-    subject: subject ?? `🎟 Your ROCAFIESTA Ticket — You're In for A Spiritual Experience with Konfam`,
+    subject: subject ?? `🎟 Your Ticket is Confirmed — ${eventTitle}`,
     html,
   });
 
