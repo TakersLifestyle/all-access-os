@@ -289,19 +289,38 @@ export default function DJLankzSkalesPage() {
         </section>
 
         {/* ── Special Guest — DANAGOG ────────────────────────────────────── */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8 space-y-4">
-          <div>
-            <p className="text-white/25 text-[10px] font-bold uppercase tracking-[0.18em] mb-1">Special Guest</p>
-            <h2 className="text-2xl font-black text-white tracking-tight">DANAGOG</h2>
-            <p className="text-white/40 text-sm mt-1">Afrobeats · Lagos, Nigeria</p>
-          </div>
-          <p className="text-white/50 text-sm leading-relaxed">
-            DANAGOG brings raw Afrobeats energy to the stage as special guest for this night.
-            Known for his infectious sound and crowd-moving performances, he adds another dimension
-            to an already loaded lineup.
-          </p>
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
-            <span className="text-white/40 text-xs font-bold">⭐ Special Guest · Oct 9, 2026</span>
+        <section className="rounded-2xl border border-white/10 overflow-hidden">
+          <div className="grid sm:grid-cols-[280px_1fr]">
+            {/* Artist photo */}
+            <div className="relative h-64 sm:h-auto overflow-hidden">
+              <img
+                src="/events/danagog.jpg"
+                alt="DANAGOG"
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/50 hidden sm:block" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent sm:hidden" />
+            </div>
+
+            {/* Artist info */}
+            <div className="p-6 sm:p-8 space-y-4 bg-white/[0.02]">
+              <div>
+                <p className="text-white/25 text-[10px] font-bold uppercase tracking-[0.18em] mb-1">
+                  Special Guest
+                </p>
+                <h2 className="text-3xl font-black text-white tracking-tight">DANAGOG</h2>
+                <p className="text-white/40 text-sm mt-1">Afrobeats · Lagos, Nigeria</p>
+              </div>
+              <p className="text-white/55 text-sm leading-relaxed">
+                DANAGOG is one of Afrobeats&rsquo; most electrifying live performers — known for
+                infectious energy, crowd-moving anthems, and a stage presence that commands
+                every room. Joining SKALES for this historic Winnipeg night, he brings
+                another headline-level act to an already loaded lineup.
+              </p>
+              <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                <span className="text-white/40 text-xs font-bold">⭐ Special Guest · Oct 9, 2026</span>
+              </div>
+            </div>
           </div>
         </section>
 
