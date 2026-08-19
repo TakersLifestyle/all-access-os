@@ -82,12 +82,15 @@ export default function DJLankzSkalesPage() {
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="relative w-full overflow-hidden" style={{ minHeight: "580px" }}>
-        {/* Skales live performance — full bleed hero */}
-        <img
-          src="/events/skales-live-1.jpg"
-          alt="SKALES — DJ LANKZ & FRIENDS, October 9, 2026"
+        {/* Promo video — autoplay muted loop as hero background */}
+        <video
+          src="/events/dj-lankz-skales-promo.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
           className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ filter: "brightness(0.6) saturate(1.15) contrast(1.05)" }}
+          style={{ filter: "brightness(0.6) saturate(1.1)" }}
         />
 
         {/* Lime-green gradient overlay from bottom */}
