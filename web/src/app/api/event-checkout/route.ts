@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
         discountPct: isMember ? "15" : "0",
       },
       payment_intent_data: {
+        description: `${event.title} — Event Ticket × ${qty}`,
         metadata: {
           orderId: orderRef.id,
           eventId,
