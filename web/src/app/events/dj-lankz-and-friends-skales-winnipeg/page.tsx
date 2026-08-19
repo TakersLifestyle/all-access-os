@@ -149,6 +149,26 @@ export default function DJLankzSkalesPage() {
           ))}
         </div>
 
+        {/* ── Promo Video ────────────────────────────────────────────────── */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
+            <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>Watch the Promo</p>
+            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
+          </div>
+          <div className={`rounded-2xl overflow-hidden border ${LIME.border}`}>
+            <video
+              src="/events/dj-lankz-skales-promo.mp4"
+              controls
+              playsInline
+              preload="metadata"
+              poster="/events/skales-hero.jpg"
+              className="w-full"
+              style={{ maxHeight: "480px", background: "#000" }}
+            />
+          </div>
+        </section>
+
         {/* ── About ──────────────────────────────────────────────────────── */}
         <section className="space-y-4">
           <div className="flex items-center gap-3">
