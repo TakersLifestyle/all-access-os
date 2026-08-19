@@ -879,21 +879,18 @@ function DJLankzConcertCard({ ev }: { ev: Event }) {
               {dateLabel}
             </span>
           )}
-          <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
-            18+
-          </span>
         </div>
 
-        {/* Bottom text overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <p className="text-[#84cc16]/70 text-xs font-bold uppercase tracking-[0.15em]">
-            DJ LANKZ & FRIENDS · {ev.location || "Winnipeg, MB"}
+        {/* Bottom text overlay — 4-level hierarchy */}
+        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+          <p className="text-[#84cc16]/70 text-[10px] sm:text-xs font-black uppercase tracking-[0.20em]">
+            DJ LANKZ & FRIENDS
           </p>
-          <h2 className="text-3xl font-black text-white mt-1 leading-tight tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-0.5 leading-none tracking-tight">
             SKALES
           </h2>
-          <p className="text-white/60 text-base font-bold mt-0.5 tracking-wide">LIVE IN WINNIPEG</p>
-          <p className="text-white/40 text-sm mt-0.5">WITH SPECIAL GUEST DANAGOG</p>
+          <p className="text-white/75 text-base sm:text-lg font-bold mt-0.5 tracking-wide">LIVE IN WINNIPEG</p>
+          <p className="text-white/40 text-xs sm:text-sm font-semibold uppercase tracking-widest mt-1">WITH SPECIAL GUEST DANAGOG</p>
         </div>
       </div>
 
@@ -919,6 +916,16 @@ function DJLankzConcertCard({ ev }: { ev: Event }) {
         <span className="text-[#84cc16] font-bold text-sm group-hover:translate-x-1 transition-transform shrink-0">
           View Event →
         </span>
+      </div>
+      {/* Venue address — separate row */}
+      <div className="px-5 sm:px-6 pb-4 bg-black">
+        <p className="text-white/25 text-xs flex items-center gap-1.5">
+          <svg className="w-3 h-3 shrink-0 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          {ev.location || "265 Portage Ave, Winnipeg, MB"}
+        </p>
       </div>
     </a>
   );

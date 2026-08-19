@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "EQIimnVZ5jPhVKPLyAJ2";
@@ -28,7 +29,6 @@ const EVENT = {
   dateShort: "Oct 9, 2026",
   doorsOpen: "10:00 PM",
   address: "265 Portage Ave, Winnipeg, MB",
-  age: "18+",
   presenter: "DJ LANKZ & ALL ACCESS Winnipeg",
 };
 
@@ -41,6 +41,8 @@ export default function DJLankzSkalesPage() {
   const handleCheckout = useCallback(async () => {
     setError(null);
     setLoading(true);
+    // Track every click — shows in Vercel Analytics custom events
+    track("get_tickets_click", { event: "skales_oct9", quantity: qty, source: "event_page" });
     try {
       const res = await fetch("/api/event-checkout", {
         method: "POST",
@@ -81,7 +83,7 @@ export default function DJLankzSkalesPage() {
       </div>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="relative w-full overflow-hidden" style={{ minHeight: "580px" }}>
+      <section className="relative w-full overflow-hidden bg-black" style={{ minHeight: "600px" }}>
         {/* Promo video — autoplay muted loop as hero background */}
         <video
           src="/events/dj-lankz-skales-promo.mp4"
@@ -90,76 +92,103 @@ export default function DJLankzSkalesPage() {
           loop
           playsInline
           className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ filter: "brightness(0.6) saturate(1.1)" }}
+          style={{ filter: "brightness(0.45) saturate(1.1)" }}
         />
 
-        {/* Lime-green gradient overlay from bottom */}
+        {/* Directional overlays: heavier on left so text always reads clearly */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0.25) 75%, transparent 100%)",
+              "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.70) 50%, rgba(0,0,0,0.15) 100%)",
           }}
         />
-
-        {/* Subtle lime tint at bottom edge */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none"
+          className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, rgba(132,204,22,0.07) 0%, transparent 100%)",
+              "linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.50) 35%, transparent 70%)",
           }}
         />
+        {/* Subtle lime tint at bottom edge */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
+          style={{ background: "linear-gradient(to top, rgba(132,204,22,0.06) 0%, transparent 100%)" }}
+        />
 
-        {/* Hero content */}
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pb-14 pt-28 sm:pt-36 flex flex-col justify-end min-h-[580px]">
-          {/* Badges */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            <span className={`${LIME.badge} text-black text-xs font-black px-3 py-1.5 rounded-full`}>
-              LIVE CONCERT
-            </span>
-            <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
-              {EVENT.dateShort}
-            </span>
-            <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
-              {EVENT.age}
-            </span>
+        {/* Hero content — desktop: side-by-side; mobile: stacked over video */}
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 min-h-[600px] flex items-end lg:items-center gap-8 pb-12 pt-28 lg:pb-16 lg:pt-20">
+
+          {/* Left column: all text */}
+          <div className="flex-1 space-y-4 lg:pr-4">
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2">
+              <span className={`${LIME.badge} text-black text-xs font-black px-3 py-1.5 rounded-full`}>
+                LIVE CONCERT
+              </span>
+              <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+                {EVENT.dateShort}
+              </span>
+            </div>
+
+            {/* Event name stack — clear 4-level hierarchy */}
+            <div className="space-y-1">
+              <p className={`${LIME.textDim} text-[11px] sm:text-xs font-black uppercase tracking-[0.22em]`}>
+                {EVENT.title}
+              </p>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-none">
+                SKALES
+              </h1>
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-white/90 leading-tight tracking-tight">
+                LIVE IN WINNIPEG
+              </p>
+              <p className="text-white/50 text-xs sm:text-sm font-semibold tracking-[0.18em] uppercase pt-1">
+                {EVENT.guest}
+              </p>
+            </div>
+
+            {/* Quick details row */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-5 pt-1 text-sm text-white/50">
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-white/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                {EVENT.date}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-white/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Doors {EVENT.doorsOpen}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-white/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                {EVENT.address}
+              </span>
+            </div>
           </div>
 
-          {/* Event name stack */}
-          <p className={`${LIME.textDim} text-xs font-bold uppercase tracking-[0.18em] mb-2`}>
-            {EVENT.title}
-          </p>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-none mb-3">
-            SKALES<br />
-            <span className="text-3xl sm:text-4xl md:text-5xl font-black">LIVE IN WINNIPEG</span>
-          </h1>
-          <p className="text-white/55 text-sm sm:text-base font-semibold tracking-widest uppercase">
-            {EVENT.guest}
-          </p>
-
-          {/* Quick details row */}
-          <div className="flex flex-wrap gap-4 mt-6 text-sm text-white/50">
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              {EVENT.date}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Doors {EVENT.doorsOpen}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              {EVENT.address}
-            </span>
+          {/* Right column: Skales press photo — desktop only */}
+          <div className="hidden lg:block relative flex-shrink-0" style={{ width: "300px", height: "500px" }}>
+            <div className="absolute inset-0 rounded-2xl overflow-hidden">
+              <img
+                src="/events/skales-hero.jpg"
+                alt="SKALES"
+                className="w-full h-full object-cover object-top"
+                style={{ filter: "brightness(0.9) saturate(1.1)" }}
+              />
+              {/* Blend left edge into the video background */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 45%)" }} />
+              {/* Blend bottom into page bg */}
+              <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 100%)" }} />
+            </div>
+            {/* Lime border glow */}
+            <div className="absolute -inset-px rounded-2xl border border-[#84cc16]/25 pointer-events-none" />
           </div>
+
         </div>
       </section>
 
@@ -172,7 +201,6 @@ export default function DJLankzSkalesPage() {
             { label: "Date", value: EVENT.date, emoji: "📅" },
             { label: "Doors Open", value: EVENT.doorsOpen, emoji: "🚪" },
             { label: "Address", value: EVENT.address, emoji: "📍" },
-            { label: "Age Restriction", value: EVENT.age + " · Valid ID required at door", emoji: "🪪" },
             { label: "Headline Artist", value: "SKALES", emoji: "🎤" },
             { label: "Special Guest", value: "DANAGOG", emoji: "⭐" },
             { label: "Host / DJ", value: "DJ LANKZ", emoji: "🎧" },
@@ -311,7 +339,6 @@ export default function DJLankzSkalesPage() {
                 <span className={`w-2 h-2 rounded-full ${LIME.badge} animate-pulse`} />
                 <span className={`${LIME.text} text-xs font-bold uppercase tracking-widest`}>Early Bird — Limited Quantity</span>
               </div>
-              <span className="text-white/30 text-xs">18+ · Valid ID at door</span>
             </div>
 
             {/* Tier card */}
@@ -357,46 +384,26 @@ export default function DJLankzSkalesPage() {
               </div>
             </div>
 
-            {/* CTA */}
-            {user ? (
-              <button
-                onClick={handleCheckout}
-                disabled={loading}
-                className="w-full bg-[#84cc16] hover:bg-[#a3e635] active:bg-[#65a30d] disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-base py-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#84cc16]/20 hover:shadow-[#84cc16]/30 hover:-translate-y-0.5"
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                    <span>Redirecting…</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🎟 Get Early Bird Tickets — ${total}</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
-                    </svg>
-                  </>
-                )}
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5">
-                  <div className="w-8 h-8 rounded-full bg-[#84cc16]/15 border border-[#84cc16]/30 flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4 text-[#84cc16]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white/70 text-sm font-semibold">Sign in to get tickets</p>
-                    <p className="text-white/30 text-xs mt-0.5">Create your account to lock in Early Bird pricing.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Link href="/login" className="flex-1 text-center border border-white/15 hover:border-white/30 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition">Log in</Link>
-                  <Link href="/signup" className="flex-1 text-center bg-[#84cc16] hover:bg-[#a3e635] text-black py-3 rounded-xl text-sm font-black transition">Create account</Link>
-                </div>
-              </div>
-            )}
+            {/* CTA — no login required, guest checkout supported */}
+            <button
+              onClick={handleCheckout}
+              disabled={loading}
+              className="w-full bg-[#84cc16] hover:bg-[#a3e635] active:bg-[#65a30d] disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-base py-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#84cc16]/20 hover:shadow-[#84cc16]/30 hover:-translate-y-0.5"
+            >
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span>Redirecting…</span>
+                </>
+              ) : (
+                <>
+                  <span>🎟 Get Early Bird Tickets — ${total}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
+                  </svg>
+                </>
+              )}
+            </button>
 
             {error && (
               <div className="bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2.5">
@@ -456,7 +463,7 @@ export default function DJLankzSkalesPage() {
               </div>
             </div>
             <p className="text-white/25 text-xs leading-relaxed pl-9">
-              October 9, 2026 · 10 PM – Late · 18+ with valid ID
+              October 9, 2026 · 10 PM – Late
             </p>
           </div>
         </section>
@@ -464,7 +471,7 @@ export default function DJLankzSkalesPage() {
         {/* ── Bottom CTA strip ───────────────────────────────────────────── */}
         <div className={`rounded-2xl border ${LIME.border} ${LIME.glow} p-6 sm:p-8 text-center space-y-3`}>
           <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>
-            October 9, 2026 · 265 Portage Ave · Doors 10 PM · 18+
+            October 9, 2026 · 265 Portage Ave · Doors 10 PM
           </p>
           <h3 className="text-2xl font-black text-white">
             SKALES LIVE IN WINNIPEG

@@ -66,6 +66,15 @@ const nextConfig: NextConfig = {
         destination: "/series/sunset-sessions/vol-01",
         permanent: false,
       },
+      // DJ LANKZ & FRIENDS — SKALES LIVE IN WINNIPEG
+      // QR codes and all print/digital materials point to /skales
+      // Update destination here if the canonical event URL ever changes —
+      // existing QR codes and printed links always point to /skales (unchanged).
+      {
+        source: "/skales",
+        destination: "/events/dj-lankz-and-friends-skales-winnipeg",
+        permanent: false, // 307 — updateable without browser cache problems
+      },
     ];
   },
 };

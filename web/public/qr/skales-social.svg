@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 1000" width="880" height="1000">
+  <!-- Dark background — social-native -->
+  <rect width="880" height="1000" fill="#0a0a0a"/>
+
+  <!-- Top label: event brand -->
+  <text x="440" y="62"
+        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+        font-size="28" font-weight="900" fill="#84cc16"
+        text-anchor="middle" letter-spacing="4">DJ LANKZ &amp; FRIENDS</text>
+
+  <!-- Lime corner accents — decoration OUTSIDE quiet zone -->
+  <!-- Top-left -->
+  <polyline points="100,96 80,96 80,120" fill="none" stroke="#84cc16" stroke-width="5" stroke-linecap="round"/>
+  <!-- Top-right -->
+  <polyline points="780,96 800,96 800,120" fill="none" stroke="#84cc16" stroke-width="5" stroke-linecap="round"/>
+  <!-- Bottom-left -->
+  <polyline points="100,820 80,820 80,796" fill="none" stroke="#84cc16" stroke-width="5" stroke-linecap="round"/>
+  <!-- Bottom-right -->
+  <polyline points="780,820 800,820 800,796" fill="none" stroke="#84cc16" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- White QR background — critical for proper quiet zone on dark bg -->
+  <rect x="90" y="88" width="700" height="700" rx="12" ry="12" fill="#FFFFFF"/>
+
+  <!-- QR code -->
+  <g transform="translate(90, 88)">
+    <path fill="#FFFFFF" d="M0 0h45v45H0z"/><path stroke="#000000" d="M4 4.5h7m2 0h1m2 0h2m2 0h2m3 0h1m2 0h2m2 0h1m1 0h7M4 5.5h1m5 0h1m2 0h1m11 0h3m1 0h1m2 0h1m1 0h1m5 0h1M4 6.5h1m1 0h3m1 0h1m5 0h3m3 0h1m1 0h8m2 0h1m1 0h3m1 0h1M4 7.5h1m1 0h3m1 0h1m2 0h1m2 0h2m1 0h3m3 0h7m2 0h1m1 0h3m1 0h1M4 8.5h1m1 0h3m1 0h1m1 0h4m1 0h1m3 0h2m5 0h1m2 0h1m2 0h1m1 0h3m1 0h1M4 9.5h1m5 0h1m4 0h1m1 0h1m1 0h1m2 0h5m1 0h2m4 0h1m5 0h1M4 10.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M12 11.5h4m4 0h8m3 0h2M6 12.5h2m2 0h5m1 0h1m1 0h3m2 0h1m1 0h1m3 0h1m1 0h4m1 0h1M4 13.5h4m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m3 0h1m3 0h1m1 0h6m4 0h1M7 14.5h1m1 0h3m4 0h1m2 0h1m1 0h4m3 0h2m1 0h1m1 0h1m1 0h3M4 15.5h2m1 0h2m2 0h2m1 0h2m2 0h3m2 0h1m1 0h2m1 0h4m3 0h1m1 0h3M4 16.5h2m2 0h1m1 0h2m1 0h4m1 0h1m2 0h1m3 0h3m1 0h2m2 0h2m1 0h1m1 0h1M4 17.5h3m2 0h1m2 0h1m1 0h4m5 0h1m3 0h1m1 0h3m2 0h1m1 0h1m1 0h3M4 18.5h1m2 0h1m1 0h3m1 0h3m2 0h1m3 0h3m3 0h2m3 0h1m2 0h1m1 0h2M9 19.5h1m1 0h3m2 0h3m1 0h1m1 0h2m2 0h1m1 0h1m1 0h2m1 0h3m4 0h1M5 20.5h1m4 0h1m1 0h2m1 0h2m2 0h2m1 0h1m4 0h1m1 0h1m2 0h1m4 0h2m1 0h1M6 21.5h2m1 0h1m1 0h2m3 0h3m5 0h2m1 0h3m1 0h1m1 0h2m3 0h1m1 0h1M5 22.5h1m2 0h1m1 0h1m1 0h1m2 0h1m1 0h2m1 0h1m2 0h1m1 0h2m2 0h1m1 0h3m1 0h2m2 0h2M4 23.5h2m1 0h3m3 0h1m1 0h2m1 0h1m3 0h2m1 0h2m4 0h1m1 0h2m1 0h2m2 0h1M4 24.5h1m1 0h7m1 0h1m3 0h1m1 0h1m1 0h2m4 0h1m1 0h1m1 0h2m2 0h1M5 25.5h1m1 0h2m2 0h1m2 0h4m1 0h2m1 0h1m3 0h1m2 0h1m5 0h1m1 0h1M7 26.5h1m2 0h5m3 0h1m1 0h1m2 0h2m3 0h2m4 0h1m1 0h1M5 27.5h2m1 0h1m2 0h1m2 0h3m1 0h1m3 0h1m3 0h1m1 0h1m2 0h2m1 0h1m2 0h2M5 28.5h3m1 0h2m1 0h1m4 0h4m1 0h1m2 0h2m1 0h1m1 0h1m1 0h2m3 0h3M5 29.5h1m3 0h1m1 0h1m1 0h2m1 0h5m2 0h1m3 0h2m1 0h1m2 0h1m1 0h1m3 0h2M5 30.5h3m1 0h2m2 0h1m1 0h1m1 0h3m1 0h5m1 0h1m1 0h1m5 0h3m1 0h1M4 31.5h1m2 0h1m4 0h2m1 0h2m2 0h1m1 0h1m2 0h1m1 0h2m2 0h2m1 0h1m1 0h3M7 32.5h5m1 0h2m2 0h2m3 0h1m6 0h1m2 0h5m3 0h1M12 33.5h2m1 0h1m2 0h6m1 0h4m3 0h1m3 0h3m1 0h1M4 34.5h7m1 0h1m1 0h2m1 0h2m1 0h1m1 0h2m1 0h2m2 0h2m1 0h1m1 0h1m1 0h2m1 0h2M4 35.5h1m5 0h1m4 0h1m4 0h1m2 0h2m1 0h2m2 0h3m3 0h2m1 0h1M4 36.5h1m1 0h3m1 0h1m2 0h1m1 0h1m4 0h3m5 0h1m1 0h1m1 0h6m1 0h2M4 37.5h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h2m1 0h1m1 0h1m5 0h2m2 0h1m1 0h1m1 0h2M4 38.5h1m1 0h3m1 0h1m1 0h1m1 0h1m2 0h1m2 0h2m1 0h1m2 0h5m3 0h6M4 39.5h1m5 0h1m4 0h2m1 0h1m1 0h2m1 0h1m5 0h3m5 0h2M4 40.5h7m2 0h2m1 0h1m9 0h1m1 0h3m2 0h1m1 0h1m1 0h4"/>
+  </g>
+
+  <!-- Bottom info -->
+  <text x="440" y="862"
+        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+        font-size="34" font-weight="900" fill="#FFFFFF"
+        text-anchor="middle" letter-spacing="2">SCAN FOR TICKETS</text>
+
+  <text x="440" y="906"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22" font-weight="400" fill="#84cc16"
+        text-anchor="middle">SKALES LIVE IN WINNIPEG · OCT 9</text>
+
+  <text x="440" y="948"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18" font-weight="400" fill="rgba(255,255,255,0.4)"
+        text-anchor="middle">allaccesswinnipeg.ca/skales</text>
+
+  <!-- $25 Early Bird badge -->
+  <rect x="340" y="962" width="200" height="32" rx="16" fill="#84cc16"/>
+  <text x="440" y="984"
+        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+        font-size="14" font-weight="900" fill="#000000"
+        text-anchor="middle" letter-spacing="1">EARLY BIRD · $25</text>
+</svg>
