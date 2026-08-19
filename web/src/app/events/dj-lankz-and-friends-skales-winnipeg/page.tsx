@@ -1,6 +1,11 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
+
+const EVENT_ID = "EQIimnVZ5jPhVKPLyAJ2";
+const EARLY_BIRD_PRICE = 25;
 
 // ── Accent palette — lime-green from Skales' signature look ──────────────────
 // Only applies to this page. No other ALL ACCESS page is affected.
@@ -28,6 +33,37 @@ const EVENT = {
 };
 
 export default function DJLankzSkalesPage() {
+  const { user } = useAuth();
+  const [qty, setQty] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCheckout = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/event-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: EVENT_ID,
+          quantity: qty,
+          uid: user?.uid ?? null,
+          userEmail: user?.email ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Checkout failed. Please try again.");
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error("No redirect URL. Please try again.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      setLoading(false);
+    }
+  }, [qty, user]);
+
+  const total = EARLY_BIRD_PRICE * qty;
+
   return (
     <main className="min-h-screen bg-black text-white">
 
@@ -273,48 +309,115 @@ export default function DJLankzSkalesPage() {
             <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
           </div>
 
-          <div className={`rounded-2xl border ${LIME.border} bg-white/[0.02] p-6 sm:p-8 space-y-5 text-center`}>
-            <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-4 py-2`}>
-              <span className={`w-2 h-2 rounded-full ${LIME.badge} animate-pulse`} />
-              <span className={`${LIME.text} text-xs font-bold uppercase tracking-widest`}>Tickets Dropping Soon</span>
+          <div className={`rounded-2xl border ${LIME.border} bg-white/[0.02] p-6 sm:p-8 space-y-5`}>
+
+            {/* Early Bird badge */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-4 py-2`}>
+                <span className={`w-2 h-2 rounded-full ${LIME.badge} animate-pulse`} />
+                <span className={`${LIME.text} text-xs font-bold uppercase tracking-widest`}>Early Bird — Limited Quantity</span>
+              </div>
+              <span className="text-white/30 text-xs">18+ · Valid ID at door</span>
             </div>
 
-            <div>
-              <h3 className="text-2xl font-black text-white">
-                DJ LANKZ & FRIENDS<br />
-                <span className="text-white/60 font-bold text-xl">October 9, 2026</span>
-              </h3>
-              <p className="text-white/35 text-sm mt-2 leading-relaxed">
-                Ticket prices and on-sale date will be announced soon.<br />
-                Follow ALL ACCESS Winnipeg to be first to know.
-              </p>
-            </div>
-
-            {/* Info grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-              {[
-                { label: "Date", val: "Oct 9, 2026" },
-                { label: "Doors", val: "10:00 PM" },
-                { label: "Age", val: "18+ with ID" },
-                { label: "Venue", val: "265 Portage Ave" },
-              ].map((item) => (
-                <div key={item.label} className="bg-black/40 border border-white/8 rounded-xl px-3 py-3">
-                  <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">{item.label}</p>
-                  <p className="text-white font-semibold text-sm mt-0.5">{item.val}</p>
+            {/* Tier card */}
+            <div className={`rounded-xl border ${LIME.border} bg-black/40 p-5 space-y-3`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-white font-black text-lg leading-tight">Early Bird</p>
+                  <p className="text-white/40 text-sm mt-0.5">General admission · Doors 10 PM · Oct 9, 2026</p>
                 </div>
-              ))}
+                <div className="text-right shrink-0">
+                  <p className="text-3xl font-black text-white">$25</p>
+                  <p className="text-white/30 text-xs">CAD per ticket</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {["General admission", "Full concert access", "Doors open 10 PM", "Early bird pricing"].map(f => (
+                  <span key={f} className="flex items-center gap-1.5 text-xs text-white/50">
+                    <span className={`text-[10px] ${LIME.text}`}>✓</span> {f}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* Coming soon button */}
-            <div className={`w-full py-4 rounded-xl border ${LIME.border} ${LIME.badgeDim} ${LIME.text} font-bold text-base cursor-default select-none`}>
-              🎟 Tickets Coming Soon
+            {/* Quantity selector */}
+            <div className="flex items-center justify-between bg-black/30 border border-white/10 rounded-xl px-4 py-3 gap-3">
+              <span className="text-sm text-white/50 shrink-0">Qty</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  disabled={qty <= 1}
+                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
+                >−</button>
+                <span className="w-8 text-center font-bold text-lg tabular-nums">{qty}</span>
+                <button
+                  onClick={() => setQty(q => Math.min(5, q + 1))}
+                  disabled={qty >= 5}
+                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
+                >+</button>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-white font-black text-xl tabular-nums">${total}</p>
+                {qty > 1 && <p className="text-white/30 text-xs">$25 × {qty}</p>}
+              </div>
             </div>
 
-            <p className="text-white/20 text-xs">
-              Questions?{" "}
-              <a href="mailto:hello@allaccesswinnipeg.ca" className="text-white/35 hover:text-white/60 transition underline">
-                hello@allaccesswinnipeg.ca
-              </a>
+            {/* CTA */}
+            {user ? (
+              <button
+                onClick={handleCheckout}
+                disabled={loading}
+                className="w-full bg-[#84cc16] hover:bg-[#a3e635] active:bg-[#65a30d] disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-base py-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#84cc16]/20 hover:shadow-[#84cc16]/30 hover:-translate-y-0.5"
+              >
+                {loading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    <span>Redirecting…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🎟 Get Early Bird Tickets — ${total}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5">
+                  <div className="w-8 h-8 rounded-full bg-[#84cc16]/15 border border-[#84cc16]/30 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-[#84cc16]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-sm font-semibold">Sign in to get tickets</p>
+                    <p className="text-white/30 text-xs mt-0.5">Create your account to lock in Early Bird pricing.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/login" className="flex-1 text-center border border-white/15 hover:border-white/30 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition">Log in</Link>
+                  <Link href="/signup" className="flex-1 text-center bg-[#84cc16] hover:bg-[#a3e635] text-black py-3 rounded-xl text-sm font-black transition">Create account</Link>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2.5">
+                <p className="text-red-400 text-xs flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">⚠</span>
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
+
+            <p className="text-center text-white/20 text-xs flex items-center justify-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              Secure checkout via Stripe · Refundable up to 72 hrs before the event
             </p>
           </div>
         </section>
@@ -375,7 +478,7 @@ export default function DJLankzSkalesPage() {
           <p className="text-white/40 text-sm">Presented by DJ LANKZ & ALL ACCESS Winnipeg</p>
           <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-4 py-2 mt-2`}>
             <span className={`w-1.5 h-1.5 rounded-full ${LIME.badge} animate-pulse`} />
-            <span className={`${LIME.text} text-xs font-bold`}>Tickets Dropping Soon — Stay Tuned</span>
+            <span className={`${LIME.text} text-xs font-bold`}>Early Bird $25 · Limited Quantity</span>
           </div>
           <p className="text-white/20 text-xs pt-1">
             Questions?{" "}

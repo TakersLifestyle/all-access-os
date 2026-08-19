@@ -901,10 +901,10 @@ function DJLankzConcertCard({ ev }: { ev: Event }) {
       <div className="px-6 py-4 bg-black flex items-center justify-between gap-4 border-t border-[#84cc16]/10">
         <div className="flex gap-5 flex-wrap">
           <div>
-            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Tickets</p>
+            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Early Bird</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#84cc16] animate-pulse" />
-              <p className="text-[#84cc16] font-bold text-sm">Dropping Soon</p>
+              <p className="text-[#84cc16] font-black text-lg">$25</p>
             </div>
           </div>
           <div className="border-l border-white/10 pl-5">
