@@ -28,7 +28,7 @@ const EVENT = {
   date: "Friday, October 9, 2026",
   dateShort: "Oct 9, 2026",
   doorsOpen: "10:00 PM",
-  address: "265 Portage Ave, Winnipeg, MB",
+  address: "625 Portage Ave, Winnipeg, MB R3B 2G4",
   presenter: "DJ LANKZ & ALL ACCESS Winnipeg",
 };
 
@@ -459,8 +459,8 @@ export default function DJLankzSkalesPage() {
             <div className="flex items-start gap-3">
               <span className="text-xl shrink-0">📍</span>
               <div>
-                <p className="text-white font-bold text-base">265 Portage Ave</p>
-                <p className="text-white/45 text-sm">Winnipeg, MB · Doors 10 PM</p>
+                <p className="text-white font-bold text-base">625 Portage Ave</p>
+                <p className="text-white/45 text-sm">Winnipeg, MB R3B 2G4 · Doors 10 PM</p>
               </div>
             </div>
             <p className="text-white/25 text-xs leading-relaxed pl-9">
@@ -472,7 +472,7 @@ export default function DJLankzSkalesPage() {
         {/* ── Bottom CTA strip ───────────────────────────────────────────── */}
         <div className={`rounded-2xl border ${LIME.border} ${LIME.glow} p-6 sm:p-8 text-center space-y-3`}>
           <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>
-            October 9, 2026 · 265 Portage Ave · Doors 10 PM
+            October 9, 2026 · 625 Portage Ave · Doors 10 PM
           </p>
           <h3 className="text-2xl font-black text-white">
             SKALES LIVE IN WINNIPEG
