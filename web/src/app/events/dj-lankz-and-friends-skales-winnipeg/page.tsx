@@ -177,6 +177,29 @@ export default function DJLankzSkalesPage() {
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
+        {/* ── Promo Video — top of page ──────────────────────────────────── */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
+            <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>Watch the Promo</p>
+            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
+          </div>
+          <div className={`rounded-2xl overflow-hidden border ${LIME.border}`}>
+            <video
+              src="/events/dj-lankz-skales-promo.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="auto"
+              poster="/events/skales-hero.jpg"
+              className="w-full"
+              style={{ maxHeight: "520px", background: "#000" }}
+            />
+          </div>
+        </section>
+
         {/* ── Event details card ─────────────────────────────────────────── */}
         <div className={`rounded-2xl border ${LIME.border} bg-white/[0.03] p-6 sm:p-8 grid sm:grid-cols-2 gap-5`}>
           {[
@@ -197,26 +220,6 @@ export default function DJLankzSkalesPage() {
             </div>
           ))}
         </div>
-
-        {/* ── Promo Video ────────────────────────────────────────────────── */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
-            <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>Watch the Promo</p>
-            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
-          </div>
-          <div className={`rounded-2xl overflow-hidden border ${LIME.border}`}>
-            <video
-              src="/events/dj-lankz-skales-promo.mp4"
-              controls
-              playsInline
-              preload="metadata"
-              poster="/events/skales-hero.jpg"
-              className="w-full"
-              style={{ maxHeight: "480px", background: "#000" }}
-            />
-          </div>
-        </section>
 
         {/* ── About ──────────────────────────────────────────────────────── */}
         <section className="space-y-4">
@@ -319,6 +322,41 @@ export default function DJLankzSkalesPage() {
               </p>
               <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
                 <span className="text-white/40 text-xs font-bold">⭐ Special Guest · Oct 9, 2026</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Performing Live — POPS ─────────────────────────────────────── */}
+        <section className="rounded-2xl border border-white/10 overflow-hidden">
+          <div className="grid sm:grid-cols-[280px_1fr]">
+            {/* Artist photo */}
+            <div className="relative h-64 sm:h-auto overflow-hidden">
+              <img
+                src="/events/pops.jpg"
+                alt="POPS"
+                className="w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/50 hidden sm:block" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent sm:hidden" />
+            </div>
+
+            {/* Artist info */}
+            <div className="p-6 sm:p-8 space-y-4 bg-white/[0.02]">
+              <div>
+                <p className="text-white/25 text-[10px] font-bold uppercase tracking-[0.18em] mb-1">
+                  Performing Live
+                </p>
+                <h2 className="text-3xl font-black text-white tracking-tight">POPS</h2>
+                <p className="text-white/40 text-sm mt-1">Winnipeg, MB</p>
+              </div>
+              <p className="text-white/55 text-sm leading-relaxed">
+                Winnipeg&rsquo;s own POPS hits the stage live — bringing raw energy and hometown
+                pride to one of the city&rsquo;s biggest nights. A name the city knows, on a stage
+                it won&rsquo;t forget.
+              </p>
+              <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                <span className="text-white/40 text-xs font-bold">🎤 Performing Live · Oct 9, 2026</span>
               </div>
             </div>
           </div>
