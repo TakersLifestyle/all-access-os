@@ -12,12 +12,21 @@ export const metadata: Metadata = {
     siteName: "ALL ACCESS Winnipeg",
     locale: "en_CA",
     type: "website",
+    images: [
+      {
+        url: "https://allaccesswinnipeg.ca/events/rocafiesta-banner.png",
+        width: 1200,
+        height: 630,
+        alt: "ROCAFIESTA — A Spiritual Experience with Konfam | ALL ACCESS Winnipeg",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ROCAFIESTA — A Spiritual Experience with Konfam",
     description:
       "September 5, 2026 · Winnipeg, MB. Early Bird tickets from $15. ALL ACCESS Winnipeg.",
+    images: ["https://allaccesswinnipeg.ca/events/rocafiesta-banner.png"],
   },
 };
 
