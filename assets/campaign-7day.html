@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #111;
+  padding: 40px;
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+  align-items: center;
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.95);
+  border-bottom: 1px solid rgba(255,0,127,0.2);
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  z-index: 1000;
+  flex-wrap: wrap;
+}
+.nav a {
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 100px;
+  transition: all 0.2s;
+}
+.nav a:hover { color: #ff007f; border-color: rgba(255,0,127,0.4); }
+
+.section-label {
+  color: #ff007f;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.section-title {
+  color: rgba(255,255,255,0.8);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.section-note {
+  color: rgba(255,255,255,0.25);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.day-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  padding-top: 80px;
+}
+
+/* ── SHARED CARD BASE ── */
+.card {
+  position: relative;
+  overflow: hidden;
+  background: #080808;
+  flex-shrink: 0;
+}
+.card.feed   { width: 1080px; height: 1350px; }
+.card.story  { width: 1080px; height: 1920px; }
+
+/* Shared elements */
+.glow { position:absolute; border-radius:50%; pointer-events:none; }
+.glow-tl { width:600px;height:600px; background:radial-gradient(circle,rgba(255,0,127,0.20) 0%,transparent 70%); top:-150px;left:-150px; }
+.glow-br { width:400px;height:400px; background:radial-gradient(circle,rgba(255,0,127,0.10) 0%,transparent 70%); bottom:-100px;right:-100px; }
+.glow-center { width:800px;height:800px; background:radial-gradient(circle,rgba(255,0,127,0.15) 0%,transparent 65%); top:50%;left:50%;transform:translate(-50%,-50%); }
+
+.left-accent { position:absolute;top:0;left:0;width:3px;height:200px;background:linear-gradient(to bottom,#ff007f,transparent);opacity:0.7; }
+.bottom-rule { position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(to right,transparent,#ff007f 20%,#ff007f 80%,transparent);opacity:0.7; }
+
+.badges { position:absolute;display:flex;gap:10px;flex-wrap:wrap; }
+.badge-pink   { background:#ff007f;color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:9px 20px;border-radius:100px; }
+.badge-glass  { background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.75);font-family:'Inter',sans-serif;font-weight:600;font-size:12px;padding:9px 20px;border-radius:100px; }
+.badge-pink-outline { background:rgba(255,0,127,0.10);border:1px solid rgba(255,0,127,0.30);color:#ff007f;font-family:'Inter',sans-serif;font-weight:600;font-size:12px;padding:9px 20px;border-radius:100px; }
+
+.eyebrow { font-family:'Inter',sans-serif;font-weight:500;font-size:12px;color:rgba(255,255,255,0.28);letter-spacing:4px;text-transform:uppercase;margin-bottom:12px; }
+.hl { font-family:'Montserrat',sans-serif;font-weight:900;color:#fff;text-transform:uppercase;line-height:0.90; }
+.hl-pink { color:#ff007f; }
+.subhead { font-family:'Inter',sans-serif;font-weight:400;color:rgba(255,255,255,0.42);letter-spacing:0.3px;line-height:1.5; }
+
+.divider-line { background:rgba(255,255,255,0.07);height:1px; }
+
+.value-grid { display:flex;gap:0; }
+.v-item { flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06); }
+.v-item:last-child{border-right:none;}
+.v-icon { font-size:26px;line-height:1; }
+.v-label { font-family:'Inter',sans-serif;font-weight:600;font-size:12px;color:rgba(255,255,255,0.58);text-align:center;line-height:1.3; }
+
+.bottom-card { background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:20px;display:flex;align-items:center;justify-content:space-between; }
+.brand-label { font-family:'Montserrat',sans-serif;font-weight:800;font-size:10px;color:#ff007f;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px; }
+.cta-main { font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;color:#fff;letter-spacing:0.5px; }
+.cta-url  { font-family:'Inter',sans-serif;font-weight:400;font-size:12px;color:rgba(255,255,255,0.28);margin-top:4px; }
+
+.checklist-row { display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px; }
+.cl-emoji{font-size:16px;}
+.cl-text{font-family:'Inter',sans-serif;font-weight:500;font-size:13px;color:rgba(255,255,255,0.62);flex:1;}
+.cl-check{font-size:13px;color:#22c55e;font-weight:700;}
+
+.story-cta-bar { background:#ff007f;border-radius:16px;text-align:center;position:absolute; }
+.story-cta-bar .main { font-family:'Montserrat',sans-serif;font-weight:900;font-size:20px;color:#fff;letter-spacing:2px;text-transform:uppercase; }
+.story-cta-bar .sub  { font-family:'Inter',sans-serif;font-weight:400;font-size:13px;color:rgba(255,255,255,0.65);margin-top:4px; }
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 1 — LAUNCH ANNOUNCEMENT                           */
+/* ─────────────────────────────────────────────────────── */
+#day1 {}
+
+/* DAY 1 FEED */
+.d1-feed .hero-zone {
+  position:absolute;top:0;left:0;right:0;height:640px;
+  background:linear-gradient(135deg,#1a0510 0%,#0e0e1a 50%,#080808 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.d1-feed .hero-zone::after {
+  content:'';position:absolute;bottom:0;left:0;right:0;height:320px;
+  background:linear-gradient(to bottom,transparent,#080808);
+}
+.d1-feed .hero-icon { font-size:120px;opacity:0.8;position:relative;z-index:1; }
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 2 — VALUE BREAKDOWN                               */
+/* ─────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 3 — EXPERIENCE FLOW                               */
+/* ─────────────────────────────────────────────────────── */
+
+.step-card {
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:14px;
+  position:relative;
+  overflow:hidden;
+}
+.step-num-bg {
+  position:absolute;top:-10px;right:8px;
+  font-family:'Montserrat',sans-serif;font-weight:900;
+  color:rgba(255,255,255,0.04);line-height:1;
+  pointer-events:none;
+}
+.step-label { font-family:'Inter',sans-serif;font-weight:700;font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px; }
+.step-title { font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;color:#fff;margin-bottom:4px; }
+.step-sub   { font-family:'Inter',sans-serif;font-weight:500;font-size:11px;color:#ff007f;opacity:0.75;margin-bottom:8px; }
+.step-bullet{ font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:rgba(255,255,255,0.38);display:flex;align-items:flex-start;gap:6px;line-height:1.4; }
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 4 — SCARCITY                                      */
+/* ─────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 5 — MEMBERSHIP                                    */
+/* ─────────────────────────────────────────────────────── */
+
+.price-compare {
+  display:flex;align-items:flex-end;gap:20px;
+}
+.price-original { font-family:'Montserrat',sans-serif;font-weight:700;font-size:36px;color:rgba(255,255,255,0.25);text-decoration:line-through; }
+.price-member   { font-family:'Montserrat',sans-serif;font-weight:900;font-size:80px;color:#ff007f;line-height:1; }
+.price-label    { font-family:'Inter',sans-serif;font-weight:500;font-size:14px;color:rgba(255,255,255,0.40);margin-bottom:8px; }
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 6 — COMMUNITY                                     */
+/* ─────────────────────────────────────────────────────── */
+
+.pillar-item {
+  display:flex;align-items:center;gap:16px;
+  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;
+}
+.pillar-icon { font-size:28px; }
+.pillar-title { font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:3px; }
+.pillar-desc  { font-family:'Inter',sans-serif;font-weight:400;font-size:12px;color:rgba(255,255,255,0.40);line-height:1.4; }
+
+/* ─────────────────────────────────────────────────────── */
+/* DAY 7 — LAST CALL                                     */
+/* ─────────────────────────────────────────────────────── */
+</style>
+</head>
+<body style="margin-top:60px;">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#day1">Day 1 · Launch</a>
+  <a href="#day2">Day 2 · Value</a>
+  <a href="#day3">Day 3 · Flow</a>
+  <a href="#day4">Day 4 · Scarcity</a>
+  <a href="#day5">Day 5 · Members</a>
+  <a href="#day6">Day 6 · Community</a>
+  <a href="#day7">Day 7 · Last Call</a>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 1 — LAUNCH ANNOUNCEMENT                          -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day1">
+  <div>
+    <div class="section-label">Day 1 of 7</div>
+    <div class="section-title">WINNIPEG'S FIRST FOUNDING 15</div>
+    <div class="section-note">Screenshot at 1080×1350 for Feed · 1080×1920 for Story</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed d1-feed">
+    <div class="glow glow-tl"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <div class="hero-zone">
+      <div class="hero-icon">🏀</div>
+    </div>
+
+    <div class="badges" style="top:32px;left:32px;">
+      <div class="badge-pink">🚀 Founding 15</div>
+      <div class="badge-glass">Only 15 Tickets</div>
+      <div class="badge-pink-outline">June 30, 2026</div>
+    </div>
+
+    <div style="position:absolute;top:556px;left:32px;right:32px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · OFFICIAL LAUNCH</div>
+      <div class="hl" style="font-size:86px;">
+        WINNIPEG'S<br>
+        <span class="hl-pink">FOUNDING</span><br>
+        <span class="hl-pink">15.</span>
+      </div>
+      <div class="subhead" style="font-size:17px;margin-top:18px;">
+        Sea Bears Courtside Launch · June 30 · 15 Seats Only
+      </div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:848px;left:32px;right:32px;"></div>
+
+    <div class="value-grid" style="position:absolute;top:872px;left:32px;right:32px;">
+      <div class="v-item"><div class="v-icon">🏀</div><div class="v-label">Premium<br>Courtside</div></div>
+      <div class="v-item"><div class="v-icon">🍽️</div><div class="v-label">Dinner<br>Buffet</div></div>
+      <div class="v-item"><div class="v-icon">🚐</div><div class="v-label">Private<br>Transport</div></div>
+      <div class="v-item"><div class="v-icon">🔐</div><div class="v-label">Founding<br>Access</div></div>
+    </div>
+
+    <div class="bottom-card" style="position:absolute;top:984px;left:32px;right:32px;bottom:32px;padding:28px 32px;">
+      <div>
+        <div class="brand-label">All Access Winnipeg</div>
+        <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.6;">
+          Community-first. Premium.<br>Built for Winnipeg.
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="cta-main">Comment ACCESS 👇</div>
+        <div class="cta-url">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story">
+    <div class="glow glow-tl"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <div style="position:absolute;top:0;left:0;right:0;height:920px;background:linear-gradient(135deg,#1a0510 0%,#0e0e1a 50%,#080808 100%);display:flex;align-items:center;justify-content:center;">
+      <div style="font-size:160px;opacity:0.7;position:relative;z-index:1;">🏀</div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:400px;background:linear-gradient(to bottom,transparent,#080808);"></div>
+    </div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">🚀 Founding 15</div>
+      <div class="badge-glass">Only 15 Tickets</div>
+    </div>
+
+    <div style="position:absolute;top:778px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · LAUNCH EVENT</div>
+      <div class="hl" style="font-size:100px;">
+        WINNIPEG'S<br>
+        <span class="hl-pink">FOUNDING</span><br>
+        <span class="hl-pink">15.</span>
+      </div>
+      <div class="subhead" style="font-size:18px;margin-top:18px;">Sea Bears Courtside · June 30, 2026</div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:1168px;left:40px;right:40px;"></div>
+
+    <div class="value-grid" style="position:absolute;top:1196px;left:40px;right:40px;">
+      <div class="v-item"><div class="v-icon" style="font-size:32px;">🏀</div><div class="v-label" style="font-size:13px;">Courtside<br>Ticket</div></div>
+      <div class="v-item"><div class="v-icon" style="font-size:32px;">🍽️</div><div class="v-label" style="font-size:13px;">Dinner<br>Buffet</div></div>
+      <div class="v-item"><div class="v-icon" style="font-size:32px;">🚐</div><div class="v-label" style="font-size:13px;">Private<br>Transport</div></div>
+      <div class="v-item"><div class="v-icon" style="font-size:32px;">🔐</div><div class="v-label" style="font-size:13px;">Founding<br>Access</div></div>
+    </div>
+
+    <div style="position:absolute;top:1330px;left:40px;right:40px;display:flex;flex-direction:column;gap:10px;">
+      <div class="checklist-row" style="padding:14px 18px;"><span class="cl-emoji">🏀</span><span class="cl-text">Premium courtside Sea Bears ticket</span><span class="cl-check">✓</span></div>
+      <div class="checklist-row" style="padding:14px 18px;"><span class="cl-emoji">🍽️</span><span class="cl-text">Dinner buffet included</span><span class="cl-check">✓</span></div>
+      <div class="checklist-row" style="padding:14px 18px;"><span class="cl-emoji">🥤</span><span class="cl-text">Beverages included — alcohol optional at venue</span><span class="cl-check">✓</span></div>
+      <div class="checklist-row" style="padding:14px 18px;"><span class="cl-emoji">🚐</span><span class="cl-text">Group transportation both ways</span><span class="cl-check">✓</span></div>
+      <div class="checklist-row" style="padding:14px 18px;"><span class="cl-emoji">🏅</span><span class="cl-text">Founding 15 recognition — permanent</span><span class="cl-check">✓</span></div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Comment ACCESS</div>
+      <div class="sub">allaccesswinnipeg.ca · June 30 · 15 Seats</div>
+    </div>
+
+    <div class="bottom-rule" style="height:4px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 2 — VALUE BREAKDOWN                              -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day2">
+  <div>
+    <div class="section-label">Day 2 of 7</div>
+    <div class="section-title">WHAT YOUR $300 ACTUALLY INCLUDES</div>
+    <div class="section-note">Value stack — objection crusher</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:linear-gradient(160deg,#0a0a0a 0%,#120518 100%);">
+    <div class="glow glow-tl"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">$300 Value Stack</div>
+      <div class="badge-glass">Founding 15</div>
+    </div>
+
+    <div style="position:absolute;top:136px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · SEA BEARS LAUNCH</div>
+      <div class="hl" style="font-size:72px;">
+        WHAT YOUR<br>
+        <span class="hl-pink">$300</span><br>
+        INCLUDES.
+      </div>
+      <div class="subhead" style="font-size:15px;margin-top:14px;">Everything covered. Nothing extra to buy.</div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:440px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:464px;left:40px;right:40px;display:flex;flex-direction:column;gap:10px;">
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">🏀</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Premium courtside Sea Bears ticket</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">$90–$150 value</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">🍽️</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Dinner buffet included</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">$50–$80 value</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">🥤</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Beverages included</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">Alcohol optional at venue · your choice</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">🚐</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Group transportation — both ways</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">$30–$50 value per person</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">📍</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Private host meetup experience</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">Check-in · wristbands · group photos</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+      <div class="checklist-row" style="padding:18px 22px;">
+        <span class="cl-emoji" style="font-size:20px;">🏅</span>
+        <div style="flex:1;">
+          <div class="cl-text" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.80);">Founding 15 recognition</div>
+          <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);margin-top:2px;">Permanent · priority future ALL ACCESS access</div>
+        </div>
+        <span class="cl-check" style="font-size:16px;">✓</span>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.30);margin-bottom:4px;">Real combined value</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;color:rgba(255,255,255,0.35);text-decoration:line-through;">$400+</div>
+      </div>
+      <div style="width:1px;height:40px;background:rgba(255,255,255,0.08);"></div>
+      <div style="text-align:center;">
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:#ff007f;margin-bottom:4px;">Your founding price</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:36px;color:#ff007f;">$300</div>
+      </div>
+      <div style="width:1px;height:40px;background:rgba(255,255,255,0.08);"></div>
+      <div style="text-align:right;">
+        <div class="cta-main" style="font-size:14px;">Comment ACCESS 👇</div>
+        <div class="cta-url">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:linear-gradient(160deg,#0a0a0a 0%,#120518 100%);">
+    <div class="glow glow-tl"></div>
+    <div class="left-accent"></div>
+
+    <div class="badges" style="top:50px;left:40px;">
+      <div class="badge-pink">Day 2 · Value Stack</div>
+    </div>
+
+    <div style="position:absolute;top:160px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS · $300 FOUNDING ACCESS</div>
+      <div class="hl" style="font-size:88px;">
+        WHAT'S<br>
+        <span class="hl-pink">INSIDE.</span>
+      </div>
+      <div class="subhead" style="font-size:16px;margin-top:16px;">Everything covered. Nothing extra.</div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:490px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:520px;left:40px;right:40px;display:flex;flex-direction:column;gap:12px;">
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">🏀</span><span class="cl-text" style="font-size:15px;">Premium courtside ticket</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">🍽️</span><span class="cl-text" style="font-size:15px;">Dinner buffet included</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">🥤</span><span class="cl-text" style="font-size:15px;">Beverages included</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">🚐</span><span class="cl-text" style="font-size:15px;">Private group transport</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">📍</span><span class="cl-text" style="font-size:15px;">Private host meetup</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">🏅</span><span class="cl-text" style="font-size:15px;">Founding 15 recognition</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+      <div class="checklist-row" style="padding:18px 20px;"><span class="cl-emoji" style="font-size:22px;">⚡</span><span class="cl-text" style="font-size:15px;">Priority future ALL ACCESS access</span><span class="cl-check" style="font-size:16px;">✓</span></div>
+    </div>
+
+    <div style="position:absolute;top:1360px;left:40px;right:40px;text-align:center;background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.25);border-radius:20px;padding:32px;">
+      <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Real value $400+ · Your price</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:72px;color:#ff007f;line-height:1;">$300</div>
+      <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.35);margin-top:8px;">Founding Access · June 30</div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Comment ACCESS</div>
+      <div class="sub">allaccesswinnipeg.ca · Only 15 Seats</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 3 — EXPERIENCE FLOW                              -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day3">
+  <div>
+    <div class="section-label">Day 3 of 7</div>
+    <div class="section-title">THIS IS NOT JUST A GAME</div>
+    <div class="section-note">4-step premium experience flow</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:#080808;">
+    <div class="glow glow-tl"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">Experience Flow</div>
+      <div class="badge-glass">June 30 · 15 Seats</div>
+    </div>
+
+    <div style="position:absolute;top:130px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · FOUNDING 15</div>
+      <div class="hl" style="font-size:76px;">
+        THIS IS NOT<br>
+        JUST A<br>
+        <span class="hl-pink">GAME.</span>
+      </div>
+      <div class="subhead" style="font-size:15px;margin-top:14px;">Four steps. One founding night. The full ALL ACCESS experience.</div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:470px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:494px;left:40px;right:40px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="step-card" style="padding:20px;">
+        <div class="step-num-bg" style="font-size:56px;">01</div>
+        <div class="step-label">Step 01</div>
+        <div style="font-size:22px;margin-bottom:8px;">📍</div>
+        <div class="step-title">Private Host<br>Meetup</div>
+        <div class="step-sub">Winnipeg — location revealed</div>
+        <div class="step-bullet"><span>·</span>Check-in & wristbands</div>
+        <div class="step-bullet"><span>·</span>Group photos</div>
+        <div class="step-bullet"><span>·</span>Meet the founders</div>
+        <div class="step-bullet"><span>·</span>Social warm-up</div>
+      </div>
+      <div class="step-card" style="padding:20px;">
+        <div class="step-num-bg" style="font-size:56px;">02</div>
+        <div class="step-label">Step 02</div>
+        <div style="font-size:22px;margin-bottom:8px;">🚐</div>
+        <div class="step-title">Group<br>Transportation</div>
+        <div class="step-sub">Executive sprinter / limo bus</div>
+        <div class="step-bullet"><span>·</span>Everyone rides together</div>
+        <div class="step-bullet"><span>·</span>Unified arrival</div>
+        <div class="step-bullet"><span>·</span>Premium social content</div>
+        <div class="step-bullet"><span>·</span>VIP entry energy</div>
+      </div>
+      <div class="step-card" style="padding:20px;">
+        <div class="step-num-bg" style="font-size:56px;">03</div>
+        <div class="step-label">Step 03</div>
+        <div style="font-size:22px;margin-bottom:8px;">🏀</div>
+        <div class="step-title">Sea Bears<br>Courtside</div>
+        <div class="step-sub" style="color:#ff007f;">Canada Life Centre</div>
+        <div class="step-bullet"><span>·</span>Courtside premium seats</div>
+        <div class="step-bullet"><span>·</span>Dinner buffet</div>
+        <div class="step-bullet"><span>·</span>Beverages included</div>
+        <div class="step-bullet"><span>·</span>Community bonding</div>
+      </div>
+      <div class="step-card" style="padding:20px;">
+        <div class="step-num-bg" style="font-size:56px;">04</div>
+        <div class="step-label">Step 04</div>
+        <div style="font-size:22px;margin-bottom:8px;">🔒</div>
+        <div class="step-title">Return<br>Transport</div>
+        <div class="step-sub">Safe group closeout</div>
+        <div class="step-bullet"><span>·</span>Controlled return</div>
+        <div class="step-bullet"><span>·</span>Full group safety</div>
+        <div class="step-bullet"><span>·</span>Professional close</div>
+        <div class="step-bullet"><span>·</span>The beginning of real</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;background:rgba(255,0,127,0.07);border:1px solid rgba(255,0,127,0.18);border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.40);font-style:italic;">This is not mass entry. This is how ALL ACCESS begins.</div>
+      <div style="text-align:right;white-space:nowrap;margin-left:20px;">
+        <div class="cta-main" style="font-size:14px;">Comment ACCESS</div>
+        <div class="cta-url">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:#080808;">
+    <div class="glow glow-tl"></div>
+    <div class="left-accent"></div>
+    <div class="badges" style="top:50px;left:40px;"><div class="badge-pink">Day 3 · Experience</div></div>
+
+    <div style="position:absolute;top:160px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS · FOUNDING 15 FLOW</div>
+      <div class="hl" style="font-size:92px;">NOT JUST<br>A <span class="hl-pink">GAME.</span></div>
+      <div class="subhead" style="font-size:16px;margin-top:14px;">Here's your entire June 30 timeline.</div>
+    </div>
+
+    <div style="position:absolute;top:500px;left:40px;right:40px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;">
+        <div style="width:48px;height:48px;background:rgba(255,0,127,0.12);border:1px solid rgba(255,0,127,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📍</div>
+        <div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px;color:#fff;">Private Host Meetup</div><div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">Check-in · wristbands · group photos · meet founders</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;">
+        <div style="width:48px;height:48px;background:rgba(255,0,127,0.12);border:1px solid rgba(255,0,127,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🚐</div>
+        <div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px;color:#fff;">Premium Group Transport</div><div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">Executive sprinter · unified arrival · VIP energy</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(255,0,127,0.10);border:1px solid rgba(255,0,127,0.25);border-radius:16px;padding:20px;">
+        <div style="width:48px;height:48px;background:rgba(255,0,127,0.20);border:1px solid rgba(255,0,127,0.40);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏀</div>
+        <div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px;color:#fff;">Sea Bears Courtside</div><div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,0,127,0.70);margin-top:3px;">Courtside seats · dinner buffet · beverages · game</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;">
+        <div style="width:48px;height:48px;background:rgba(255,0,127,0.12);border:1px solid rgba(255,0,127,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🔒</div>
+        <div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px;color:#fff;">Safe Group Return</div><div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">Controlled close · full group · professional</div></div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:1360px;left:40px;right:40px;text-align:center;">
+      <div style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.35);font-style:italic;margin-bottom:32px;">"This is not mass entry. This is how ALL ACCESS begins."</div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Comment ACCESS</div>
+      <div class="sub">allaccesswinnipeg.ca · June 30 · 15 Seats</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 4 — SCARCITY                                     -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day4">
+  <div>
+    <div class="section-label">Day 4 of 7</div>
+    <div class="section-title">ONLY 15 WILL SAY THEY WERE FIRST</div>
+    <div class="section-note">Scarcity · Identity · FOMO</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:#080808;">
+    <div class="glow glow-tl"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <!-- Giant 15 background -->
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-family:'Montserrat',sans-serif;font-weight:900;font-size:520px;color:rgba(255,0,127,0.05);line-height:1;pointer-events:none;user-select:none;">15</div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">Founding 15 · June 30</div>
+    </div>
+
+    <div style="position:absolute;top:280px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG</div>
+      <div class="hl" style="font-size:100px;line-height:0.88;">
+        ONLY<br>
+        <span class="hl-pink">15</span><br>
+        SEATS.
+      </div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:690px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:720px;left:40px;right:40px;">
+      <div style="font-family:'Inter',sans-serif;font-weight:400;font-size:20px;color:rgba(255,255,255,0.50);line-height:1.7;max-width:800px;">
+        Not 15 left.<br>
+        <span style="color:rgba(255,255,255,0.75);font-weight:600;">15 total. Ever. For this event.</span><br><br>
+        The people in those seats become the official founding group of ALL ACCESS Winnipeg.<br><br>
+        <span style="color:rgba(255,0,127,0.80);">Years from now — you'll either say you were there, or you won't.</span>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:1040px;left:40px;right:40px;display:flex;gap:16px;">
+      <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px;text-align:center;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:40px;color:#ff007f;">15</div>
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.30);letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Total seats</div>
+      </div>
+      <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px;text-align:center;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:40px;color:#fff;">June 30</div>
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.30);letter-spacing:2px;text-transform:uppercase;margin-top:4px;">One night only</div>
+      </div>
+      <div style="flex:1;background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:14px;padding:22px;text-align:center;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:40px;color:#ff007f;">$300</div>
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,0,127,0.50);letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Founding access</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:rgba(255,255,255,0.70);">Who was here first?</div>
+      <div style="text-align:right;">
+        <div class="cta-main">Comment ACCESS 👇</div>
+        <div class="cta-url">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:#080808;">
+    <div class="glow glow-tl"></div>
+    <div class="left-accent"></div>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Montserrat',sans-serif;font-weight:900;font-size:700px;color:rgba(255,0,127,0.04);line-height:1;pointer-events:none;">15</div>
+
+    <div class="badges" style="top:50px;left:40px;"><div class="badge-pink">Scarcity · Day 4</div></div>
+
+    <div style="position:absolute;top:200px;left:40px;right:40px;text-align:center;">
+      <div class="eyebrow" style="text-align:center;">ALL ACCESS WINNIPEG · 2026</div>
+      <div class="hl" style="font-size:130px;text-align:center;">
+        ONLY<br>
+        <span class="hl-pink">15.</span>
+      </div>
+      <div style="font-family:'Inter',sans-serif;font-size:18px;color:rgba(255,255,255,0.40);margin-top:24px;line-height:1.6;">Not 15 remaining.<br><span style="color:rgba(255,255,255,0.65);">15 total. One founding group.</span></div>
+    </div>
+
+    <div style="position:absolute;top:800px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;">
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:rgba(255,255,255,0.60);">✦ No waitlist. No second round.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:rgba(255,255,255,0.60);">✦ Courtside. Buffet. Limo. $300.</div>
+      </div>
+      <div style="background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:#ff007f;">✦ June 30. Who was here first?</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:1140px;left:40px;right:40px;text-align:center;padding:32px;background:rgba(255,0,127,0.05);border:1px solid rgba(255,0,127,0.15);border-radius:20px;">
+      <div style="font-family:'Inter',sans-serif;font-size:16px;color:rgba(255,255,255,0.40);font-style:italic;line-height:1.7;">"Years from now — you'll either say you were there, or you won't."</div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Comment ACCESS</div>
+      <div class="sub">allaccesswinnipeg.ca · 15 Seats · June 30</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 5 — MEMBERSHIP ADVANTAGE                         -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day5">
+  <div>
+    <div class="section-label">Day 5 of 7</div>
+    <div class="section-title">MEMBERS SAVE 15%</div>
+    <div class="section-note">Membership value · $255 vs $300</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:linear-gradient(160deg,#080808 0%,#0a1208 100%);">
+    <div class="glow glow-tl" style="background:radial-gradient(circle,rgba(34,197,94,0.15) 0%,transparent 70%);"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent" style="background:linear-gradient(to bottom,#22c55e,transparent);"></div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">Member Pricing</div>
+      <div class="badge-glass">ALL ACCESS Membership</div>
+    </div>
+
+    <div style="position:absolute;top:144px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · MEMBERSHIP ADVANTAGE</div>
+      <div class="hl" style="font-size:72px;">
+        MEMBERS<br>
+        <span style="color:#22c55e;">SAVE 15%</span><br>
+        ON EVERY<br>
+        TICKET.
+      </div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:528px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:560px;left:40px;right:40px;">
+      <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.30);margin-bottom:16px;letter-spacing:2px;text-transform:uppercase;">Sea Bears Founding 15 · June 30</div>
+      <div style="display:flex;align-items:flex-end;gap:24px;margin-bottom:8px;">
+        <div>
+          <div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.30);margin-bottom:4px;">General price</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:48px;color:rgba(255,255,255,0.25);text-decoration:line-through;">$300</div>
+        </div>
+        <div style="width:1px;height:50px;background:rgba(255,255,255,0.08);"></div>
+        <div>
+          <div style="font-family:'Inter',sans-serif;font-size:12px;color:#22c55e;margin-bottom:4px;">Member price (15% off)</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:80px;color:#22c55e;line-height:1;">$255</div>
+        </div>
+      </div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.35);margin-bottom:32px;">You save $45 on this event alone.</div>
+    </div>
+
+    <div style="position:absolute;top:828px;left:40px;right:40px;">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:rgba(255,255,255,0.50);margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;">ALL ACCESS Membership — $25/month</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;"><span style="color:#22c55e;font-size:16px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.60);">15% off every single event ticket</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="color:#22c55e;font-size:16px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.60);">Early access to new event drops</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="color:#22c55e;font-size:16px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.60);">Local partner perks & discounts</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="color:#22c55e;font-size:16px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.60);">Community feed access</span></div>
+        <div style="display:flex;align-items:center;gap:12px;"><span style="color:#22c55e;font-size:16px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.60);">Cancel anytime — no commitment</span></div>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;display:flex;gap:16px;">
+      <a href="https://allaccesswinnipeg.ca" style="flex:1;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:20px;text-align:center;text-decoration:none;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;color:#22c55e;">Become a Member</div>
+        <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.25);margin-top:4px;">$25/month · allaccesswinnipeg.ca</div>
+      </a>
+      <div style="flex:1;background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:14px;padding:20px;text-align:center;">
+        <div class="cta-main" style="font-size:14px;">Comment ACCESS 👇</div>
+        <div class="cta-url">For ticket details</div>
+      </div>
+    </div>
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:linear-gradient(160deg,#080808 0%,#0a1208 100%);">
+    <div class="glow glow-tl" style="background:radial-gradient(circle,rgba(34,197,94,0.15) 0%,transparent 70%);"></div>
+    <div class="left-accent" style="background:linear-gradient(to bottom,#22c55e,transparent);"></div>
+    <div class="badges" style="top:50px;left:40px;"><div class="badge-pink">Day 5 · Member Pricing</div></div>
+
+    <div style="position:absolute;top:170px;left:40px;right:40px;text-align:center;">
+      <div class="eyebrow" style="text-align:center;">ALL ACCESS MEMBERSHIP</div>
+      <div class="hl" style="font-size:100px;text-align:center;">
+        SAVE<br>
+        <span style="color:#22c55e;">15%</span>
+      </div>
+      <div style="font-family:'Inter',sans-serif;font-size:18px;color:rgba(255,255,255,0.40);margin-top:16px;">On every single event.</div>
+    </div>
+
+    <div style="position:absolute;top:660px;left:40px;right:40px;text-align:center;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:20px;padding:40px;">
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.30);margin-bottom:12px;">Sea Bears Founding 15 · June 30</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;">
+        <div style="text-align:center;">
+          <div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.25);margin-bottom:4px;">General</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:36px;color:rgba(255,255,255,0.22);text-decoration:line-through;">$300</div>
+        </div>
+        <div style="font-size:24px;color:rgba(255,255,255,0.15);">→</div>
+        <div style="text-align:center;">
+          <div style="font-family:'Inter',sans-serif;font-size:12px;color:#22c55e;margin-bottom:4px;">Member Price</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:64px;color:#22c55e;line-height:1;">$255</div>
+        </div>
+      </div>
+      <div style="font-family:'Inter',sans-serif;font-size:14px;color:rgba(255,255,255,0.30);margin-top:12px;">You save $45 on this event alone</div>
+    </div>
+
+    <div style="position:absolute;top:1060px;left:40px;right:40px;">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:rgba(255,255,255,0.35);margin-bottom:14px;letter-spacing:2px;text-transform:uppercase;">Membership — $25/month</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:14px;"><span style="color:#22c55e;font-size:18px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.55);">15% off every ticket</span></div>
+        <div style="display:flex;align-items:center;gap:14px;"><span style="color:#22c55e;font-size:18px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.55);">Early event access</span></div>
+        <div style="display:flex;align-items:center;gap:14px;"><span style="color:#22c55e;font-size:18px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.55);">Local partner perks</span></div>
+        <div style="display:flex;align-items:center;gap:14px;"><span style="color:#22c55e;font-size:18px;">✓</span><span style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.55);">Cancel anytime</span></div>
+      </div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;background:#22c55e;">
+      <div class="main" style="letter-spacing:1px;font-size:18px;">Become a Member — $25/mo</div>
+      <div class="sub">allaccesswinnipeg.ca</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;background:linear-gradient(to right,transparent,#22c55e 20%,#22c55e 80%,transparent);"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 6 — COMMUNITY / CONNECTION                       -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day6">
+  <div>
+    <div class="section-label">Day 6 of 7</div>
+    <div class="section-title">BUILT FOR REAL CONNECTION</div>
+    <div class="section-note">Community · safety · mental wellness</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:#080808;">
+    <div class="glow glow-tl" style="background:radial-gradient(circle,rgba(255,0,127,0.15) 0%,transparent 70%);width:700px;height:700px;top:-200px;left:-200px;"></div>
+    <div class="glow glow-br"></div>
+    <div class="left-accent"></div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">Community First</div>
+      <div class="badge-glass">ALL ACCESS Winnipeg</div>
+    </div>
+
+    <div style="position:absolute;top:136px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · OUR STANDARD</div>
+      <div class="hl" style="font-size:80px;">
+        BUILT FOR<br>
+        REAL<br>
+        <span class="hl-pink">CONNECTION.</span>
+      </div>
+      <div class="subhead" style="font-size:16px;margin-top:18px;max-width:780px;line-height:1.7;">
+        Not another bar night. Not general admission.<br>
+        A curated experience for Winnipeg — safe, premium, and built to actually bring people together.
+      </div>
+    </div>
+
+    <div class="divider-line" style="position:absolute;top:556px;left:40px;right:40px;"></div>
+
+    <div style="position:absolute;top:586px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;">
+      <div class="pillar-item" style="padding:22px;">
+        <div class="pillar-icon">🛡️</div>
+        <div><div class="pillar-title">Safety First</div><div class="pillar-desc">Every event is designed with verified guest lists, professional hosting, and controlled environments.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px;">
+        <div class="pillar-icon">🧠</div>
+        <div><div class="pillar-title">Mental Wellness</div><div class="pillar-desc">Programming centered on well-being, real connection, and healthy social environments.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px;">
+        <div class="pillar-icon">🤝</div>
+        <div><div class="pillar-title">Real Community</div><div class="pillar-desc">15 people who all chose to show up. That's not a coincidence. That's what we're building.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px;">
+        <div class="pillar-icon">🌍</div>
+        <div><div class="pillar-title">Built for Winnipeg</div><div class="pillar-desc">Community-funded. Community-first. No corporate backing. Every dollar back into the mission.</div></div>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;background:rgba(255,0,127,0.07);border:1px solid rgba(255,0,127,0.18);border-radius:16px;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.40);max-width:500px;line-height:1.5;">
+        ALL ACCESS exists because Winnipeg deserves better than what's been built for it.
+      </div>
+      <div style="text-align:right;margin-left:20px;">
+        <div class="cta-main" style="font-size:14px;">Comment ACCESS 👇</div>
+        <div class="cta-url">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+    <div class="bottom-rule"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:#080808;">
+    <div class="glow glow-tl"></div>
+    <div class="left-accent"></div>
+    <div class="badges" style="top:50px;left:40px;"><div class="badge-pink">Day 6 · Community</div></div>
+
+    <div style="position:absolute;top:170px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG</div>
+      <div class="hl" style="font-size:96px;">
+        BUILT<br>FOR<br>
+        <span class="hl-pink">REAL.</span>
+      </div>
+      <div class="subhead" style="font-size:17px;margin-top:18px;line-height:1.7;">Not a bar night. Not general admission.<br>A curated experience for Winnipeg.</div>
+    </div>
+
+    <div style="position:absolute;top:680px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;">
+      <div class="pillar-item" style="padding:22px 24px;">
+        <div class="pillar-icon" style="font-size:32px;">🛡️</div>
+        <div><div class="pillar-title" style="font-size:17px;">Safety First</div><div class="pillar-desc" style="font-size:13px;">Verified guests. Professional host. Controlled environment.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px 24px;">
+        <div class="pillar-icon" style="font-size:32px;">🧠</div>
+        <div><div class="pillar-title" style="font-size:17px;">Mental Wellness</div><div class="pillar-desc" style="font-size:13px;">Real connection. Healthy social energy. No pressure.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px 24px;">
+        <div class="pillar-icon" style="font-size:32px;">🤝</div>
+        <div><div class="pillar-title" style="font-size:17px;">Real Community</div><div class="pillar-desc" style="font-size:13px;">15 people who chose to show up. That matters.</div></div>
+      </div>
+      <div class="pillar-item" style="padding:22px 24px;">
+        <div class="pillar-icon" style="font-size:32px;">🌍</div>
+        <div><div class="pillar-title" style="font-size:17px;">Built for Winnipeg</div><div class="pillar-desc" style="font-size:13px;">Community-funded. No corporate backing.</div></div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:1360px;left:40px;right:40px;text-align:center;padding:28px;background:rgba(255,0,127,0.06);border:1px solid rgba(255,0,127,0.15);border-radius:18px;">
+      <div style="font-family:'Inter',sans-serif;font-size:16px;color:rgba(255,255,255,0.40);font-style:italic;line-height:1.7;">"Winnipeg deserves better than what's been built for it. So we built it."</div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Comment ACCESS</div>
+      <div class="sub">allaccesswinnipeg.ca · June 30</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- DAY 7 — LAST CALL                                    -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="day-block" id="day7">
+  <div>
+    <div class="section-label">Day 7 of 7</div>
+    <div class="section-title">LAST CALL — URGENCY CONVERSION</div>
+    <div class="section-note">Maximum urgency · deploy when seats near sold out</div>
+  </div>
+
+  <!-- FEED -->
+  <div class="card feed" style="background:#080808;">
+    <div class="glow glow-tl" style="background:radial-gradient(circle,rgba(255,0,127,0.28) 0%,transparent 65%);width:700px;height:700px;top:-180px;left:-180px;"></div>
+    <div class="glow glow-br" style="background:radial-gradient(circle,rgba(255,0,127,0.15) 0%,transparent 70%);"></div>
+    <div class="left-accent" style="height:100%;opacity:0.4;"></div>
+
+    <!-- Right accent -->
+    <div style="position:absolute;top:0;right:0;width:3px;height:100%;background:linear-gradient(to bottom,transparent,#ff007f 40%,transparent);opacity:0.3;"></div>
+
+    <div class="badges" style="top:40px;left:40px;">
+      <div class="badge-pink">⚠️ Last Call</div>
+      <div class="badge-glass">Founding 15 · June 30</div>
+    </div>
+
+    <div style="position:absolute;top:200px;left:40px;right:40px;">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · FINAL NOTICE</div>
+      <div class="hl" style="font-size:110px;line-height:0.86;">
+        LAST<br>
+        <span class="hl-pink">CALL.</span>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:580px;left:40px;right:40px;">
+      <div style="font-family:'Inter',sans-serif;font-size:20px;color:rgba(255,255,255,0.50);line-height:1.7;max-width:800px;">
+        <span style="color:rgba(255,255,255,0.75);font-weight:600;">The Founding 15 is closing.</span><br><br>
+        June 30. Sea Bears courtside. Dinner buffet. Limo bus. Private host meetup. 15 founding members of ALL ACCESS Winnipeg.<br><br>
+        <span style="color:#ff007f;font-weight:600;">When these seats are gone — they are gone.</span><br>
+        No waitlist. No second chance. No "next time."
+      </div>
+    </div>
+
+    <div style="position:absolute;top:960px;left:40px;right:40px;">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🏀</span><span style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.50);">Courtside ticket</span></div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🍽️</span><span style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.50);">Dinner buffet</span></div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🚐</span><span style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.50);">Private transport</span></div>
+        <div style="background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🔐</span><span style="font-family:'Inter',sans-serif;font-size:13px;color:#ff007f;">Founding access</span></div>
+      </div>
+    </div>
+
+    <div style="position:absolute;bottom:32px;left:40px;right:40px;background:#ff007f;border-radius:18px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:22px;color:#fff;">Claim Your Seat Now</div>
+        <div style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.65);margin-top:4px;">Comment ACCESS · allaccesswinnipeg.ca</div>
+      </div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:36px;color:#fff;">$300</div>
+    </div>
+    <div class="bottom-rule" style="opacity:1;"></div>
+  </div>
+
+  <!-- STORY -->
+  <div class="card story" style="background:#080808;">
+    <div class="glow glow-tl" style="background:radial-gradient(circle,rgba(255,0,127,0.28) 0%,transparent 65%);width:800px;height:800px;top:-200px;left:-200px;"></div>
+    <div class="left-accent" style="opacity:0.8;height:100%;"></div>
+    <div class="badges" style="top:50px;left:40px;"><div class="badge-pink">⚠️ Last Call · Day 7</div></div>
+
+    <div style="position:absolute;top:180px;left:40px;right:40px;text-align:center;">
+      <div class="eyebrow" style="text-align:center;">ALL ACCESS WINNIPEG · FINAL NOTICE</div>
+      <div class="hl" style="font-size:136px;text-align:center;line-height:0.86;">
+        LAST<br>
+        <span class="hl-pink">CALL.</span>
+      </div>
+      <div style="font-family:'Inter',sans-serif;font-size:18px;color:rgba(255,255,255,0.40);margin-top:24px;line-height:1.6;">The Founding 15 is closing.<br>When it's gone — it's gone.</div>
+    </div>
+
+    <div style="position:absolute;top:760px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;">
+      <div style="background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:rgba(255,255,255,0.65);">⚡ No waitlist. No second round.</div>
+      </div>
+      <div style="background:rgba(255,0,127,0.08);border:1px solid rgba(255,0,127,0.20);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:rgba(255,255,255,0.65);">⚡ Courtside · Buffet · Limo · $300</div>
+      </div>
+      <div style="background:rgba(255,0,127,0.12);border:1px solid rgba(255,0,127,0.30);border-radius:14px;padding:20px 24px;">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;color:#ff007f;">⚡ June 30. 15 people. One founding night.</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:1080px;left:40px;right:40px;text-align:center;padding:36px;background:rgba(255,0,127,0.06);border:1px solid rgba(255,0,127,0.18);border-radius:20px;">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:64px;color:#ff007f;line-height:1;">$300</div>
+      <div style="font-family:'Inter',sans-serif;font-size:15px;color:rgba(255,255,255,0.35);margin-top:10px;">Founding Access · All-inclusive</div>
+    </div>
+
+    <div style="position:absolute;bottom:140px;left:40px;right:40px;text-align:center;">
+      <div style="font-family:'Inter',sans-serif;font-size:16px;color:rgba(255,255,255,0.35);font-style:italic;">"You'll either say you were there, or you won't."</div>
+    </div>
+
+    <div class="story-cta-bar" style="bottom:40px;left:40px;right:40px;padding:24px 32px;">
+      <div class="main">Claim Your Seat Now</div>
+      <div class="sub">Comment ACCESS · allaccesswinnipeg.ca</div>
+    </div>
+    <div class="bottom-rule" style="height:4px;opacity:1;"></div>
+  </div>
+</div>
+
+<!-- spacer -->
+<div style="height:80px;"></div>
+
+</body>
+</html>

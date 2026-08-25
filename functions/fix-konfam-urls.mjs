@@ -1,0 +1,10 @@
+import { initializeApp, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { readFileSync } from "fs";
+const env = readFileSync("C:\\Users\\TakersLifestyle\\all-access-platform\\web\\.env.local","utf8");
+const sa = JSON.parse(env.split("\n").find(l=>l.startsWith("GOOGLE_APPLICATION_CREDENTIALS_JSON=")).replace("GOOGLE_APPLICATION_CREDENTIALS_JSON=","").trim());
+initializeApp({ credential: cert(sa) });
+const db = getFirestore();
+await db.collection("memoryAlbums").doc("casa-blanca-dj-lankz-and-friends").update({ title: "CASA BLANCA ALL WHITE PARTY by DAN Ft DJ LANKZ & FRIENDS" });
+console.log("✅ Done");
+process.exit(0);

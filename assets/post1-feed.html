@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  body {
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  .label {
+    color: rgba(255,255,255,0.3);
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  /* ── FEED POST 1080×1350 ─────────────────────── */
+  .feed {
+    width: 1080px;
+    height: 1350px;
+    background: #080808;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Glow orbs */
+  .glow-tl {
+    position: absolute;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,0,127,0.22) 0%, transparent 70%);
+    top: -120px; left: -120px;
+    pointer-events: none;
+  }
+  .glow-br {
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,0,127,0.10) 0%, transparent 70%);
+    bottom: -80px; right: -80px;
+    pointer-events: none;
+  }
+
+  /* Hero image area */
+  .hero-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 660px;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,0) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,1) 100%),
+      url('/events/sea-bears-courtside.jpg') center center / cover no-repeat;
+  }
+
+  /* Fallback if image doesn't load — use a placeholder gradient */
+  .hero-img-fallback {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 660px;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,0) 0%, rgba(8,8,8,0.4) 60%, rgba(8,8,8,1) 100%),
+      linear-gradient(135deg, #1a0a15 0%, #0d0d1a 40%, #0a1a0d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-placeholder-text {
+    color: rgba(255,255,255,0.06);
+    font-size: 18px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Top badge row */
+  .badges {
+    position: absolute;
+    top: 32px; left: 32px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .badge-pink {
+    background: #ff007f;
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 9px 20px;
+    border-radius: 100px;
+  }
+  .badge-outline {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.75);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 9px 20px;
+    border-radius: 100px;
+  }
+  .badge-date {
+    background: rgba(255,0,127,0.10);
+    border: 1px solid rgba(255,0,127,0.25);
+    color: rgba(255,120,180,0.85);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    padding: 9px 20px;
+    border-radius: 100px;
+  }
+
+  /* Headline block */
+  .headline-block {
+    position: absolute;
+    top: 540px;
+    left: 32px;
+    right: 32px;
+  }
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: rgba(255,255,255,0.30);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .headline-main {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 80px;
+    line-height: 0.92;
+    color: #fff;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+  }
+  .headline-pink {
+    color: #ff007f;
+  }
+  .subhead {
+    margin-top: 18px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 17px;
+    color: rgba(255,255,255,0.42);
+    letter-spacing: 0.3px;
+  }
+
+  /* Divider */
+  .divider {
+    position: absolute;
+    top: 842px;
+    left: 32px;
+    right: 32px;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* 4-icon value row */
+  .value-row {
+    position: absolute;
+    top: 866px;
+    left: 32px;
+    right: 32px;
+    display: flex;
+    gap: 0;
+  }
+  .value-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .value-item:last-child { border-right: none; }
+  .value-icon {
+    font-size: 26px;
+    line-height: 1;
+  }
+  .value-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: rgba(255,255,255,0.60);
+    text-align: center;
+    line-height: 1.3;
+    letter-spacing: 0.3px;
+  }
+
+  /* Bottom card */
+  .bottom-card {
+    position: absolute;
+    top: 988px;
+    left: 32px;
+    right: 32px;
+    bottom: 32px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-left {}
+  .brand-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 10px;
+    color: #ff007f;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .card-desc {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: rgba(255,255,255,0.38);
+    line-height: 1.5;
+  }
+  .card-right {
+    text-align: right;
+  }
+  .cta-text {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .cta-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: rgba(255,255,255,0.28);
+    margin-top: 5px;
+  }
+
+  /* Pink bottom rule */
+  .bottom-rule {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(to right, transparent, #ff007f 30%, #ff007f 70%, transparent);
+    opacity: 0.7;
+  }
+
+  /* Thin pink left accent line */
+  .left-accent {
+    position: absolute;
+    top: 32px;
+    left: 0;
+    width: 3px;
+    height: 180px;
+    background: linear-gradient(to bottom, #ff007f, transparent);
+    opacity: 0.6;
+  }
+
+  /* ── STORY 1080×1920 ─────────────────────────── */
+  .story {
+    width: 1080px;
+    height: 1920px;
+    background: #080808;
+    position: relative;
+    overflow: hidden;
+  }
+  .story .glow-tl {
+    width: 700px; height: 700px;
+    top: -150px; left: -150px;
+  }
+  .story .hero-img {
+    height: 920px;
+  }
+  .story .hero-img-fallback {
+    height: 920px;
+  }
+  .story .badges {
+    top: 40px; left: 40px;
+  }
+  .story .headline-block {
+    top: 760px;
+    left: 40px; right: 40px;
+  }
+  .story .headline-main {
+    font-size: 96px;
+  }
+  .story .divider {
+    top: 1130px;
+    left: 40px; right: 40px;
+  }
+  .story .value-row {
+    top: 1160px;
+    left: 40px; right: 40px;
+  }
+  .story .value-icon { font-size: 30px; }
+  .story .value-label { font-size: 13px; }
+
+  /* Story checklist */
+  .story-checklist {
+    position: absolute;
+    top: 1290px;
+    left: 40px; right: 40px;
+  }
+  .checklist-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: rgba(255,255,255,0.80);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    margin-bottom: 7px;
+  }
+  .checklist-emoji { font-size: 16px; }
+  .checklist-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(255,255,255,0.62);
+    flex: 1;
+  }
+  .checklist-check {
+    font-size: 13px;
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  /* Story bottom CTA */
+  .story-cta {
+    position: absolute;
+    bottom: 40px;
+    left: 40px; right: 40px;
+    background: #ff007f;
+    border-radius: 16px;
+    padding: 22px 32px;
+    text-align: center;
+  }
+  .story-cta-main {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .story-cta-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 5px;
+  }
+
+  /* ── REEL COVER 1080×1920 ───────────────────── */
+  .reel {
+    width: 1080px;
+    height: 1920px;
+    background: #080808;
+    position: relative;
+    overflow: hidden;
+  }
+  .reel .hero-fullbleed {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,0.2) 0%, rgba(8,8,8,0.55) 50%, rgba(8,8,8,0.95) 100%),
+      linear-gradient(135deg, #1a0810 0%, #0a0a14 50%, #0a140a 100%);
+  }
+  .reel .glow-center {
+    position: absolute;
+    width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(255,0,127,0.18) 0%, transparent 65%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -55%);
+  }
+  .reel-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px;
+  }
+  .reel-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: #ff007f;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .reel-headline {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 108px;
+    line-height: 0.90;
+    color: #fff;
+    letter-spacing: -2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .reel-headline-pink {
+    color: #ff007f;
+    display: block;
+  }
+  .reel-divider {
+    width: 60px;
+    height: 2px;
+    background: #ff007f;
+    margin: 32px auto;
+    opacity: 0.7;
+  }
+  .reel-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 20px;
+    color: rgba(255,255,255,0.42);
+    letter-spacing: 1px;
+    margin-bottom: 48px;
+  }
+  .reel-stats {
+    display: flex;
+    gap: 48px;
+    margin-bottom: 60px;
+  }
+  .reel-stat {
+    text-align: center;
+  }
+  .reel-stat-num {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 44px;
+    color: #fff;
+    line-height: 1;
+  }
+  .reel-stat-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .reel-cta-badge {
+    background: rgba(255,0,127,0.12);
+    border: 1px solid rgba(255,0,127,0.35);
+    border-radius: 100px;
+    padding: 14px 40px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: #ff007f;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .reel-url {
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    color: rgba(255,255,255,0.22);
+    letter-spacing: 1px;
+  }
+  .reel .bottom-rule {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(to right, transparent, #ff007f 20%, #ff007f 80%, transparent);
+    opacity: 0.8;
+  }
+  .reel .left-accent {
+    height: 260px;
+    top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- FEED POST 1080×1350                    -->
+<!-- ═══════════════════════════════════════ -->
+<div>
+  <div class="label">INSTAGRAM FEED · 1080×1350</div>
+  <div class="feed">
+    <div class="glow-tl"></div>
+    <div class="glow-br"></div>
+    <div class="left-accent"></div>
+
+    <!-- Hero image -->
+    <div class="hero-img-fallback">
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0510 0%,#0d0d1a 40%,#080808 100%);"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;">
+          <div style="font-size:72px;margin-bottom:16px;">🏀</div>
+          <div style="color:rgba(255,255,255,0.12);font-size:13px;letter-spacing:4px;font-family:'Inter',sans-serif;text-transform:uppercase;">Canada Life Centre · Courtside</div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:300px;background:linear-gradient(to bottom,transparent,#080808);"></div>
+    </div>
+
+    <!-- Badges -->
+    <div class="badges">
+      <div class="badge-pink">🚀 Founding 15</div>
+      <div class="badge-outline">Only 15 Tickets</div>
+      <div class="badge-date">June 30, 2026</div>
+    </div>
+
+    <!-- Headline -->
+    <div class="headline-block">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · LAUNCH EVENT</div>
+      <div class="headline-main">
+        WINNIPEG'S<br>
+        <span class="headline-pink">FOUNDING</span><br>
+        <span class="headline-pink">15.</span>
+      </div>
+      <div class="subhead">Sea Bears Courtside Launch · June 30 · 15 Seats Only</div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- 4-icon value row -->
+    <div class="value-row">
+      <div class="value-item">
+        <div class="value-icon">🏀</div>
+        <div class="value-label">Premium<br>Courtside</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🍽️</div>
+        <div class="value-label">Dinner<br>Buffet</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🚐</div>
+        <div class="value-label">Private<br>Transport</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🔐</div>
+        <div class="value-label">Founding<br>Access</div>
+      </div>
+    </div>
+
+    <!-- Bottom card -->
+    <div class="bottom-card">
+      <div class="card-left">
+        <div class="brand-label">All Access Winnipeg</div>
+        <div class="card-desc">Community-first.<br>Premium. Real connection.</div>
+      </div>
+      <div class="card-right">
+        <div class="cta-text">Comment ACCESS 👇</div>
+        <div class="cta-sub">allaccesswinnipeg.ca</div>
+      </div>
+    </div>
+
+    <div class="bottom-rule"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- INSTAGRAM STORY 1080×1920              -->
+<!-- ═══════════════════════════════════════ -->
+<div>
+  <div class="label">INSTAGRAM STORY · 1080×1920</div>
+  <div class="story">
+    <div class="glow-tl"></div>
+    <div class="glow-br"></div>
+    <div class="left-accent"></div>
+
+    <!-- Hero image area -->
+    <div class="hero-img-fallback">
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0510 0%,#0d0d1a 40%,#080808 100%);"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;">
+          <div style="font-size:96px;margin-bottom:16px;">🏀</div>
+          <div style="color:rgba(255,255,255,0.10);font-size:14px;letter-spacing:4px;font-family:'Inter',sans-serif;text-transform:uppercase;">Canada Life Centre · Courtside</div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:400px;background:linear-gradient(to bottom,transparent,#080808);"></div>
+    </div>
+
+    <!-- Badges -->
+    <div class="badges">
+      <div class="badge-pink">🚀 Founding 15</div>
+      <div class="badge-outline">Only 15 Tickets</div>
+    </div>
+
+    <!-- Headline -->
+    <div class="headline-block">
+      <div class="eyebrow">ALL ACCESS WINNIPEG · LAUNCH EVENT</div>
+      <div class="headline-main">
+        WINNIPEG'S<br>
+        <span class="headline-pink">FOUNDING</span><br>
+        <span class="headline-pink">15.</span>
+      </div>
+      <div class="subhead">Sea Bears Courtside · June 30, 2026 · 15 Seats</div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- 4-icon value row -->
+    <div class="value-row">
+      <div class="value-item">
+        <div class="value-icon">🏀</div>
+        <div class="value-label">Courtside<br>Ticket</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🍽️</div>
+        <div class="value-label">Dinner<br>Buffet</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🚐</div>
+        <div class="value-label">Private<br>Transport</div>
+      </div>
+      <div class="value-item">
+        <div class="value-icon">🔐</div>
+        <div class="value-label">Founding<br>Access</div>
+      </div>
+    </div>
+
+    <!-- Checklist -->
+    <div class="story-checklist">
+      <div class="checklist-title">What's Included</div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">🏀</span>
+        <span class="checklist-text">Premium courtside Sea Bears ticket</span>
+        <span class="checklist-check">✓</span>
+      </div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">🍽️</span>
+        <span class="checklist-text">Dinner buffet included</span>
+        <span class="checklist-check">✓</span>
+      </div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">🥤</span>
+        <span class="checklist-text">Beverages included — alcohol optional at venue</span>
+        <span class="checklist-check">✓</span>
+      </div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">🚐</span>
+        <span class="checklist-text">Group transportation — to & from event</span>
+        <span class="checklist-check">✓</span>
+      </div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">📍</span>
+        <span class="checklist-text">Private host meetup (location after booking)</span>
+        <span class="checklist-check">✓</span>
+      </div>
+      <div class="checklist-item">
+        <span class="checklist-emoji">🏅</span>
+        <span class="checklist-text">Founding 15 recognition — permanent</span>
+        <span class="checklist-check">✓</span>
+      </div>
+    </div>
+
+    <!-- Story CTA -->
+    <div class="story-cta">
+      <div class="story-cta-main">Comment ACCESS</div>
+      <div class="story-cta-sub">allaccesswinnipeg.ca · June 30 · Only 15 Seats</div>
+    </div>
+
+    <div class="bottom-rule"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- REEL COVER 1080×1920                   -->
+<!-- ═══════════════════════════════════════ -->
+<div>
+  <div class="label">REEL COVER · 1080×1920</div>
+  <div class="reel">
+    <div class="hero-fullbleed"></div>
+    <div class="glow-center"></div>
+    <div class="left-accent"></div>
+
+    <div class="reel-content">
+      <div class="reel-eyebrow">All Access Winnipeg · 2026</div>
+      <div class="reel-headline">
+        FOUNDING<br>
+        <span class="reel-headline-pink">15.</span>
+      </div>
+      <div class="reel-divider"></div>
+      <div class="reel-sub">Sea Bears Courtside Launch · June 30</div>
+
+      <div class="reel-stats">
+        <div class="reel-stat">
+          <div class="reel-stat-num">15</div>
+          <div class="reel-stat-label">Total Seats</div>
+        </div>
+        <div class="reel-stat" style="border-left:1px solid rgba(255,255,255,0.08);border-right:1px solid rgba(255,255,255,0.08);padding:0 48px;">
+          <div class="reel-stat-num">$300</div>
+          <div class="reel-stat-label">Founding Access</div>
+        </div>
+        <div class="reel-stat">
+          <div class="reel-stat-num">Jun 30</div>
+          <div class="reel-stat-label">Date</div>
+        </div>
+      </div>
+
+      <div class="reel-cta-badge">Comment ACCESS</div>
+      <div class="reel-url">allaccesswinnipeg.ca</div>
+    </div>
+
+    <div class="bottom-rule"></div>
+  </div>
+</div>
+
+</body>
+</html>
