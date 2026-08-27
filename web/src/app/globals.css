@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
+/*
+  ROOT CAUSE FIX (2026-08-27):
+  Tailwind v4 puts all utilities inside @layer blocks. Unlayered CSS always wins
+  over @layer rules regardless of specificity. The original :root had --background: #ffffff
+  which caused body { background: var(--background) } to produce a WHITE background on
+  any device in light OS mode, making all text-white/* and bg-white/* elements invisible.
+
+  Fix: hardcode --background to the actual design dark colour so body background is
+  always correct regardless of OS light/dark preference (this site is always dark-themed).
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0e0a1a;
+  --foreground: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/*
+  No @media prefers-color-scheme override needed — this site is single-theme dark.
+  Removing that block was the fix: it was supplying #ffffff as the default which iOS
+  Safari in light mode used, overriding the Tailwind bg-[#0e0a1a] class on <body>.
+*/
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

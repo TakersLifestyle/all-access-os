@@ -257,8 +257,12 @@ export default function OpenClaw() {
       {/* Chat Panel */}
       {isOpen && (
         <div
-          className="fixed bottom-20 right-4 z-50 flex flex-col w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden"
-          style={{ background: "#0e0a1a", maxHeight: "min(560px, calc(100dvh - 120px))" }}
+          className="fixed right-4 z-50 flex flex-col w-[360px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden"
+          style={{
+            bottom: "max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem))",
+            background: "#0e0a1a",
+            maxHeight: "min(560px, calc(100dvh - 120px))",
+          }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-white/3 flex-shrink-0">
@@ -337,11 +341,12 @@ export default function OpenClaw() {
         </div>
       )}
 
-      {/* Floating Button */}
+      {/* Floating Button — bottom position respects iPhone home indicator safe area */}
       <button
         onClick={() => setIsOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-pink-900/50 transition-all hover:scale-105 active:scale-95"
+        className="fixed right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-pink-900/50 transition-all hover:scale-105 active:scale-95"
         style={{
+          bottom: "max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))",
           background: "linear-gradient(135deg, #ff007f 0%, #cc0055 100%)",
           boxShadow: "0 0 24px rgba(255, 0, 127, 0.4)",
         }}
