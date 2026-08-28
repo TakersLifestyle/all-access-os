@@ -526,7 +526,7 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
 export default function AlbumPage() {
   const params = useParams();
   const albumId = (Array.isArray(params?.albumId) ? params.albumId[0] : params?.albumId) ?? "";
-  const { user, profile, isAdmin, hasCommunityAccess, loading } = useAuth();
+  const { user, profile, isAdmin, loading } = useAuth();
   const router = useRouter();
 
   const [album, setAlbum] = useState<MemoryAlbum | null>(null);
@@ -562,14 +562,10 @@ export default function AlbumPage() {
     .filter(m => m.isFeatured)
     .sort((a, b) => (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0));
 
-  // Auth guard
+  // Public data fetch — album, media, comments, series siblings
+  // No auth required; Firestore rules now allow public reads on memoryAlbums/Media/Comments
   useEffect(() => {
-    if (!loading && !user) router.push(`/login?redirect=/memories/${albumId}`);
-  }, [loading, user, albumId, router]);
-
-  // Load album + media + comments + attendees + series siblings
-  useEffect(() => {
-    if (!user || !albumId || !hasCommunityAccess) return;
+    if (!albumId) return;
     (async () => {
       setFetching(true);
       try {
@@ -589,15 +585,6 @@ export default function AlbumPage() {
             .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt))
         );
 
-        // Load attendees if album is linked to an event
-        if (albumData.eventId) {
-          const attendeeSnap = await getDocs(
-            query(collection(db, "eventPurchases"), where("eventId", "==", albumData.eventId))
-          );
-          const allAttendees = attendeeSnap.docs.map(d => ({ id: d.id, ...d.data() } as AlbumAttendee));
-          setAttendees(allAttendees.filter(a => a.status === "confirmed" || !a.status));
-        }
-
         // Load series siblings when category is set
         if (albumData.category) {
           const seriesSnap = await getDocs(
@@ -615,7 +602,18 @@ export default function AlbumPage() {
         setFetching(false);
       }
     })();
-  }, [user, albumId, hasCommunityAccess, router]);
+  }, [albumId, router]);
+
+  // Auth-gated data — attendees (eventPurchases rules require auth)
+  useEffect(() => {
+    if (!user || !album?.eventId) return;
+    getDocs(query(collection(db, "eventPurchases"), where("eventId", "==", album.eventId)))
+      .then(snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as AlbumAttendee));
+        setAttendees(all.filter(a => a.status === "confirmed" || !a.status));
+      })
+      .catch(() => { /* user may not have read access to eventPurchases */ });
+  }, [user, album]);
 
   // Lightbox keyboard handler
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -674,36 +672,6 @@ export default function AlbumPage() {
   };
 
   // ─── Render ───────────────────────────────────────────────
-
-  if (loading || !user) return null;
-
-  // Locked state
-  if (!hasCommunityAccess) {
-    return (
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <Link href="/memories" className="text-white/30 hover:text-white/60 text-sm transition inline-block mb-10">
-          ← Memories
-        </Link>
-        <div className="text-center py-20 space-y-5">
-          <p className="text-7xl">🔒</p>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Memories are for the community.</h2>
-            <p className="text-white/40 text-sm max-w-md mx-auto leading-relaxed">
-              Attend an ALL ACCESS event or become a monthly supporter to access event albums, recaps, and downloadable media.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
-            <Link href="/signup" className="bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition">
-              Become a Supporter — $25/mo
-            </Link>
-            <Link href="/events" className="text-white/40 hover:text-white text-sm transition">
-              View Upcoming Events →
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   if (fetching) {
     return (
@@ -871,25 +839,58 @@ export default function AlbumPage() {
 
         {/* Tab content */}
         {activeTab === "photos" && (
-          <MasonryPhotoGrid photos={photos} userId={user.uid} onOpen={setLightboxIndex} onLike={toggleLike} />
+          <MasonryPhotoGrid photos={photos} userId={user?.uid ?? ""} onOpen={setLightboxIndex} onLike={toggleLike} />
         )}
         {activeTab === "videos" && (
-          <VideoGrid videos={videos} userId={user.uid} onLike={toggleLike} />
+          <VideoGrid videos={videos} userId={user?.uid ?? ""} onLike={toggleLike} />
         )}
         {activeTab === "creator" && (
-          <CreatorGrid items={creatorContent} userId={user.uid} onLike={toggleLike} />
+          <CreatorGrid items={creatorContent} userId={user?.uid ?? ""} onLike={toggleLike} />
         )}
         {activeTab === "comments" && (
-          <CommentsSection
-            comments={comments}
-            commentText={commentText}
-            setCommentText={setCommentText}
-            submitting={submitting}
-            onSubmit={submitComment}
-            onDelete={deleteComment}
-            userId={user.uid}
-            isAdmin={isAdmin}
-          />
+          user ? (
+            <CommentsSection
+              comments={comments}
+              commentText={commentText}
+              setCommentText={setCommentText}
+              submitting={submitting}
+              onSubmit={submitComment}
+              onDelete={deleteComment}
+              userId={user.uid}
+              isAdmin={isAdmin}
+            />
+          ) : (
+            <div className="space-y-6">
+              {comments.length === 0 ? (
+                <div className="text-center py-12 text-white/25 text-sm">No comments yet.</div>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map(c => (
+                    <div key={c.id} className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-xs font-bold shrink-0">
+                        {c.displayName?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-sm font-semibold text-white/80">{c.displayName}</span>
+                          <span className="text-white/20 text-xs">{formatCommentTime(c.createdAt)}</span>
+                        </div>
+                        <p className="text-white/60 text-sm leading-relaxed">{c.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="text-center py-4 border-t border-white/10">
+                <p className="text-white/30 text-sm">
+                  <Link href={`/login?redirect=/memories/${albumId}`} className="text-pink-400 hover:text-pink-300 font-semibold transition">Sign in</Link>
+                  {" "}or{" "}
+                  <Link href="/signup" className="text-pink-400 hover:text-pink-300 font-semibold transition">create a free account</Link>
+                  {" "}to share a memory.
+                </p>
+              </div>
+            </div>
+          )
         )}
 
         {/* ── Series Navigation ─────────────────────────────── */}

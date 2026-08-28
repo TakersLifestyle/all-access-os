@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -123,19 +122,14 @@ function EpisodeCard({ album }: { album: MemoryAlbum }) {
 }
 
 export default function MemoriesPage() {
-  const { user, hasCommunityAccess, loading } = useAuth();
-  const router = useRouter();
+  const { user } = useAuth();
   const [albums, setAlbums] = useState<MemoryAlbum[]>([]);
   const [fetching, setFetching] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "events" | "founding-15">("all");
 
+  // Public fetch — no auth required (rules now allow public reads)
   useEffect(() => {
-    if (!loading && !user) router.push("/login?redirect=/memories");
-  }, [loading, user, router]);
-
-  useEffect(() => {
-    if (!user || !hasCommunityAccess) { setFetching(false); return; }
     (async () => {
       try {
         const snap = await getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active")));
@@ -144,33 +138,7 @@ export default function MemoriesPage() {
         setAlbums(result);
       } finally { setFetching(false); }
     })();
-  }, [user, hasCommunityAccess]);
-
-  if (loading || !user) return null;
-
-  if (!hasCommunityAccess) {
-    return (
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="text-center py-24 space-y-6">
-          <p className="text-7xl">🔒</p>
-          <div className="space-y-3">
-            <h2 className="text-2xl font-bold">Memories are for the community.</h2>
-            <p className="text-white/40 text-sm max-w-md mx-auto leading-relaxed">
-              Attend an ALL ACCESS event or become a monthly supporter to view event albums, photos, videos, and downloadable memories.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link href="/signup" className="bg-pink-600 hover:bg-pink-500 px-6 py-2.5 rounded-xl text-sm font-bold transition">
-              Become a Supporter — $25/mo
-            </Link>
-            <Link href="/events" className="text-white/40 hover:text-white text-sm transition">
-              View Upcoming Events →
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  }, []);
 
   const founding15 = albums
     .filter(a => a.category === "Founding 15")
@@ -196,9 +164,24 @@ export default function MemoriesPage() {
         <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest">ALL ACCESS Winnipeg</p>
         <h1 className="text-5xl md:text-6xl font-black tracking-tight">MEMORIES</h1>
         <p className="text-white/40 text-sm max-w-sm mx-auto leading-relaxed">
-          Real community. Real experiences. Relive every moment.
+          4,000+ community photos. Winnipeg, you might be in here 👀
         </p>
       </div>
+
+      {/* Soft sign-in CTA for unauthenticated visitors */}
+      {!user && (
+        <div className="text-center py-3 px-5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+          <p className="text-white/35 text-sm">
+            <Link href="/signup" className="text-pink-400 hover:text-pink-300 font-semibold transition">
+              Create a free account
+            </Link>
+            {" "}to save photos and leave reactions.{" "}
+            <Link href="/login?redirect=/memories" className="text-white/50 hover:text-white transition">
+              Already have one? Sign in →
+            </Link>
+          </p>
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="space-y-4">

@@ -418,40 +418,41 @@ service cloud.firestore {
 
 
     // ─── memoryAlbums/{albumId} ─────────────────────────────
-    // READ  — community access (active member OR event attendee OR manual grant)
+    // READ  — PUBLIC (community photo archive is open to everyone)
     // WRITE — admin only (created via Admin > Memories page)
     match /memoryAlbums/{albumId} {
-      allow read: if hasCommunityAccess();
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
 
     // ─── memoryMedia/{mediaId} ──────────────────────────────
-    // READ  — community access
-    // WRITE — admin only for create/delete; community members can toggle likedBy
+    // READ   — PUBLIC (photos are open to everyone)
+    // CREATE/DELETE — admin only
+    // UPDATE likedBy — any signed-in user (free account)
     match /memoryMedia/{mediaId} {
-      allow read: if hasCommunityAccess();
+      allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
-                    || (hasCommunityAccess()
+                    || (isSignedIn()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["likedBy"]));
     }
 
 
     // ─── memoryComments/{commentId} ─────────────────────────
-    // READ   — community access
-    // CREATE — community access (must own the userId field)
+    // READ   — PUBLIC (comments visible to everyone)
+    // CREATE — any signed-in user (free account, must own userId field)
     // DELETE — own comment or admin
     match /memoryComments/{commentId} {
-      allow read: if hasCommunityAccess();
-      allow create: if hasCommunityAccess()
+      allow read: if true;
+      allow create: if isSignedIn()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 1000;
       allow delete: if isAdmin()
-                    || (hasCommunityAccess() && resource.data.userId == request.auth.uid);
+                    || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow update: if false;
     }
 

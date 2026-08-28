@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import SocialFeedSection from "@/components/SocialFeedSection";
 
@@ -29,6 +29,21 @@ interface EventTeaser {
   checkoutEnabled?: boolean;
   homepageFeatured?: boolean;
   homepagePriority?: number;
+}
+
+function useMemoryPreviews() {
+  const [albums, setAlbums] = useState<{ id: string; title: string; coverImageUrl?: string; photoCount?: number }[]>([]);
+  useEffect(() => {
+    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(8)))
+      .then(snap => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        all.sort((a: any, b: any) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
+        setAlbums(all.slice(0, 4));
+      })
+      .catch(() => {});
+  }, []);
+  return albums;
 }
 
 function useEventTeasers() {
@@ -96,6 +111,7 @@ export default function Home() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const events = useEventTeasers();
+  const memoryPreviews = useMemoryPreviews();
 
   const featuredConcert = events.find(
     (e) => e.type === "concert" && e.featured && e.status === "active"
@@ -519,6 +535,64 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* ── COMMUNITY MEMORIES ────────────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-1">Community Archive</p>
+            <h2 className="text-2xl font-bold">4,000+ Moments Captured</h2>
+            <p className="text-white/40 text-sm mt-1">Winnipeg, you might be in here 👀</p>
+          </div>
+          <Link href="/memories" className="text-pink-400 hover:text-pink-300 text-sm transition shrink-0 font-medium">
+            Browse all →
+          </Link>
+        </div>
+
+        <Link
+          href="/memories"
+          className="group block relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]"
+        >
+          {/* Photo mosaic grid */}
+          <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
+            {memoryPreviews.map((album) => (
+              <div key={album.id} className="relative overflow-hidden">
+                {album.coverImageUrl ? (
+                  <img
+                    src={album.coverImageUrl}
+                    alt={album.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
+                )}
+              </div>
+            ))}
+            {Array.from({ length: Math.max(0, 4 - memoryPreviews.length) }).map((_, i) => (
+              <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 flex items-center justify-center">
+                <span className="text-4xl opacity-[0.04]">📸</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Gradient overlay + CTA */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1">
+                Founding 15 · Community Moments · Events
+              </p>
+              <p className="text-white font-bold text-base leading-tight">
+                Browse the archive. Find your people.
+              </p>
+            </div>
+            <span className="bg-pink-600 group-hover:bg-pink-500 transition px-5 py-2.5 rounded-xl text-sm font-bold text-white shrink-0">
+              Open →
+            </span>
+          </div>
+        </Link>
+      </section>
 
       {/* ── MEMBERSHIP ────────────────────────────────────────────────────── */}
       {(!user || !isActive) && (
