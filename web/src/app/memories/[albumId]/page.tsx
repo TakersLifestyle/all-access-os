@@ -659,7 +659,7 @@ export default function AlbumPage() {
   };
 
   const toggleLike = async (item: MemoryMedia) => {
-    if (!hasCommunityAccess) { setShowUpgradePrompt(true); return; }
+    if (!hasCommunityAccess || !user) { setShowUpgradePrompt(true); return; }
     const liked = (item.likedBy ?? []).includes(user.uid);
     await updateDoc(doc(db, "memoryMedia", item.id), {
       likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
