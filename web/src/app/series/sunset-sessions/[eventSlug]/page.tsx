@@ -617,7 +617,7 @@ export default function SeriesEventPage() {
                       </div>
                       {t === "supporter" && (
                         <span className="text-[10px] text-[#D4AF37]/50 ml-[15px]">
-                          Become a Supporter — $25/mo
+                          Go ALL ACCESS — $10/mo
                         </span>
                       )}
                       {t === "community" && (

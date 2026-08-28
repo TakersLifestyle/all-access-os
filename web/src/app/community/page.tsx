@@ -159,7 +159,7 @@ function MembersOnlyBlock() {
         <span className="text-white/50 text-sm">Attend an event or join to participate</span>
       </div>
       <Link href="/" className="bg-pink-600 hover:bg-pink-500 px-4 py-2 rounded-xl text-sm font-bold transition shrink-0">
-        Join — $25/mo
+        Go ALL ACCESS — $10/mo
       </Link>
     </div>
   );

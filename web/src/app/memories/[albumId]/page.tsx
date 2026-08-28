@@ -526,7 +526,7 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
 export default function AlbumPage() {
   const params = useParams();
   const albumId = (Array.isArray(params?.albumId) ? params.albumId[0] : params?.albumId) ?? "";
-  const { user, profile, isAdmin, loading } = useAuth();
+  const { user, profile, isAdmin, hasCommunityAccess, loading } = useAuth();
   const router = useRouter();
 
   const [album, setAlbum] = useState<MemoryAlbum | null>(null);
@@ -540,6 +540,7 @@ export default function AlbumPage() {
   const [featuredVideoItem, setFeaturedVideoItem] = useState<MemoryMedia | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Derived media sets
   const photos = media
@@ -658,7 +659,7 @@ export default function AlbumPage() {
   };
 
   const toggleLike = async (item: MemoryMedia) => {
-    if (!user) return;
+    if (!hasCommunityAccess) { setShowUpgradePrompt(true); return; }
     const liked = (item.likedBy ?? []).includes(user.uid);
     await updateDoc(doc(db, "memoryMedia", item.id), {
       likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
@@ -914,15 +915,27 @@ export default function AlbumPage() {
           onClick={() => setLightboxIndex(-1)}
         >
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => downloadMedia(lightboxPhoto.url, `memory-${lightboxPhoto.id}.jpg`)}
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-2 rounded-lg text-xs font-semibold text-white transition"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-              </svg>
-              Download
-            </button>
+            {hasCommunityAccess ? (
+              <button
+                onClick={() => downloadMedia(lightboxPhoto.url, `memory-${lightboxPhoto.id}.jpg`)}
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-2 rounded-lg text-xs font-semibold text-white transition"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Download
+              </button>
+            ) : (
+              <button
+                onClick={() => { setLightboxIndex(-1); setShowUpgradePrompt(true); }}
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-2 rounded-lg text-xs font-semibold text-white/50 hover:text-white transition"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Download
+              </button>
+            )}
             <button
               onClick={() => setLightboxIndex(-1)}
               className="bg-white/10 hover:bg-white/20 border border-white/15 w-9 h-9 rounded-lg text-white/60 hover:text-white transition flex items-center justify-center text-lg leading-none"
@@ -962,6 +975,58 @@ export default function AlbumPage() {
               <p className="text-white/45 text-sm text-center">{lightboxPhoto.caption}</p>
             )}
             <p className="text-white/20 text-xs">{lightboxIndex + 1} / {photos.length}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALL ACCESS Upgrade Prompt ───────────────────────── */}
+      {showUpgradePrompt && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center"
+          onClick={() => setShowUpgradePrompt(false)}
+        >
+          <div
+            className="bg-[#0d0917] border border-white/10 rounded-2xl p-8 max-w-sm mx-4 text-center space-y-5 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 bg-pink-600/15 rounded-2xl flex items-center justify-center mx-auto">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-400">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-white font-bold text-lg">Go ALL ACCESS</h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Downloads, reactions, and high-resolution Memories are included with ALL ACCESS — $10/month.
+                Cancel anytime.
+              </p>
+            </div>
+            <ul className="text-left space-y-2 text-sm text-white/60">
+              {[
+                "Download your favourite photos",
+                "High-resolution Memories access",
+                "React and interact with the archive",
+                "15% off eligible event tickets",
+                "Local partner perks",
+              ].map(item => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="text-pink-400 shrink-0">✓</span> {item}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/#membership"
+              className="block w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3.5 px-6 rounded-xl transition text-sm"
+              onClick={() => setShowUpgradePrompt(false)}
+            >
+              Go ALL ACCESS — $10/mo
+            </Link>
+            <button
+              onClick={() => setShowUpgradePrompt(false)}
+              className="text-white/25 hover:text-white/50 text-sm transition"
+            >
+              Maybe later
+            </button>
           </div>
         </div>
       )}

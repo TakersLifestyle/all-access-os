@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
         discountPct: isMember ? "15" : "0",
       },
       payment_intent_data: {
+        statement_descriptor: "ALL ACCESS WINNIPEG",
         // Ticket number = sold so far + 1 (capacity - remaining = sold)
         description: (() => {
           const cap = typeof event.capacity === "number" ? event.capacity : 0;

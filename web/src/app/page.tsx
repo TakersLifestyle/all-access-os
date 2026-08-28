@@ -226,7 +226,7 @@ export default function Home() {
                 disabled={checkoutLoading}
                 className="border border-pink-500/40 hover:border-pink-500/70 px-7 py-3.5 rounded-xl font-semibold text-base transition text-pink-300 hover:text-pink-200"
               >
-                {checkoutLoading ? "Redirecting…" : "Become a Supporter"}
+                {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo"}
               </button>
             ) : (
               <Link
@@ -598,10 +598,10 @@ export default function Home() {
       {(!user || !isActive) && (
         <section className="max-w-lg mx-auto space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Support the Mission.</h2>
+            <p className="text-pink-500 text-[10px] font-black uppercase tracking-[0.2em]">Go ALL ACCESS</p>
+            <h2 className="text-2xl font-bold">More access to the community.</h2>
             <p className="text-white/40 text-sm max-w-sm mx-auto">
-              Membership directly funds safe, accessible experiences for Winnipeg youth and young adults —
-              and saves you money at every event.
+              For just $10/month. Cancel anytime. No commitment.
             </p>
           </div>
 
@@ -610,7 +610,7 @@ export default function Home() {
 
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold">$25</span>
+                <span className="text-5xl font-bold">$10</span>
                 <span className="text-white/50">/month</span>
               </div>
               <p className="text-pink-400 text-sm font-semibold">Cancel anytime. No commitment.</p>
@@ -618,12 +618,13 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "15% off all event tickets — every time, automatically",
-                "Priority access to new events before public release",
+                "15% off eligible ALL ACCESS event tickets",
+                "High-resolution access to community Memories",
+                "Download your favourite photos",
+                "React, save and interact with Memories",
+                "Priority access to select new events",
                 "Local partner perks & community discounts",
-                "Access to the community feed + founding supporter status",
-                "Directly fund safe, accessible experiences for Winnipeg youth",
-                "Help us build more — more events, more spaces, more impact",
+                "Access to additional ALL ACCESS community features",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-white/70">
                   <span className="text-pink-400 shrink-0">✓</span> {item}
@@ -636,7 +637,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
             >
-              {checkoutLoading ? "Redirecting…" : "Become a Supporter — $25/mo"}
+              {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo"}
             </button>
 
             {error && (
@@ -644,7 +645,8 @@ export default function Home() {
             )}
 
             <p className="text-center text-white/20 text-xs">
-              Secure checkout via Stripe. Cancel anytime. Events are open to everyone — membership is how you support the community.
+              Supporting ALL ACCESS also helps us continue documenting the community, creating accessible experiences,
+              supporting local talent and building more spaces for people to connect.
             </p>
           </div>
         </section>

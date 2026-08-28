@@ -17,6 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://allaccesswinnipeg.ca"),
   title: "ALL ACCESS Winnipeg",
   description: "Winnipeg's community-first platform. Safe events, real connection, and premium experiences for youth and young adults. Sunset Sessions and more.",
   openGraph: {

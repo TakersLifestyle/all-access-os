@@ -1,5 +1,5 @@
-// Membership subscription checkout — $25/month CAD
-// Membership is optional — for community supporters
+// Membership subscription checkout — $10/month CAD (ALL ACCESS)
+// Membership unlocks downloads, reactions, high-res Memories + perks
 // Does NOT gate event ticket access
 
 import { NextRequest, NextResponse } from "next/server";
@@ -39,13 +39,13 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "cad",
-            unit_amount: 2500, // $25.00 CAD in cents
+            unit_amount: 1000, // $10.00 CAD in cents
             recurring: { interval: "month" },
             product_data: {
-              name: "ALL ACCESS Community Membership",
+              name: "ALL ACCESS Membership",
               description:
-                "Support the community. Help grow the platform. " +
-                "Optional monthly membership — cancel anytime.",
+                "High-res Memories, downloads, reactions, 15% off tickets, partner perks. " +
+                "Cancel anytime.",
             },
           },
           quantity: 1,
@@ -56,6 +56,10 @@ export async function POST(req: NextRequest) {
       allow_promotion_codes: true,
       ...(uid ? { client_reference_id: uid } : {}),
       ...(customerId ? { customer: customerId } : {}),
+      subscription_data: {
+        description: "ALL ACCESS Membership — $10/month CAD",
+      },
+      statement_descriptor: "ALL ACCESS WINNIPEG",
     } as any);
 
     if (!session.url) {

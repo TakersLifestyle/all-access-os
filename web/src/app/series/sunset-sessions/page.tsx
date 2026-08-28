@@ -403,13 +403,13 @@ export default function SunsetSessionsPage() {
           </div>
 
           <p className="text-white/25 text-sm mb-6">
-            Want deeper access? The optional <strong className="text-white/40">$25/mo Supporting Membership</strong> unlocks member pricing on all sessions + full perks.
+            Want deeper access? The optional <strong className="text-white/40">$10/mo ALL ACCESS Membership</strong> unlocks member pricing on all sessions + full perks.
           </p>
           <Link
             href="/membership"
             className="text-[#D4AF37]/50 hover:text-[#D4AF37] text-sm underline underline-offset-4 transition"
           >
-            Learn about Supporting Membership →
+            Learn about ALL ACCESS →
           </Link>
         </div>
       </section>

@@ -503,8 +503,8 @@ export default function ProfilePage() {
             className="flex items-center justify-between bg-amber-950/20 hover:bg-amber-950/30 border border-amber-500/25 rounded-xl px-5 py-4 transition group"
           >
             <div>
-              <p className="font-semibold text-amber-400 text-sm">Upgrade to Supporting Member</p>
-              <p className="text-white/35 text-xs mt-0.5">$25/month · Unlock perks, discounts &amp; more</p>
+              <p className="font-semibold text-amber-400 text-sm">Go ALL ACCESS</p>
+              <p className="text-white/35 text-xs mt-0.5">$10/month · Downloads, reactions, discounts &amp; more</p>
             </div>
             <span className="text-amber-400 group-hover:translate-x-1 transition-transform shrink-0">→</span>
           </Link>

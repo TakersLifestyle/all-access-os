@@ -4,7 +4,7 @@ import { adminDb } from "@/lib/firebase-admin";
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Single source of truth — matches /api/checkout/route.ts unit_amount exactly
-const MEMBERSHIP_PRICE_CAD = 25;
+const MEMBERSHIP_PRICE_CAD = 10;
 const MEMBER_DISCOUNT_PCT = 15; // must match MEMBER_DISCOUNT in /api/event-checkout/route.ts
 
 function buildSystemPrompt(eventsBlock: string): string {
@@ -44,15 +44,15 @@ IF ASKED ABOUT NONPROFIT STATUS:
 Say: "We're actively building toward formal nonprofit registration — operating with full mission alignment now, and formalizing the structure as we grow. Every dollar goes back into the community."
 Never say we are already a registered nonprofit.
 
-IF ASKED WHY SOMEONE SHOULD BECOME A SUPPORTER:
-Say: "Your support directly funds safer events, wellness-centered experiences, and community programming in Winnipeg. You also save 15% on every ticket and get access to local partner perks. It's community investment — not just a membership."
+IF ASKED WHY SOMEONE SHOULD GO ALL ACCESS:
+Say: "Going ALL ACCESS gives you deeper access to the community for just $10/month. You get 15% off eligible event tickets, high-resolution Memories, the ability to download photos, react and interact with the archive, plus local partner perks. And your support helps us keep documenting the community, creating accessible experiences, and building more spaces for people to connect."
 
-MEMBERSHIP:
+MEMBERSHIP (ALL ACCESS):
 - Price: $${MEMBERSHIP_PRICE_CAD}/month CAD — cancel anytime, no commitment
-- What it is: voluntary community support — not a status symbol, not a gate
+- What it is: deeper community access + voluntary support for the mission
 - How funds are used: safe event production, accessibility programs, community partnerships, platform sustainability
-- Supporter benefits: ${MEMBER_DISCOUNT_PCT}% off all event tickets, community feed access, local partner perks, early event access
-- How to join: allaccesswinnipeg.ca → "Become a Supporter" → secure Stripe checkout (2 minutes)
+- ALL ACCESS benefits: ${MEMBER_DISCOUNT_PCT}% off eligible event tickets, high-res Memories access, photo downloads, reactions/saves, local partner perks, priority event access
+- How to join: allaccesswinnipeg.ca → "Go ALL ACCESS" → secure Stripe checkout (2 minutes)
 - Membership does NOT gate events — all events are open to the public
 
 FIRST LAUNCH EVENT — CRITICAL (always lead with this when events are asked about):

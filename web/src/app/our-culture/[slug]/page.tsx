@@ -225,12 +225,12 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
           <Link href="/our-culture" className="text-white/40 hover:text-white transition text-sm font-semibold">
             ← Back to OUR CULTURE
           </Link>
-          <a
+          <Link
             href="/our-culture#nominate"
             className="bg-pink-600 hover:bg-pink-500 text-white font-black px-6 py-3 rounded-xl transition text-sm"
           >
             Nominate the Next Guest →
-          </a>
+          </Link>
         </div>
       </section>
     </main>
