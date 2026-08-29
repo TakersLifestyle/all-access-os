@@ -1,6 +1,6 @@
-// Event ticket checkout — open to ALL signed-in users (members get 15% off)
+// Event ticket checkout — open to ALL signed-in users (members get 30% off)
 // Pricing always read from Firestore — never trusted from frontend
-// Member discount: MEMBER_DISCOUNT (15%) off generalPrice, calculated server-side
+// Member discount: MEMBER_DISCOUNT (30%) off generalPrice, calculated server-side
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -15,9 +15,9 @@ const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 5;
 
 // ── Member discount constant ────────────────────────────────────────────────
-// Active members receive exactly 15% off generalPrice, calculated server-side.
+// Active members receive exactly 30% off generalPrice, calculated server-side.
 // Frontend displays the same calculation — these must stay in sync.
-const MEMBER_DISCOUNT = 0.15;
+const MEMBER_DISCOUNT = 0.30;
 
 function applyMemberDiscount(price: number): number {
   return Math.round(price * (1 - MEMBER_DISCOUNT) * 100) / 100;
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Resolve membership status ────────────────────────
-    // All signed-in users can purchase — active members get 15% discount
+    // All signed-in users can purchase — active members get 30% discount
     let isMember = false;
     if (uid) {
       try {
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     // ── 6. Server-side pricing ──────────────────────────────
     // generalPrice is the single source of truth from Firestore.
-    // Members receive MEMBER_DISCOUNT (15%) off UNLESS noMemberDiscount is set
+    // Members receive MEMBER_DISCOUNT (30%) off UNLESS noMemberDiscount is set
     // (flat-price events like the Founding 15 $300 launch).
     const generalPrice = Number(event.generalPrice) || 0;
 
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     const noMemberDiscount = event.noMemberDiscount === true;
     const eligibleForDiscount = isMember && !noMemberDiscount;
 
-    // Apply 15% member discount server-side (only when eligible)
+    // Apply 30% member discount server-side (only when eligible)
     const unitPriceDollars: number = eligibleForDiscount
       ? applyMemberDiscount(generalPrice)
       : generalPrice;
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
       eventDateStr,
       event.location ?? null,
       eligibleForDiscount
-        ? `Member rate — 15% off (saving $${savingsPerTicket.toFixed(2)}/ticket)`
+        ? `Member rate — 30% off (saving $${savingsPerTicket.toFixed(2)}/ticket)`
         : null,
     ].filter(Boolean);
 
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     console.log(
       `[event-checkout] Creating session | event="${event.title}" qty=${qty} ` +
       `generalPrice=${generalPrice} unitPriceCents=${unitPriceCents} ` +
-      `isMember=${isMember} noMemberDiscount=${noMemberDiscount} discount=${eligibleForDiscount ? "15%" : "none"} imageUrl=${imageUrl ?? "none"}`
+      `isMember=${isMember} noMemberDiscount=${noMemberDiscount} discount=${eligibleForDiscount ? "30%" : "none"} imageUrl=${imageUrl ?? "none"}`
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

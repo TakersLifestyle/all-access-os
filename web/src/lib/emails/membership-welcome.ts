@@ -11,7 +11,7 @@ export interface MembershipWelcomeData {
 
 export function membershipWelcomeHtml(d: MembershipWelcomeData): string {
   const perks: [string, string, string][] = [
-    ["🎉", "Community Events", "Sports nights, cultural experiences, community socials — 15% off every ticket, automatically."],
+    ["🎉", "Community Events", "Sports nights, cultural experiences, community socials — 30% off every ticket, automatically."],
     ["🎁", "Member Perks", "Local partner discounts, promo codes, and community benefits — our way of saying thank you."],
     ["👥", "Real Community", "A growing network of Winnipeggers building something together. Show up, connect, belong."],
     ["⭐", "Founding Supporter Status", "You're one of the first. Your support helps fund safe, accessible experiences for Winnipeg."],

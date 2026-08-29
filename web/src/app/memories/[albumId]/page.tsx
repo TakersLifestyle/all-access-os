@@ -1062,7 +1062,7 @@ export default function AlbumPage() {
                 "Download your favourite photos",
                 "High-resolution Memories access",
                 "React and interact with the archive",
-                "15% off eligible event tickets",
+                "30% off eligible event tickets",
                 "Local partner perks",
               ].map(item => (
                 <li key={item} className="flex items-center gap-2">

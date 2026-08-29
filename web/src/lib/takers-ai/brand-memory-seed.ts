@@ -89,7 +89,7 @@ Max 5 tickets per purchase. Payments in CAD.`,
     title: "Membership Model",
     content: `ALL ACCESS membership: $25/month CAD flat rate.
 Members receive:
-- 15% off general ticket prices (server-side enforced, cannot be bypassed)
+- 30% off general ticket prices (server-side enforced, cannot be bypassed)
 - Access to exclusive member perks (promo codes, partner discounts)
 - Community feed access (posts, comments, discussions)
 - Early access to events

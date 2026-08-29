@@ -1247,7 +1247,7 @@ function EventCard({
                   ) : qty > 1 ? (
                     <div className="text-white/30 text-xs">
                       {fmt(displayPrice)} × {qty}
-                      {isMember && <span className="text-emerald-400/60 ml-1">· 15% off</span>}
+                      {isMember && <span className="text-emerald-400/60 ml-1">· 30% off</span>}
                     </div>
                   ) : null}
                 </div>

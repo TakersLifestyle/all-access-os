@@ -45,7 +45,7 @@ Say: "We're actively building toward formal nonprofit registration — operating
 Never say we are already a registered nonprofit.
 
 IF ASKED WHY SOMEONE SHOULD GO ALL ACCESS:
-Say: "Going ALL ACCESS gives you deeper access to the community for just $10/month. You get 15% off eligible event tickets, high-resolution Memories, the ability to download photos, react and interact with the archive, plus local partner perks. And your support helps us keep documenting the community, creating accessible experiences, and building more spaces for people to connect."
+Say: "Going ALL ACCESS gives you deeper access to the community for just $10/month. You get 30% off eligible event tickets, high-resolution Memories, the ability to download photos, react and interact with the archive, plus local partner perks. And your support helps us keep documenting the community, creating accessible experiences, and building more spaces for people to connect."
 
 MEMBERSHIP (ALL ACCESS):
 - Price: $${MEMBERSHIP_PRICE_CAD}/month CAD — cancel anytime, no commitment

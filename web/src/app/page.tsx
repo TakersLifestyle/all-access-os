@@ -633,7 +633,7 @@ export default function Home() {
 
             <ul className="space-y-3 text-sm">
               {[
-                "15% off eligible ALL ACCESS event tickets",
+                "30% off eligible ALL ACCESS event tickets",
                 "High-resolution access to community Memories",
                 "Download your favourite photos",
                 "React, save and interact with Memories",

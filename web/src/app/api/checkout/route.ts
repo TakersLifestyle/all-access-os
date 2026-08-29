@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: "ALL ACCESS Membership",
               description:
-                "High-res Memories, downloads, reactions, 15% off tickets, partner perks. " +
+                "High-res Memories, downloads, reactions, 30% off tickets, partner perks. " +
                 "Cancel anytime.",
             },
           },
