@@ -36,9 +36,10 @@ const SIZE_CONFIG = {
 
 type Size = keyof typeof SIZE_CONFIG;
 
-// Cache-Control for Vercel CDN edge caching.
-// Album covers don't change frequently, so we cache aggressively.
-const CACHE_CONTROL = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400";
+// Browser-only cache — do NOT use s-maxage so Vercel CDN never caches covers.
+// The ?v= param is bumped on every cover change to bust browser cache.
+// CDN caching caused stale covers to persist for up to 7 days after admin changes.
+const CACHE_CONTROL = "public, max-age=3600";
 
 // ── Route handler ────────────────────────────────────────────────────────────
 
