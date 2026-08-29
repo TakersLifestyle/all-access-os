@@ -551,6 +551,31 @@ export default function AlbumPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [heroImgError, setHeroImgError] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const startMembershipCheckout = async () => {
+    if (!user) return;
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.uid }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setCheckoutError(data.error || "Checkout unavailable — try again.");
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setCheckoutError("Something went wrong. Please try again.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   // Derived media sets
   const photos = media
@@ -1070,13 +1095,16 @@ export default function AlbumPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/#membership"
-              className="block w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3.5 px-6 rounded-xl transition text-sm"
-              onClick={() => setShowUpgradePrompt(false)}
+            <button
+              onClick={startMembershipCheckout}
+              disabled={checkoutLoading}
+              className="block w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3.5 px-6 rounded-xl transition text-sm"
             >
-              Go ALL ACCESS — $10/mo
-            </Link>
+              {checkoutLoading ? "Redirecting to checkout…" : "Go ALL ACCESS — $10/mo"}
+            </button>
+            {checkoutError && (
+              <p className="text-red-400 text-xs text-center">{checkoutError}</p>
+            )}
             <button
               onClick={() => setShowUpgradePrompt(false)}
               className="text-white/25 hover:text-white/50 text-sm transition"
