@@ -88,7 +88,6 @@ export async function GET(request: NextRequest) {
         .collection("memoryMedia")
         .where("albumId", "==", albumId)
         .where("type", "==", "photo")
-        .orderBy("order", "asc")
         .limit(1)
         .get();
 
