@@ -71,12 +71,19 @@ export async function GET(request: NextRequest) {
       return new NextResponse("Videos are not proxied through this endpoint", { status: 400 });
     }
 
-    // ── 2. Resolve the storage path ──────────────────────────────────────────
+    // ── 2. Resolve the storage path + bucket ─────────────────────────────────
+    // Prefer explicit storagePath if present.
+    // Fall back to extracting path (and bucket) from the tokenized URL.
+    // Albums created at different times may be in different buckets
+    // (.appspot.com vs .firebasestorage.app) — extract the bucket from the URL
+    // so the proxy always hits the right one.
     let storagePath: string | undefined = data.storagePath;
+    let urlBucket: string | undefined;
 
-    // Fallback: extract path from the tokenized URL for legacy records
-    if (!storagePath && typeof data.url === "string") {
-      storagePath = extractStoragePathFromUrl(data.url);
+    if (typeof data.url === "string") {
+      const resolved = resolveFromUrl(data.url);
+      if (!storagePath && resolved?.path) storagePath = resolved.path;
+      urlBucket = resolved?.bucket;
     }
 
     if (!storagePath) {
@@ -84,25 +91,42 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 3. Download original from Firebase Storage via Admin SDK ─────────────
-    // This is a server-to-server call using the service account.
-    // The original bytes never touch the client — only the resized derivative does.
-    const bucket = adminStorage();
-    const file = bucket.file(storagePath);
+    // Try the bucket embedded in the URL first (most accurate).
+    // Fall back to the project-default bucket if the URL bucket fails.
+    const defaultBucket = adminStorage();
+    const bucketsToTry = urlBucket
+      ? [adminStorageBucket(urlBucket), defaultBucket]
+      : [defaultBucket];
 
-    let originalBuffer: Buffer;
-    try {
-      const [downloaded] = await file.download();
-      originalBuffer = downloaded;
-    } catch (storageErr: unknown) {
-      const code = (storageErr as { code?: number })?.code;
-      if (code === 404) {
-        return new NextResponse("Storage object not found", { status: 404 });
+    // Deduplicate in case urlBucket === defaultBucket name
+    const seen = new Set<string>();
+    const uniqueBuckets = bucketsToTry.filter(b => {
+      const n = b.name;
+      if (seen.has(n)) return false;
+      seen.add(n);
+      return true;
+    });
+
+    let originalBuffer: Buffer | undefined;
+    for (const bucket of uniqueBuckets) {
+      try {
+        const [downloaded] = await bucket.file(storagePath).download();
+        originalBuffer = downloaded;
+        break;
+      } catch (storageErr: unknown) {
+        const code = (storageErr as { code?: number })?.code;
+        if (code !== 404) throw storageErr; // non-404 errors bubble up immediately
+        // 404 → try next bucket
       }
-      throw storageErr;
+    }
+
+    if (!originalBuffer) {
+      console.warn("[memories/image] Image not found in any bucket", { id, storagePath, urlBucket });
+      return new NextResponse("Storage object not found", { status: 404 });
     }
 
     // ── 4. Resize with sharp ─────────────────────────────────────────────────
-    const resized = await sharp(originalBuffer)
+    const resized = await sharp(originalBuffer as Buffer)
       .resize({
         width: maxDim,
         height: maxDim,
@@ -133,17 +157,30 @@ export async function GET(request: NextRequest) {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Extract the Firebase Storage object path from a tokenized download URL.
- * URL format:
+ * Extract the storage path AND bucket name from a Firebase Storage download URL.
+ * Handles both bucket formats:
  *   https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media&token=XXXX
- * The encoded path segment is URL-encoded, so decodeURIComponent is required.
+ * Returns both the object path and the bucket name so the proxy can target the
+ * exact bucket the file lives in — critical when media spans multiple buckets.
  */
-function extractStoragePathFromUrl(url: string): string | undefined {
+function resolveFromUrl(url: string): { path: string; bucket?: string } | undefined {
   try {
-    const match = url.match(/\/o\/(.+?)(?:\?|$)/);
-    if (!match?.[1]) return undefined;
-    return decodeURIComponent(match[1]);
+    const pathMatch = url.match(/\/o\/(.+?)(?:\?|$)/);
+    if (!pathMatch?.[1]) return undefined;
+    const path = decodeURIComponent(pathMatch[1]);
+
+    // Extract bucket name from /v0/b/{bucket}/o/ segment
+    const bucketMatch = url.match(/\/b\/([^/]+)\/o\//);
+    const bucket = bucketMatch?.[1] ? decodeURIComponent(bucketMatch[1]) : undefined;
+
+    return { path, bucket };
   } catch {
     return undefined;
   }
+}
+
+/** Get a specific named bucket from the Admin Storage singleton. */
+function adminStorageBucket(bucketName: string) {
+  const { getStorage } = require("firebase-admin/storage") as typeof import("firebase-admin/storage");
+  return getStorage().bucket(bucketName);
 }
