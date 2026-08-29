@@ -59,8 +59,7 @@ export async function POST(req: NextRequest) {
       subscription_data: {
         description: "ALL ACCESS Membership — $10/month CAD",
       },
-      statement_descriptor: "ALL ACCESS WINNIPEG",
-    } as any);
+    });
 
     if (!session.url) {
       return NextResponse.json({ error: "Stripe returned no URL" }, { status: 500 });
