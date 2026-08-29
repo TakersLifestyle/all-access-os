@@ -12,13 +12,21 @@ import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────
 
+// ── Album cover proxy helper ──────────────────────────────
+// Never render album.coverImageUrl directly — it is a raw Firebase tokenized URL.
+// Always use albumCoverUrl() which routes through the server-side proxy.
+function albumCoverUrl(albumId: string, size: "card" | "hero" = "card"): string {
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}`;
+}
+
 interface MemoryAlbum {
   id: string;
   title: string;
   eventDate: string;
   eventId?: string;
   description?: string;
-  coverImageUrl?: string;
+  coverImageUrl?: string;    // raw Firebase URL — never render directly; use albumCoverUrl() instead
+  coverStoragePath?: string; // preferred storage path for server-side proxy
   location?: string;
   category?: string;
   episodeNumber?: number;
@@ -497,9 +505,9 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
   return (
     <Link href={`/memories/${album.id}`} className="group flex-1 block">
       <div className={`flex items-center gap-3 p-4 rounded-2xl border border-white/10 hover:border-pink-500/25 bg-white/[0.02] hover:bg-white/[0.04] transition-all ${direction === "next" ? "flex-row-reverse text-right" : ""}`}>
-        {album.coverImageUrl && (
+        {(album.coverImageUrl || album.coverStoragePath) && (
           <img
-            src={album.coverImageUrl}
+            src={albumCoverUrl(album.id, "card")}
             alt={album.title}
             className="w-14 h-14 rounded-xl object-cover shrink-0 border border-white/10"
           />
@@ -766,9 +774,9 @@ export default function AlbumPage() {
     <>
       {/* ── Full-width Hero Banner ─────────────────────────── */}
       <div className="relative h-[360px] md:h-[460px] overflow-hidden">
-        {album.coverImageUrl ? (
+        {(album.coverImageUrl || album.coverStoragePath) ? (
           <img
-            src={album.coverImageUrl}
+            src={albumCoverUrl(album.id, "hero")}
             alt={album.title}
             className="w-full h-full object-cover"
             style={{

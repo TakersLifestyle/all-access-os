@@ -31,8 +31,13 @@ interface EventTeaser {
   homepagePriority?: number;
 }
 
+/** Returns the proxied album cover URL — never the raw Firebase Storage URL. */
+function albumCoverUrl(albumId: string): string {
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=card`;
+}
+
 function useMemoryPreviews() {
-  const [albums, setAlbums] = useState<{ id: string; title: string; coverImageUrl?: string; photoCount?: number }[]>([]);
+  const [albums, setAlbums] = useState<{ id: string; title: string; coverImageUrl?: string; coverStoragePath?: string; photoCount?: number }[]>([]);
   useEffect(() => {
     getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(8)))
       .then(snap => {
@@ -557,9 +562,9 @@ export default function Home() {
           <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
             {memoryPreviews.map((album) => (
               <div key={album.id} className="relative overflow-hidden">
-                {album.coverImageUrl ? (
+                {(album.coverImageUrl || album.coverStoragePath) ? (
                   <img
-                    src={album.coverImageUrl}
+                    src={albumCoverUrl(album.id)}
                     alt={album.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />

@@ -10,7 +10,8 @@ interface MemoryAlbum {
   id: string;
   title: string;
   eventDate: string;
-  coverImageUrl?: string;
+  coverImageUrl?: string;    // raw Firebase URL — never render directly; use albumCoverUrl() instead
+  coverStoragePath?: string; // preferred storage path for server-side proxy
   description?: string;
   location?: string;
   category?: string;
@@ -25,6 +26,16 @@ interface MemoryAlbum {
   isFeatured?: boolean;
 }
 
+/** Returns the proxied album cover URL served by /api/memories/cover — never the raw Firebase URL. */
+function albumCoverUrl(albumId: string, size: "card" | "hero" = "card"): string {
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}`;
+}
+
+/** True if this album has any cover image (raw or storagePath). */
+function hasCover(album: MemoryAlbum): boolean {
+  return !!(album.coverStoragePath || album.coverImageUrl);
+}
+
 function formatDate(dateStr: string) {
   try {
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -37,10 +48,10 @@ function AlbumCard({ album }: { album: MemoryAlbum }) {
     <Link href={`/memories/${album.id}`} className="group block">
       <div className="relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]">
         <div className="relative h-52 bg-white/[0.03] overflow-hidden">
-          {album.coverImageUrl ? (
+          {hasCover(album) ? (
             <>
               <img
-                src={album.coverImageUrl}
+                src={albumCoverUrl(album.id, "card")}
                 alt={album.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 style={{ objectPosition: `${album.focalX ?? 50}% ${album.focalY ?? 50}%` }}
@@ -93,9 +104,9 @@ function EpisodeCard({ album }: { album: MemoryAlbum }) {
   return (
     <Link href={`/memories/${album.id}`} className="group shrink-0 block w-44">
       <div className="relative w-44 h-64 rounded-2xl overflow-hidden border border-white/10 group-hover:border-pink-500/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(236,72,153,0.18)]">
-        {album.coverImageUrl ? (
+        {hasCover(album) ? (
           <img
-            src={album.coverImageUrl}
+            src={albumCoverUrl(album.id, "card")}
             alt={album.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -267,9 +278,9 @@ export default function MemoriesPage() {
             <section>
               <Link href={`/memories/${featuredAlbum.id}`} className="group block">
                 <div className="relative h-[340px] md:h-[460px] rounded-3xl overflow-hidden">
-                  {featuredAlbum.coverImageUrl ? (
+                  {hasCover(featuredAlbum) ? (
                     <img
-                      src={featuredAlbum.coverImageUrl}
+                      src={albumCoverUrl(featuredAlbum.id, "hero")}
                       alt={featuredAlbum.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                     />

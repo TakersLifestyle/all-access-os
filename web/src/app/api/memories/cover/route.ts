@@ -1,0 +1,147 @@
+/**
+ * GET /api/memories/cover?albumId={albumId}&size=card|hero
+ *
+ * PUBLIC album-cover proxy for the Memories archive.
+ * — Reads coverStoragePath (or derives it from coverImageUrl) via Admin SDK
+ * — Downloads the original from Firebase Storage (server-to-server, bypasses rules)
+ * — Resizes to a web-optimised derivative using sharp
+ * — Returns the derivative; never returns the original or any Firebase download token
+ * — Vercel edge-caches the result for 7 days
+ *
+ * Size specs:
+ *   card   → max 800px,  JPEG 80%   (album cards, episode cards, nav thumbnails, homepage grid)
+ *   hero   → max 1200px, JPEG 85%   (full-width hero banners)
+ *
+ * The original Firebase Storage URL / download token is never sent to the browser.
+ * This endpoint is intentionally unauthenticated; it serves only resized derivatives.
+ *
+ * Storage path resolution order:
+ *   1. memoryAlbums/{albumId}.coverStoragePath  (preferred — explicit path)
+ *   2. Extract path from memoryAlbums/{albumId}.coverImageUrl (legacy fallback)
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { adminDb, adminStorage } from "@/lib/firebase-admin";
+import sharp from "sharp";
+
+// Ensure Node.js runtime (required for sharp native binaries)
+export const runtime = "nodejs";
+
+// ── Size configurations ──────────────────────────────────────────────────────
+
+const SIZE_CONFIG = {
+  card: { maxDim: 800,  quality: 80 },
+  hero: { maxDim: 1200, quality: 85 },
+} as const;
+
+type Size = keyof typeof SIZE_CONFIG;
+
+// Cache-Control for Vercel CDN edge caching.
+// Album covers don't change frequently, so we cache aggressively.
+const CACHE_CONTROL = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400";
+
+// ── Route handler ────────────────────────────────────────────────────────────
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const albumId = searchParams.get("albumId");
+  const sizeParam = searchParams.get("size") ?? "card";
+
+  // Validate inputs
+  if (!albumId || typeof albumId !== "string" || albumId.length > 256) {
+    return new NextResponse("Missing or invalid albumId", { status: 400 });
+  }
+  if (!Object.keys(SIZE_CONFIG).includes(sizeParam)) {
+    return new NextResponse("Invalid size — use card or hero", { status: 400 });
+  }
+  const size = sizeParam as Size;
+  const { maxDim, quality } = SIZE_CONFIG[size];
+
+  try {
+    // ── 1. Read album document from Firestore (server-side, Admin SDK) ────────
+    const snap = await adminDb().collection("memoryAlbums").doc(albumId).get();
+
+    if (!snap.exists) {
+      return new NextResponse("Album not found", { status: 404 });
+    }
+
+    const data = snap.data()!;
+
+    // ── 2. Resolve the cover storage path ────────────────────────────────────
+    // Prefer explicit coverStoragePath if present.
+    // Fall back to extracting the path from the tokenized coverImageUrl.
+    let storagePath: string | undefined = data.coverStoragePath;
+
+    if (!storagePath && typeof data.coverImageUrl === "string") {
+      storagePath = extractStoragePathFromUrl(data.coverImageUrl);
+    }
+
+    if (!storagePath) {
+      // Album has no cover at all — return 404 so the client falls back to placeholder
+      return new NextResponse("No cover image available for this album", { status: 404 });
+    }
+
+    // ── 3. Download original cover from Firebase Storage via Admin SDK ────────
+    // This is a server-to-server call using the service account.
+    // The original bytes never touch the client — only the resized derivative does.
+    const bucket = adminStorage();
+    const file = bucket.file(storagePath);
+
+    let originalBuffer: Buffer;
+    try {
+      const [downloaded] = await file.download();
+      originalBuffer = downloaded;
+    } catch (storageErr: unknown) {
+      const code = (storageErr as { code?: number })?.code;
+      if (code === 404) {
+        return new NextResponse("Cover image not found in storage", { status: 404 });
+      }
+      throw storageErr;
+    }
+
+    // ── 4. Resize with sharp ─────────────────────────────────────────────────
+    const resized = await sharp(originalBuffer)
+      .resize({
+        width: maxDim,
+        height: maxDim,
+        fit: "inside",           // preserve aspect ratio, never upscale
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality, progressive: true, mozjpeg: true })
+      .toBuffer();
+
+    // ── 5. Return derivative with CDN cache headers ──────────────────────────
+    // Convert Buffer to Uint8Array — NextResponse BodyInit requires it in strict TS
+    return new NextResponse(new Uint8Array(resized), {
+      status: 200,
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": CACHE_CONTROL,
+        "Vary": "Accept",
+        "X-Content-Type-Options": "nosniff",
+        // Never expose storage path or any storage credential in response headers
+      },
+    });
+  } catch (err) {
+    console.error("[memories/cover] Error serving cover image", { albumId, size }, err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Extract the Firebase Storage object path from a tokenized download URL.
+ * URL format:
+ *   https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media&token=XXXX
+ * The encoded path segment is URL-encoded, so decodeURIComponent is required.
+ */
+function extractStoragePathFromUrl(url: string): string | undefined {
+  try {
+    const match = url.match(/\/o\/(.+?)(?:\?|$)/);
+    if (!match?.[1]) return undefined;
+    return decodeURIComponent(match[1]);
+  } catch {
+    return undefined;
+  }
+}
