@@ -83,8 +83,30 @@ export async function GET(request: NextRequest) {
     }
 
     if (!storagePath) {
-      // Album has no cover at all — return 404 so the client falls back to placeholder
-      return new NextResponse("No cover image available for this album", { status: 404 });
+      // No explicit cover set — fall back to the first photo in the album
+      const firstPhotoSnap = await adminDb()
+        .collection("memoryMedia")
+        .where("albumId", "==", albumId)
+        .where("type", "==", "photo")
+        .orderBy("order", "asc")
+        .limit(1)
+        .get();
+
+      if (!firstPhotoSnap.empty) {
+        const photoData = firstPhotoSnap.docs[0].data();
+        storagePath = photoData.storagePath;
+        if (!storagePath && typeof photoData.url === "string") {
+          const resolved = resolveFromUrl(photoData.url);
+          if (resolved?.path) {
+            storagePath = resolved.path;
+            urlBucket = resolved.bucket;
+          }
+        }
+      }
+
+      if (!storagePath) {
+        return new NextResponse("No cover image available for this album", { status: 404 });
+      }
     }
 
     // ── 3. Download original cover from Firebase Storage via Admin SDK ────────
