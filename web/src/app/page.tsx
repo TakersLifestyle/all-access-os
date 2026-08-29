@@ -360,33 +360,63 @@ export default function Home() {
         ))}
       </section>
 
-      {/* ── SUNSET SESSIONS PROMO ─────────────────────────────────────────── */}
-      <Link
-        href="/series/sunset-sessions"
-        className="group block relative overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-black hover:border-[#D4AF37]/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(212,175,55,0.08)]"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 via-transparent to-[#D4AF37]/3 pointer-events-none" />
-        <div className="relative px-6 sm:px-8 py-6 flex items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-1">
-            <p className="text-[#D4AF37] text-xs font-bold tracking-[0.2em] uppercase">
-              Now Ongoing · Event Series
-            </p>
-            <h2 className="text-xl font-bold text-white">Sunset Sessions by ALL ACCESS</h2>
-            <p className="text-white/45 text-sm max-w-sm">
-              Winnipeg&apos;s premium rooftop experience series. Art, music, culture — every session intentional.
-            </p>
+      {/* ── COMMUNITY MEMORIES ────────────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-1">Community Archive</p>
+            <h2 className="text-2xl font-bold">4,000+ Moments Captured</h2>
+            <p className="text-white/40 text-sm mt-1">Winnipeg, you might be in here 👀</p>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="text-right hidden sm:block">
-              <p className="text-[#D4AF37] font-bold text-sm">Vol. 01 Active</p>
-              <p className="text-white/30 text-xs">Paint &amp; Sip · Rooftop</p>
+          <Link href="/memories" className="text-pink-400 hover:text-pink-300 text-sm transition shrink-0 font-medium">
+            Browse all →
+          </Link>
+        </div>
+
+        <Link
+          href="/memories"
+          className="group block relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]"
+        >
+          {/* Photo mosaic grid */}
+          <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
+            {memoryPreviews.map((album) => (
+              <div key={album.id} className="relative overflow-hidden">
+                {(album.coverImageUrl || album.coverStoragePath) ? (
+                  <img
+                    src={albumCoverUrl(album.id)}
+                    alt={album.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
+                )}
+              </div>
+            ))}
+            {Array.from({ length: Math.max(0, 4 - memoryPreviews.length) }).map((_, i) => (
+              <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 flex items-center justify-center">
+                <span className="text-4xl opacity-[0.04]">📸</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Gradient overlay + CTA */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1">
+                Founding 15 · Community Moments · Events
+              </p>
+              <p className="text-white font-bold text-base leading-tight">
+                Browse the archive. Find your people.
+              </p>
             </div>
-            <span className="text-[#D4AF37] font-semibold text-sm group-hover:translate-x-1 transition-transform whitespace-nowrap">
-              Explore Series →
+            <span className="bg-pink-600 group-hover:bg-pink-500 transition px-5 py-2.5 rounded-xl text-sm font-bold text-white shrink-0">
+              Open →
             </span>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </section>
 
       {/* ── URGENCY BANNER (dynamic — only shows when spots are low) ─────── */}
       {urgencyEvent && (
@@ -541,63 +571,33 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── COMMUNITY MEMORIES ────────────────────────────────────────────── */}
-      <section className="space-y-5">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-1">Community Archive</p>
-            <h2 className="text-2xl font-bold">4,000+ Moments Captured</h2>
-            <p className="text-white/40 text-sm mt-1">Winnipeg, you might be in here 👀</p>
+      {/* ── SUNSET SESSIONS PROMO ─────────────────────────────────────────── */}
+      <Link
+        href="/series/sunset-sessions"
+        className="group block relative overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-black hover:border-[#D4AF37]/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(212,175,55,0.08)]"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 via-transparent to-[#D4AF37]/3 pointer-events-none" />
+        <div className="relative px-6 sm:px-8 py-6 flex items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-1">
+            <p className="text-[#D4AF37] text-xs font-bold tracking-[0.2em] uppercase">
+              Now Ongoing · Event Series
+            </p>
+            <h2 className="text-xl font-bold text-white">Sunset Sessions by ALL ACCESS</h2>
+            <p className="text-white/45 text-sm max-w-sm">
+              Winnipeg&apos;s premium rooftop experience series. Art, music, culture — every session intentional.
+            </p>
           </div>
-          <Link href="/memories" className="text-pink-400 hover:text-pink-300 text-sm transition shrink-0 font-medium">
-            Browse all →
-          </Link>
-        </div>
-
-        <Link
-          href="/memories"
-          className="group block relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]"
-        >
-          {/* Photo mosaic grid */}
-          <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
-            {memoryPreviews.map((album) => (
-              <div key={album.id} className="relative overflow-hidden">
-                {(album.coverImageUrl || album.coverStoragePath) ? (
-                  <img
-                    src={albumCoverUrl(album.id)}
-                    alt={album.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
-                )}
-              </div>
-            ))}
-            {Array.from({ length: Math.max(0, 4 - memoryPreviews.length) }).map((_, i) => (
-              <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 flex items-center justify-center">
-                <span className="text-4xl opacity-[0.04]">📸</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Gradient overlay + CTA */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1">
-                Founding 15 · Community Moments · Events
-              </p>
-              <p className="text-white font-bold text-base leading-tight">
-                Browse the archive. Find your people.
-              </p>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="text-right hidden sm:block">
+              <p className="text-[#D4AF37] font-bold text-sm">Vol. 01 Active</p>
+              <p className="text-white/30 text-xs">Paint &amp; Sip · Rooftop</p>
             </div>
-            <span className="bg-pink-600 group-hover:bg-pink-500 transition px-5 py-2.5 rounded-xl text-sm font-bold text-white shrink-0">
-              Open →
+            <span className="text-[#D4AF37] font-semibold text-sm group-hover:translate-x-1 transition-transform whitespace-nowrap">
+              Explore Series →
             </span>
           </div>
-        </Link>
-      </section>
+        </div>
+      </Link>
 
       {/* ── MEMBERSHIP ────────────────────────────────────────────────────── */}
       {(!user || !isActive) && (
