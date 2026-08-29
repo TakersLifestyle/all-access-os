@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   collection, getDocs, getDoc, doc, addDoc, deleteDoc,
   query, where, serverTimestamp, updateDoc, arrayUnion, arrayRemove, Timestamp,
@@ -36,7 +36,8 @@ interface MemoryMedia {
   id: string;
   albumId: string;
   type: "photo" | "video" | "creator_content";
-  url: string;
+  url: string;         // Firebase Storage tokenized URL — server use only; never render in <img src>
+  storagePath?: string; // Firebase Storage object path — read server-side only
   thumbnailUrl?: string;
   caption?: string;
   isPinned: boolean;
@@ -106,21 +107,16 @@ function getVideoEmbed(url: string): { isYoutube: boolean; embedSrc: string; ytT
   return { isYoutube: false, embedSrc: url };
 }
 
-async function downloadMedia(url: string, filename: string) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-  } catch {
-    window.open(url, "_blank");
-  }
+// ─── Image URL helpers ────────────────────────────────────────────────────
+// All Memories image requests go through the server-side proxy.
+// The original Firebase Storage URL (photo.url) is NEVER used in the DOM.
+
+function gridImageUrl(mediaId: string): string {
+  return `/api/memories/image?id=${encodeURIComponent(mediaId)}&size=grid`;
+}
+
+function lightboxImageUrl(mediaId: string): string {
+  return `/api/memories/image?id=${encodeURIComponent(mediaId)}&size=lightbox`;
 }
 
 // ─── Sub-components ───────────────────────────────────────
@@ -135,7 +131,9 @@ function FeaturedCard({
   onVideoClick: () => void;
 }) {
   const isPhoto = item.type === "photo";
-  const imageSrc = isPhoto ? (item.thumbnailUrl || item.url) : item.thumbnailUrl;
+  // Photos: always use the proxy (never expose Firebase Storage URL)
+  // Videos: use thumbnailUrl (YouTube thumbnail or uploaded cover)
+  const imageSrc = isPhoto ? gridImageUrl(item.id) : item.thumbnailUrl;
 
   return (
     <div
@@ -234,15 +232,9 @@ function MasonryPhotoGrid({
             onClick={() => onOpen(i)}
           >
             <img
-              src={photo.thumbnailUrl || photo.url}
+              src={gridImageUrl(photo.id)}
               alt={photo.caption ?? ""}
               loading="lazy"
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (photo.thumbnailUrl && img.src !== photo.url) {
-                  img.src = photo.url;
-                }
-              }}
               className="w-full block transition-transform duration-300 group-hover:scale-[1.02]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -376,14 +368,21 @@ function CreatorGrid({
         const liked = (item.likedBy ?? []).includes(userId);
         const likeCount = (item.likedBy ?? []).length;
         const { isYoutube, embedSrc } = getVideoEmbed(item.url);
-        const isImage = item.url.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+        const isFirebasePhoto = item.url.includes("firebasestorage.googleapis.com")
+          || !!item.storagePath;
+        const isImage = isFirebasePhoto || item.url.match(/\.(jpg|jpeg|png|webp|gif)$/i);
         return (
           <div key={item.id} className="bg-white/[0.03] border border-purple-500/20 rounded-2xl overflow-hidden">
             <div className="aspect-video bg-purple-950/20">
               {isYoutube ? (
                 <iframe src={embedSrc} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
               ) : isImage ? (
-                <img src={item.url} alt={item.caption ?? ""} className="w-full h-full object-cover" />
+                // Firebase-hosted photos go through the proxy; external images use their URL
+                <img
+                  src={isFirebasePhoto ? lightboxImageUrl(item.id) : item.url}
+                  alt={item.caption ?? ""}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <video src={item.url} controls className="w-full h-full" />
               )}
@@ -526,8 +525,9 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
 export default function AlbumPage() {
   const params = useParams();
   const albumId = (Array.isArray(params?.albumId) ? params.albumId[0] : params?.albumId) ?? "";
-  const { user, profile, isAdmin, hasCommunityAccess, loading } = useAuth();
+  const { user, profile, isAdmin, canAccessPremiumMemories, loading } = useAuth();
   const router = useRouter();
+  const downloadingRef = useRef(false);
 
   const [album, setAlbum] = useState<MemoryAlbum | null>(null);
   const [media, setMedia] = useState<MemoryMedia[]>([]);
@@ -659,7 +659,8 @@ export default function AlbumPage() {
   };
 
   const toggleLike = async (item: MemoryMedia) => {
-    if (!hasCommunityAccess || !user) { setShowUpgradePrompt(true); return; }
+    // Premium Memories gate — NOT hasCommunityAccess (too broad)
+    if (!canAccessPremiumMemories || !user) { setShowUpgradePrompt(true); return; }
     const liked = (item.likedBy ?? []).includes(user.uid);
     await updateDoc(doc(db, "memoryMedia", item.id), {
       likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
@@ -671,6 +672,50 @@ export default function AlbumPage() {
         : [...(m.likedBy ?? []), user.uid],
     } : m));
   };
+
+  /**
+   * Authenticated download — calls /api/memories/download with the user's
+   * Firebase ID token. Server verifies canAccessPremiumMemories() before
+   * generating a 15-minute signed URL. The original Storage URL and path
+   * are never sent to the browser.
+   */
+  const handlePremiumDownload = useCallback(async (mediaId: string) => {
+    if (!canAccessPremiumMemories || !user) {
+      setShowUpgradePrompt(true);
+      return;
+    }
+    if (downloadingRef.current) return; // prevent double-click
+    downloadingRef.current = true;
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/memories/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ mediaId }),
+      });
+      if (res.status === 403) {
+        setShowUpgradePrompt(true);
+        return;
+      }
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+
+      const { signedUrl } = await res.json() as { signedUrl: string };
+      // Open the signed URL — GCS sends Content-Disposition: attachment so browser downloads
+      const a = document.createElement("a");
+      a.href = signedUrl;
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("[memories] Download failed:", err);
+    } finally {
+      downloadingRef.current = false;
+    }
+  }, [canAccessPremiumMemories, user]);
 
   // ─── Render ───────────────────────────────────────────────
 
@@ -915,9 +960,9 @@ export default function AlbumPage() {
           onClick={() => setLightboxIndex(-1)}
         >
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
-            {hasCommunityAccess ? (
+            {canAccessPremiumMemories ? (
               <button
-                onClick={() => downloadMedia(lightboxPhoto.url, `memory-${lightboxPhoto.id}.jpg`)}
+                onClick={() => handlePremiumDownload(lightboxPhoto.id)}
                 className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-2 rounded-lg text-xs font-semibold text-white transition"
               >
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -967,7 +1012,7 @@ export default function AlbumPage() {
             onClick={e => e.stopPropagation()}
           >
             <img
-              src={lightboxPhoto.url}
+              src={lightboxImageUrl(lightboxPhoto.id)}
               alt={lightboxPhoto.caption ?? ""}
               className="max-w-full max-h-[75vh] object-contain rounded-xl"
             />

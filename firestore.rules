@@ -38,10 +38,27 @@ service cloud.firestore {
       return isAdmin() || isActive() || request.auth.token.hasCommunityAccess == true;
     }
 
-    // Supporting Member — $25/mo subscriber (accountType == "supporter") OR admin
+    // Supporting Member — $10/mo subscriber (accountType == "supporter") OR admin
     // Unlocks: Perks, discounts, priority registration, exclusive experiences
     function isSupportingMember() {
       return isAdmin() || isActive() || request.auth.token.accountType == "supporter";
+    }
+
+    // Premium Memories access — separate, narrower than hasCommunityAccess.
+    // Mirrors the canAccessPremiumMemoriesFromClaims() logic in premium-memories.ts.
+    // Authorized:
+    //   1. Admin
+    //   2. Active ALL ACCESS subscriber: status=active AND accountType=supporter
+    //      (status alone is insufficient — event-ticket holders also have status=active
+    //       but their accountType is "community")
+    //   3. Historical Founding Member (isFoundingMember custom claim)
+    // NOT authorized: event-ticket-only purchasers, free accounts, manual grants
+    function hasPremiumMemoriesAccess() {
+      return isAdmin()
+        || (isSignedIn()
+            && request.auth.token.status == "active"
+            && request.auth.token.accountType == "supporter")
+        || (isSignedIn() && request.auth.token.isFoundingMember == true);
     }
 
     function isOwner(userId) {
@@ -427,14 +444,16 @@ service cloud.firestore {
 
 
     // ─── memoryMedia/{mediaId} ──────────────────────────────
-    // READ   — PUBLIC (photos are open to everyone)
+    // READ   — PUBLIC (photos are open to everyone for browsing)
     // CREATE/DELETE — admin only
-    // UPDATE likedBy — any signed-in user (free account)
+    // UPDATE likedBy — Premium Memories access only (admin, active subscriber, Founding Member)
+    //   Previously allowed any signed-in user — narrowed to hasPremiumMemoriesAccess()
+    //   to match the new access model: reactions are a premium Memories feature.
     match /memoryMedia/{mediaId} {
       allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
-                    || (isSignedIn()
+                    || (hasPremiumMemoriesAccess()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys().hasOnly(["likedBy"]));
     }

@@ -11,11 +11,12 @@ import {
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { canAccessPremiumMemoriesFromProfile } from "./premium-memories";
 
 type UserRole = "admin" | "member";
 type UserStatus = "active" | "inactive" | "past_due" | "cancelled";
 
-/** Community Member = attended an event. Supporting Member = $25/mo subscription. */
+/** Community Member = attended an event. Supporting Member = $10/mo subscription. */
 export type AccountType = "community" | "supporter";
 
 interface UserProfile {
@@ -30,6 +31,11 @@ interface UserProfile {
   creatorStatus?: string;
   hasCommunityAccess?: boolean;
   accountType?: AccountType;
+  /**
+   * Permanent claim set by admin for historical Founding Members.
+   * Grants premium Memories access regardless of current subscription state.
+   */
+  isFoundingMember?: boolean;
 }
 
 interface AuthContextType {
@@ -40,12 +46,19 @@ interface AuthContextType {
   isActive: boolean;
   /** true when user has community access: active membership, event ticket, or manual grant. */
   hasCommunityAccess: boolean;
-  /** Attended ≥1 event but not a $25/mo subscriber. */
+  /** Attended ≥1 event but not a $10/mo subscriber. */
   isCommunityMember: boolean;
-  /** $25/mo subscriber (or admin). Full perks + badges + discounts. */
+  /** $10/mo subscriber (or admin). Full perks + badges + discounts. */
   isSupportingMember: boolean;
   /** Raw accountType from claim / Firestore ("community" | "supporter" | null). */
   accountType: AccountType | null;
+  /**
+   * Premium Memories entitlement — separate from general hasCommunityAccess.
+   * Authorized: admins, active $10/mo ALL ACCESS subscribers, historical Founding Members.
+   * NOT authorized: event-ticket-only purchasers, free accounts, manual community grants.
+   * Server re-validates on every privileged request — this value only drives UI.
+   */
+  canAccessPremiumMemories: boolean;
   /** Force-refresh the Firebase ID token to pick up new custom claims immediately.
    *  Call this right after checkout success so the user gets access without sign-out/sign-in. */
   refreshToken: () => Promise<void>;
@@ -61,6 +74,7 @@ const AuthContext = createContext<AuthContextType>({
   isCommunityMember: false,
   isSupportingMember: false,
   accountType: null,
+  canAccessPremiumMemories: false,
   refreshToken: async () => {},
 });
 
@@ -78,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         status?: UserStatus;
         hasCommunityAccess?: boolean;
         accountType?: AccountType;
+        isFoundingMember?: boolean;
       };
 
       // Custom claims are the source of truth for role/status
@@ -86,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let status: UserStatus = (claims.status as UserStatus) ?? "inactive";
       let hasCommunityAccess = !!claims.hasCommunityAccess;
       let accountType: AccountType | undefined = claims.accountType;
+      let isFoundingMember = !!claims.isFoundingMember;
       let stripeCustomerId: string | undefined;
       let stripeSubscriptionId: string | undefined;
       let isCreator: boolean | undefined;
@@ -102,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Firestore fallback when claim hasn't been picked up yet (token stale)
           if (!hasCommunityAccess) hasCommunityAccess = !!data.hasCommunityAccess;
           if (!accountType) accountType = data.accountType as AccountType | undefined;
+          if (!isFoundingMember) isFoundingMember = !!data.isFoundingMember;
           stripeCustomerId = data.stripeCustomerId;
           stripeSubscriptionId = data.stripeSubscriptionId;
           isCreator = data.isCreator;
@@ -123,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         creatorStatus,
         hasCommunityAccess,
         accountType,
+        isFoundingMember,
       });
     } catch {
       setProfile({
@@ -168,6 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isCommunityMember = hasCommunityAccess && !isSupportingMember;
   const accountType: AccountType | null = profile?.accountType ?? null;
 
+  // Premium Memories entitlement — separate, narrower than hasCommunityAccess.
+  // Derived from profile using the canonical function in premium-memories.ts.
+  // The server re-validates this on every privileged API request.
+  const canAccessPremiumMemories = canAccessPremiumMemoriesFromProfile(isAdmin, profile ?? null);
+
   return (
     <AuthContext.Provider
       value={{
@@ -180,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isCommunityMember,
         isSupportingMember,
         accountType,
+        canAccessPremiumMemories,
         refreshToken,
       }}
     >
