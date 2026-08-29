@@ -94,8 +94,11 @@ export function adminStorage() {
   ensureInitialized();
   // Dynamically import to avoid pulling in storage SDK for routes that don't need it
   const { getStorage } = require("firebase-admin/storage") as typeof import("firebase-admin/storage");
+  // New Firebase projects (2024+) use the {project-id}.firebasestorage.app bucket,
+  // not the legacy {project-id}.appspot.com bucket. Set FIREBASE_STORAGE_BUCKET env
+  // var to override, otherwise default to the new format.
   const bucketName =
     process.env.FIREBASE_STORAGE_BUCKET ??
-    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`;
+    `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`;
   return getStorage().bucket(bucketName);
 }
