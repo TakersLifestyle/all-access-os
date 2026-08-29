@@ -555,7 +555,11 @@ export default function AlbumPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const startMembershipCheckout = async () => {
-    if (!user) return;
+    // Not logged in — send to login with a return redirect
+    if (!user) {
+      window.location.href = `/login?redirect=/memories/${albumId}`;
+      return;
+    }
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
@@ -564,15 +568,17 @@ export default function AlbumPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid: user.uid }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.url) {
-        setCheckoutError(data.error || "Checkout unavailable — try again.");
+        setCheckoutError(data.error || "Checkout unavailable — please try again.");
+        setCheckoutLoading(false);
         return;
       }
+      // Redirect to Stripe checkout
       window.location.href = data.url;
-    } catch {
-      setCheckoutError("Something went wrong. Please try again.");
-    } finally {
+    } catch (err) {
+      console.error("[checkout] fetch error:", err);
+      setCheckoutError("Something went wrong — please try again.");
       setCheckoutLoading(false);
     }
   };
