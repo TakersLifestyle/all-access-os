@@ -16,7 +16,7 @@ import Link from "next/link";
 // Never render album.coverImageUrl directly — it is a raw Firebase tokenized URL.
 // Always use albumCoverUrl() which routes through the server-side proxy.
 function albumCoverUrl(albumId: string, size: "card" | "hero" = "card"): string {
-  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}&v=3`;
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}&v=4`;
 }
 
 interface MemoryAlbum {
