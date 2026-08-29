@@ -510,6 +510,7 @@ function SeriesNavCard({ album, direction }: { album: MemoryAlbum; direction: "p
             src={albumCoverUrl(album.id, "card")}
             alt={album.title}
             className="w-14 h-14 rounded-xl object-cover shrink-0 border border-white/10"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
         )}
         <div className="min-w-0">
@@ -549,6 +550,7 @@ export default function AlbumPage() {
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [heroImgError, setHeroImgError] = useState(false);
 
   // Derived media sets
   const photos = media
@@ -774,7 +776,7 @@ export default function AlbumPage() {
     <>
       {/* ── Full-width Hero Banner ─────────────────────────── */}
       <div className="relative h-[360px] md:h-[460px] overflow-hidden">
-        {(album.coverImageUrl || album.coverStoragePath) ? (
+        {(album.coverImageUrl || album.coverStoragePath) && !heroImgError ? (
           <img
             src={albumCoverUrl(album.id, "hero")}
             alt={album.title}
@@ -784,6 +786,7 @@ export default function AlbumPage() {
               transform: (album.zoom ?? 1) !== 1 ? `scale(${album.zoom})` : undefined,
               transformOrigin: `${album.focalX ?? 50}% ${album.focalY ?? 50}%`,
             }}
+            onError={() => setHeroImgError(true)}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-[#080412] to-purple-950/50" />

@@ -44,17 +44,20 @@ function formatDate(dateStr: string) {
 }
 
 function AlbumCard({ album }: { album: MemoryAlbum }) {
+  const [imgError, setImgError] = useState(false);
+  const showCover = hasCover(album) && !imgError;
   return (
     <Link href={`/memories/${album.id}`} className="group block">
       <div className="relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]">
         <div className="relative h-52 bg-white/[0.03] overflow-hidden">
-          {hasCover(album) ? (
+          {showCover ? (
             <>
               <img
                 src={albumCoverUrl(album.id, "card")}
                 alt={album.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 style={{ objectPosition: `${album.focalX ?? 50}% ${album.focalY ?? 50}%` }}
+                onError={() => setImgError(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
             </>
@@ -101,14 +104,17 @@ function AlbumCard({ album }: { album: MemoryAlbum }) {
 }
 
 function EpisodeCard({ album }: { album: MemoryAlbum }) {
+  const [imgError, setImgError] = useState(false);
+  const showCover = hasCover(album) && !imgError;
   return (
     <Link href={`/memories/${album.id}`} className="group shrink-0 block w-44">
       <div className="relative w-44 h-64 rounded-2xl overflow-hidden border border-white/10 group-hover:border-pink-500/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(236,72,153,0.18)]">
-        {hasCover(album) ? (
+        {showCover ? (
           <img
             src={albumCoverUrl(album.id, "card")}
             alt={album.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-b from-pink-950/50 via-black to-purple-950/40" />
@@ -138,6 +144,7 @@ export default function MemoriesPage() {
   const [fetching, setFetching] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "events" | "founding-15">("all");
+  const [featuredImgError, setFeaturedImgError] = useState(false);
 
   // Public fetch — no auth required (rules now allow public reads)
   useEffect(() => {
@@ -278,11 +285,12 @@ export default function MemoriesPage() {
             <section>
               <Link href={`/memories/${featuredAlbum.id}`} className="group block">
                 <div className="relative h-[340px] md:h-[460px] rounded-3xl overflow-hidden">
-                  {hasCover(featuredAlbum) ? (
+                  {hasCover(featuredAlbum) && !featuredImgError ? (
                     <img
                       src={albumCoverUrl(featuredAlbum.id, "hero")}
                       alt={featuredAlbum.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                      onError={() => setFeaturedImgError(true)}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-pink-950/70 via-[#080412] to-purple-950/60" />

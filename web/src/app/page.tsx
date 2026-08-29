@@ -36,6 +36,26 @@ function albumCoverUrl(albumId: string): string {
   return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=card`;
 }
 
+/** Mosaic tile — self-contained error state so a missing cover shows gradient, not broken img. */
+function MosaicTile({ album }: { album: { id: string; title: string; coverImageUrl?: string; coverStoragePath?: string } }) {
+  const [imgError, setImgError] = useState(false);
+  const hasCover = !!(album.coverImageUrl || album.coverStoragePath) && !imgError;
+  return (
+    <div className="relative overflow-hidden">
+      {hasCover ? (
+        <img
+          src={albumCoverUrl(album.id)}
+          alt={album.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
+      )}
+    </div>
+  );
+}
+
 function useMemoryPreviews() {
   const [albums, setAlbums] = useState<{ id: string; title: string; coverImageUrl?: string; coverStoragePath?: string; photoCount?: number }[]>([]);
   useEffect(() => {
@@ -380,17 +400,7 @@ export default function Home() {
           {/* Photo mosaic grid */}
           <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
             {memoryPreviews.map((album) => (
-              <div key={album.id} className="relative overflow-hidden">
-                {(album.coverImageUrl || album.coverStoragePath) ? (
-                  <img
-                    src={albumCoverUrl(album.id)}
-                    alt={album.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
-                )}
-              </div>
+              <MosaicTile key={album.id} album={album} />
             ))}
             {Array.from({ length: Math.max(0, 4 - memoryPreviews.length) }).map((_, i) => (
               <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 flex items-center justify-center">
