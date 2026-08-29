@@ -28,7 +28,7 @@ interface MemoryAlbum {
 
 /** Returns the proxied album cover URL served by /api/memories/cover — never the raw Firebase URL. */
 function albumCoverUrl(albumId: string, size: "card" | "hero" = "card"): string {
-  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}`;
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=${size}&v=2`;
 }
 
 /** True if this album has any cover image (raw or storagePath). */

@@ -33,7 +33,7 @@ interface EventTeaser {
 
 /** Returns the proxied album cover URL — never the raw Firebase Storage URL. */
 function albumCoverUrl(albumId: string): string {
-  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=card`;
+  return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=card&v=2`;
 }
 
 /** Mosaic tile — self-contained error state so a missing cover shows gradient, not broken img. */
