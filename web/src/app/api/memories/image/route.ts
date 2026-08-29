@@ -113,7 +113,8 @@ export async function GET(request: NextRequest) {
       .toBuffer();
 
     // ── 5. Return derivative with CDN cache headers ──────────────────────────
-    return new NextResponse(resized, {
+    // Convert Buffer to Uint8Array — NextResponse BodyInit requires it in strict TS
+    return new NextResponse(new Uint8Array(resized), {
       status: 200,
       headers: {
         "Content-Type": "image/jpeg",
