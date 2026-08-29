@@ -408,7 +408,14 @@ export default function AdminMemoriesPage() {
 
   const setAsCover = async (url: string) => {
     if (!selectedAlbum) return;
-    await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), { coverImageUrl: url });
+    // Extract the storage path from the URL so coverStoragePath stays in sync.
+    // The proxy prefers coverImageUrl (latest admin pick) but coverStoragePath
+    // acts as the indexed fallback — keep both consistent on every cover change.
+    const pathMatch = url.match(/\/o\/(.+?)(?:\?|$)/);
+    const coverStoragePath = pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : undefined;
+    const update: Record<string, string> = { coverImageUrl: url };
+    if (coverStoragePath) update.coverStoragePath = coverStoragePath;
+    await updateDoc(doc(db, "memoryAlbums", selectedAlbum.id), update);
     setSelectedAlbum(prev => prev ? { ...prev, coverImageUrl: url } : prev);
     setAlbums(prev => prev.map(a => a.id === selectedAlbum.id ? { ...a, coverImageUrl: url } : a));
   };

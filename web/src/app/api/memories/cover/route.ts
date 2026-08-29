@@ -68,18 +68,24 @@ export async function GET(request: NextRequest) {
     const data = snap.data()!;
 
     // ── 2. Resolve the cover storage path + bucket ───────────────────────────
-    // Prefer explicit coverStoragePath if present.
-    // Fall back to extracting path (and bucket) from the tokenized coverImageUrl.
+    // Priority: coverImageUrl first (reflects the admin's latest "Set Cover" pick),
+    // then coverStoragePath as fallback (used for albums with no URL set).
     // Albums created at different times may be in different buckets
-    // (.appspot.com vs .firebasestorage.app) — extract the bucket from the URL
-    // so the proxy always hits the right one.
-    let storagePath: string | undefined = data.coverStoragePath;
+    // (.appspot.com vs .firebasestorage.app) — bucket is extracted from the URL.
+    let storagePath: string | undefined;
     let urlBucket: string | undefined;
 
-    if (typeof data.coverImageUrl === "string") {
+    if (typeof data.coverImageUrl === "string" && data.coverImageUrl.includes("/o/")) {
       const resolved = resolveFromUrl(data.coverImageUrl);
-      if (!storagePath && resolved?.path) storagePath = resolved.path;
-      urlBucket = resolved?.bucket;
+      if (resolved?.path) {
+        storagePath = resolved.path;
+        urlBucket = resolved.bucket;
+      }
+    }
+
+    // Fall back to coverStoragePath if coverImageUrl absent or unparseable
+    if (!storagePath) {
+      storagePath = data.coverStoragePath;
     }
 
     if (!storagePath) {
