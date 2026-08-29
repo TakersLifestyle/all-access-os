@@ -19,8 +19,12 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.10.0",
-    "sharp": "^0.35.4",
+    "sharp": "^0.33.5",
     "stripe": "^22.0.0"
+  },
+  "optionalDependencies": {
+    "@img/sharp-linux-x64": "^0.33.5",
+    "@img/sharp-linux-arm64": "^0.33.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
