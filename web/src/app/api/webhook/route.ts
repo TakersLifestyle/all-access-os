@@ -364,7 +364,7 @@ export async function POST(req: NextRequest) {
                   const eventDay = new Date(rawDate.length === 10 ? rawDate + "T12:00:00" : rawDate);
                   const now = new Date();
                   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                  const diffDays = Math.round((eventDay.getTime() - todayStart.getTime()) / 86400000);
+                  const diffDays = Math.floor((eventDay.getTime() - todayStart.getTime()) / 86400000);
                   if (diffDays === 0) return `🎟 See You TONIGHT — Your ${resolvedEventTitle} Ticket + QR Code Inside`;
                   if (diffDays === 1) return `🎟 See You TOMORROW — Your ${resolvedEventTitle} Ticket + QR Code Inside`;
                 } catch { /* fall through */ }
