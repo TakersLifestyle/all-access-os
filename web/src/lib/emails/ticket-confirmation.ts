@@ -15,7 +15,8 @@ export interface TicketConfirmationData {
   paidAt: string;
   eventsUrl: string;
   accentColor?: string;  // e.g. "#84cc16" for Skales, "#ec4899" for ROCAFIESTA
-  qrCodeDataUri?: string; // PNG data URI — scanned at door to pull up order
+  qrCodeUrl?: string;    // Hosted URL via api.qrserver.com — renders in Gmail, Outlook, all clients
+  hypeMessage?: string;  // Optional event-specific hype block (HTML-escaped plain text)
 }
 
 export function ticketConfirmationHtml(d: TicketConfirmationData): string {
@@ -115,12 +116,21 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
 
               </div>
 
-              <!-- QR Code section -->
-              ${d.qrCodeDataUri ? `
+              <!-- Optional event hype block (e.g. Konfam message for ROCAFIESTA) -->
+              ${d.hypeMessage ? `
+              <div style="margin:0 36px 0;padding:20px 22px;background:linear-gradient(135deg,rgba(236,72,153,0.1) 0%,rgba(139,92,246,0.07) 100%);border:1px solid rgba(236,72,153,0.22);border-radius:14px;text-align:center;">
+                <p style="margin:0 0 4px;font-size:20px;">🎉</p>
+                <p style="margin:0 0 10px;font-size:14px;font-weight:800;color:${accent};line-height:1.3;">KONFAM is excited to see all your beautiful faces!</p>
+                <p style="margin:0;font-size:13px;color:#ffffffbb;line-height:1.7;">${escHtml(d.hypeMessage)}</p>
+              </div>
+              <div style="height:24px;"></div>` : ''}
+
+              <!-- QR Code section — hosted URL renders in Gmail, Outlook, all email clients -->
+              ${d.qrCodeUrl ? `
               <div style="background:#ffffff;padding:28px 36px;text-align:center;border-top:1px solid #e5e5e5;">
-                <p style="margin:0 0 14px;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#000000;">Scan at the Door</p>
-                <img src="${d.qrCodeDataUri}" alt="Ticket QR Code" width="180" height="180"
-                  style="display:block;margin:0 auto;border:none;width:180px;height:180px;" />
+                <p style="margin:0 0 14px;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#000000;">&#128241;&nbsp; Scan at the Door</p>
+                <img src="${d.qrCodeUrl}" alt="Ticket QR Code" width="200" height="200"
+                  style="display:block;margin:0 auto;border:none;width:200px;height:200px;" />
                 <p style="margin:12px 0 0;font-size:10px;color:#999999;font-family:monospace;letter-spacing:0.04em;">${escHtml(d.orderId)}</p>
               </div>` : ''}
 

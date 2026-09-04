@@ -350,16 +350,42 @@ export async function POST(req: NextRequest) {
                 } catch { /* no-op */ }
               }
 
+              const resolvedEventTitle =
+                (orderData.eventTitle as string) ??
+                (eventData.title as string) ??
+                "Your Event";
+
+              // Smart subject: "See You TONIGHT" same day, "See You TOMORROW" next day, else standard
+              const buildSubject = (): string => {
+                try {
+                  const rawDate = eventData.date as string;
+                  if (!rawDate) return `🎟 Your Ticket is Confirmed — ${resolvedEventTitle}`;
+                  // Parse at noon local to avoid UTC midnight timezone shift
+                  const eventDay = new Date(rawDate.length === 10 ? rawDate + "T12:00:00" : rawDate);
+                  const now = new Date();
+                  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const diffDays = Math.round((eventDay.getTime() - todayStart.getTime()) / 86400000);
+                  if (diffDays === 0) return `🎟 See You TONIGHT — Your ${resolvedEventTitle} Ticket + QR Code Inside`;
+                  if (diffDays === 1) return `🎟 See You TOMORROW — Your ${resolvedEventTitle} Ticket + QR Code Inside`;
+                } catch { /* fall through */ }
+                return `🎟 Your Ticket is Confirmed — ${resolvedEventTitle}`;
+              };
+
+              // ROCAFIESTA-specific Konfam hype message
+              const ROCAFIESTA_EVENT_ID = "MCzwl8mGF8P1rL5goEab";
+              const isRocaFiesta = (orderData.eventId as string) === ROCAFIESTA_EVENT_ID
+                || (eventData as { id?: string }).id === ROCAFIESTA_EVENT_ID;
+              const hypeMessage = isRocaFiesta
+                ? "Red carpet ready — I'm sure everyone is going to look their very best. Say hi to ALL ACCESS Winnipeg on the camera! Your QR code is below — scan it at the door and you're in. See you TONIGHT! 🖤"
+                : undefined;
+
               await sendTicketConfirmation({
                 orderId,
                 toEmail,
                 displayName,
-                subject: (orderData.emailSubject as string | undefined) ?? undefined,
+                subject: (orderData.emailSubject as string | undefined) ?? buildSubject(),
                 accentColor: (orderData.emailAccentColor as string | undefined) ?? undefined,
-                eventTitle:
-                  (orderData.eventTitle as string) ??
-                  (eventData.title as string) ??
-                  "Your Event",
+                eventTitle: resolvedEventTitle,
                 eventDate: (eventData.date as string) ?? "",
                 eventLocation: (eventData.location as string) ?? "",
                 quantity: qty,
@@ -371,6 +397,7 @@ export async function POST(req: NextRequest) {
                 ),
                 stripePaymentIntentId: paymentIntentId ?? session.id,
                 paidAt: new Date().toISOString(),
+                hypeMessage,
               }).catch((err) =>
                 console.error("[webhook] ticket confirmation email failed:", err)
               );

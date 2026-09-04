@@ -12,7 +12,6 @@
 //   If the field exists the send is skipped — safe for Stripe webhook retries.
 
 import { Resend } from "resend";
-import QRCode from "qrcode";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { membershipWelcomeHtml } from "@/lib/emails/membership-welcome";
 import { ticketConfirmationHtml } from "@/lib/emails/ticket-confirmation";
@@ -133,6 +132,7 @@ export async function sendTicketConfirmation({
   totalPaidCents,
   stripePaymentIntentId,
   paidAt,
+  hypeMessage,
 }: {
   orderId: string;
   toEmail: string;
@@ -147,6 +147,7 @@ export async function sendTicketConfirmation({
   totalPaidCents: number;
   stripePaymentIntentId: string;
   paidAt: string;          // ISO string
+  hypeMessage?: string;    // Optional event hype text (e.g. Konfam message for ROCAFIESTA)
 }): Promise<void> {
   const db = adminDb();
   const orderRef = db.collection("ticketOrders").doc(orderId);
@@ -168,17 +169,9 @@ export async function sendTicketConfirmation({
     } catch { return eventDate; }
   })();
 
-  // Generate QR code encoding the Order ID — scanned by door check-in system
-  let qrCodeDataUri: string | undefined;
-  try {
-    qrCodeDataUri = await QRCode.toDataURL(orderId, {
-      width: 360,
-      margin: 2,
-      color: { dark: "#000000", light: "#ffffff" },
-    });
-  } catch (err) {
-    console.warn("[email] QR code generation failed — sending without QR:", err);
-  }
+  // QR code — hosted URL via api.qrserver.com (renders in Gmail, Outlook, iOS Mail, all clients)
+  // Never use data URIs: Gmail strips them and the image shows as broken.
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(orderId)}&size=300x300&margin=10&bgcolor=ffffff&color=000000&ecc=M`;
 
   const html = ticketConfirmationHtml({
     firstName,
@@ -193,7 +186,8 @@ export async function sendTicketConfirmation({
     paidAt: formatDate(paidAt),
     eventsUrl: `${APP_URL}/events`,
     accentColor,
-    qrCodeDataUri,
+    qrCodeUrl,
+    hypeMessage,
   });
 
   const { error } = await resend.emails.send({
