@@ -11,11 +11,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@opentelemetry/api": "^1.9.1",
+    "@types/qrcode": "^1.5.6",
     "@vercel/analytics": "^2.0.1",
     "firebase": "^12.11.0",
     "firebase-admin": "^13.7.0",
     "html5-qrcode": "^2.3.8",
     "next": "16.1.6",
+    "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.10.0",
@@ -23,8 +25,8 @@
     "stripe": "^22.0.0"
   },
   "optionalDependencies": {
-    "@img/sharp-linux-x64": "^0.33.5",
-    "@img/sharp-linux-arm64": "^0.33.5"
+    "@img/sharp-linux-arm64": "^0.33.5",
+    "@img/sharp-linux-x64": "^0.33.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

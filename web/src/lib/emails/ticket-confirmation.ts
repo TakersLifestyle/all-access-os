@@ -1,6 +1,6 @@
 // Event ticket confirmation email HTML template
 // Sent once after checkout.session.completed confirms an event_ticket purchase
-// Simple physical-ticket style — no QR code, show email at the door
+// QR code encodes the Order ID — scanned by the Door Check-In scanner at the event
 
 export interface TicketConfirmationData {
   firstName: string;
@@ -15,6 +15,7 @@ export interface TicketConfirmationData {
   paidAt: string;
   eventsUrl: string;
   accentColor?: string;  // e.g. "#84cc16" for Skales, "#ec4899" for ROCAFIESTA
+  qrCodeDataUri?: string; // PNG data URI — scanned at door to pull up order
 }
 
 export function ticketConfirmationHtml(d: TicketConfirmationData): string {
@@ -108,11 +109,20 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
                 <!-- Dotted divider -->
                 <div style="border-top:1px dashed #ffffff15;margin:24px 0;"></div>
 
-                <!-- Order number (prominent — show at door) -->
+                <!-- Order number -->
                 <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#ffffff25;">Order Confirmation</p>
                 <p style="margin:0;font-size:14px;font-family:monospace;font-weight:600;letter-spacing:0.06em;color:#ffffff60;word-break:break-all;">${escHtml(d.orderId)}</p>
 
               </div>
+
+              <!-- QR Code section -->
+              ${d.qrCodeDataUri ? `
+              <div style="background:#ffffff;padding:28px 36px;text-align:center;border-top:1px solid #e5e5e5;">
+                <p style="margin:0 0 14px;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#000000;">Scan at the Door</p>
+                <img src="${d.qrCodeDataUri}" alt="Ticket QR Code" width="180" height="180"
+                  style="display:block;margin:0 auto;border:none;width:180px;height:180px;" />
+                <p style="margin:12px 0 0;font-size:10px;color:#999999;font-family:monospace;letter-spacing:0.04em;">${escHtml(d.orderId)}</p>
+              </div>` : ''}
 
               <!-- Bottom CTA strip -->
               <div style="background:${accentBg};border-top:1px solid ${accentDim};padding:18px 36px;text-align:center;">
@@ -120,7 +130,7 @@ export function ticketConfirmationHtml(d: TicketConfirmationData): string {
                   Show this email at the door &mdash; that&rsquo;s your ticket.
                 </p>
                 <p style="margin:6px 0 0;font-size:12px;color:#ffffff30;">
-                  Staff will pull up your order by name or email.
+                  Staff will scan your QR code or look you up by name.
                 </p>
               </div>
 

@@ -44,7 +44,7 @@ Premium visuals are correct and intentional. But messaging must always feel **tr
 ### Membership framing
 Membership = **supporting the mission + receiving perks as a thank-you**  
 NOT = buying access to an elite club  
-CTA: **"Become a Supporter — $25/mo"** (never "Take Your Place" or "Join the Elite")  
+CTA: **"Go ALL ACCESS — $10/mo"** (never "Take Your Place" or "Join the Elite")  
 Events are open to everyone. Membership is how you go deeper and help fund more.
 
 ### Brand separation — CRITICAL
@@ -79,7 +79,7 @@ Events are open to everyone. Membership is how you go deeper and help fund more.
 ---
 
 ## Stripe
-- Membership: `mode: "subscription"`, CAD, **$25/month flat** (no trial, no tiered pricing)
+- Membership: `mode: "subscription"`, CAD, **$10/month flat** (no trial, no tiered pricing)
 - Pricing is set via `price_data` inline in checkout — no hardcoded Stripe Price ID needed
 - Event tickets: `mode: "payment"`, CAD, server-side pricing only (never trust frontend)
 - Webhook secret: `STRIPE_WEBHOOK_SECRET` env var

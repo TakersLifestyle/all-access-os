@@ -12,6 +12,7 @@
 //   If the field exists the send is skipped — safe for Stripe webhook retries.
 
 import { Resend } from "resend";
+import QRCode from "qrcode";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { membershipWelcomeHtml } from "@/lib/emails/membership-welcome";
 import { ticketConfirmationHtml } from "@/lib/emails/ticket-confirmation";
@@ -167,6 +168,18 @@ export async function sendTicketConfirmation({
     } catch { return eventDate; }
   })();
 
+  // Generate QR code encoding the Order ID — scanned by door check-in system
+  let qrCodeDataUri: string | undefined;
+  try {
+    qrCodeDataUri = await QRCode.toDataURL(orderId, {
+      width: 360,
+      margin: 2,
+      color: { dark: "#000000", light: "#ffffff" },
+    });
+  } catch (err) {
+    console.warn("[email] QR code generation failed — sending without QR:", err);
+  }
+
   const html = ticketConfirmationHtml({
     firstName,
     eventTitle,
@@ -180,6 +193,7 @@ export async function sendTicketConfirmation({
     paidAt: formatDate(paidAt),
     eventsUrl: `${APP_URL}/events`,
     accentColor,
+    qrCodeDataUri,
   });
 
   const { error } = await resend.emails.send({
