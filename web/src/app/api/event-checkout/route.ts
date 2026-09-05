@@ -19,6 +19,18 @@ const MAX_QUANTITY = 5;
 // Frontend displays the same calculation — these must stay in sync.
 const MEMBER_DISCOUNT = 0.30;
 
+// ── Stripe fee passthrough ───────────────────────────────────────────────────
+// Buyers pay the Stripe processing fee so ALL ACCESS receives the full face value.
+// Stripe CAD fee: 2.9% + $0.30 per transaction.
+// Formula: ceil((baseCents + 30) / (1 - 0.029))
+// e.g. $25 base → $26.06 charged → Stripe takes ~$1.06 → ALL ACCESS receives $25.00
+const STRIPE_FEE_RATE  = 0.029;
+const STRIPE_FEE_FIXED = 30; // cents
+
+function calcChargeAmount(baseCents: number): number {
+  return Math.ceil((baseCents + STRIPE_FEE_FIXED) / (1 - STRIPE_FEE_RATE));
+}
+
 function applyMemberDiscount(price: number): number {
   return Math.round(price * (1 - MEMBER_DISCOUNT) * 100) / 100;
 }
@@ -128,8 +140,11 @@ export async function POST(req: NextRequest) {
       ? applyMemberDiscount(generalPrice)
       : generalPrice;
 
-    // unit_amount must be an integer number of cents
+    // unit_amount must be an integer number of cents (face value)
     const unitPriceCents = Math.round(unitPriceDollars * 100);
+
+    // Fee-inclusive amount charged to buyer — ALL ACCESS receives unitPriceCents net
+    const chargeAmountCents = calcChargeAmount(unitPriceCents);
 
     const savingsPerTicket = eligibleForDiscount
       ? Math.round(generalPrice * MEMBER_DISCOUNT * 100) / 100
@@ -201,7 +216,7 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "cad",
-            unit_amount: unitPriceCents, // integer cents — e.g. $85 member price on $100 event → 8500
+            unit_amount: chargeAmountCents, // fee-inclusive — buyer covers Stripe processing fee
             product_data: {
               name: event.title,
               description: descParts.join(" · ") || undefined,
