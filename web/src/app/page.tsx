@@ -207,7 +207,7 @@ export default function Home() {
               <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse" />
               {heroEvent.ticketsRemaining <= Math.ceil(heroEvent.capacity * 0.35)
                 ? `Only ${heroEvent.ticketsRemaining} spots left — ${formatDate(heroEvent.date)}`
-                : `Tickets Available&nbsp;•&nbsp;${formatDate(heroEvent.date)}`}
+                : `Tickets Available • ${formatDate(heroEvent.date)}`}
             </div>
           ) : (
             <div className="inline-flex items-center gap-2 bg-pink-600/15 border border-pink-500/30 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm text-pink-300 font-medium flex-wrap">

@@ -47,6 +47,7 @@ interface Event {
   seriesId?: string;
   seriesVolumeLabel?: string;
   ticketTiers?: Record<string, { name: string; price: number }>;
+  imageObjectPosition?: string;
 }
 
 // EventPurchase — mirrors the eventPurchases Firestore collection
@@ -393,7 +394,7 @@ function FutureDropCard({ ev }: { ev: Event }) {
     <div className="rounded-2xl overflow-hidden border border-white/15 bg-white/5 hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(168,85,247,0.07)] transition-all duration-300 group">
       {(ev.heroImageUrl || ev.imageUrl) && (
         <div className="relative w-full h-60 overflow-hidden">
-          <img src={ev.heroImageUrl || ev.imageUrl} alt={cleanTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90" />
+          <img src={ev.heroImageUrl || ev.imageUrl} alt={cleanTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-90" style={{ objectPosition: ev.imageObjectPosition ?? "center center" }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute top-4 left-4">
             <span className="bg-purple-600/90 backdrop-blur-sm border border-purple-400/40 text-white text-xs font-bold px-3 py-1.5 rounded-full">
@@ -1004,6 +1005,7 @@ function EventCard({
             src={ev.heroImageUrl || ev.imageUrl}
             alt={ev.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            style={{ objectPosition: ev.imageObjectPosition ?? "center center" }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
