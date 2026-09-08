@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+// Node.js runtime (not edge) — edge runtime hits a Next.js 16 / Vercel Skew
+// Protection bug ("process.env.NEXT_DEPLOYMENT_ID is missing but
+// runtimeServerDeploymentId is enabled") that 500s this route on every
+// social-crawler request. ImageResponse works the same on Node.
 export const alt = "Rooftop Paint & Sip — Sunset Sessions Vol. 01 | ALL ACCESS Winnipeg";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

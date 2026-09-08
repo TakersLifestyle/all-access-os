@@ -469,6 +469,33 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // ── Checkout session expired (buyer abandoned checkout) ─
+      // Stripe fires this ~24h after an unpaid Checkout Session is created.
+      // Without this handler, abandoned event-ticket orders stayed
+      // "pending" in Firestore forever — ticketsRemaining was never
+      // decremented for them (that only happens on .completed), so it's
+      // safe to just flip the order to "failed" for bookkeeping.
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.type === "event_ticket") {
+          const { orderId } = session.metadata;
+          if (orderId) {
+            const db = adminDb();
+            const orderRef = db.collection("ticketOrders").doc(orderId);
+            const orderSnap = await orderRef.get();
+            if (orderSnap.exists && orderSnap.data()?.paymentStatus === "pending") {
+              await orderRef.update({
+                paymentStatus: "failed",
+                failureReason: "checkout_session_expired",
+                updatedAt: new Date().toISOString(),
+              });
+              console.log(`[webhook] event_ticket order ${orderId} marked failed — checkout expired`);
+            }
+          }
+        }
+        break;
+      }
+
       // ── Subscription renewed or changed ───────────────────
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
