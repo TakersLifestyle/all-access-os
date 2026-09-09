@@ -153,7 +153,10 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 4. Resize with sharp ─────────────────────────────────────────────────
+    // .rotate() reads EXIF orientation and corrects it before resize —
+    // prevents portrait photos from appearing sideways as album covers.
     const resized = await sharp(originalBuffer as Buffer)
+      .rotate()                  // auto-rotate from EXIF orientation, strip EXIF
       .resize({
         width: maxDim,
         height: maxDim,
