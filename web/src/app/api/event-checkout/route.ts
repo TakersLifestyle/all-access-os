@@ -38,11 +38,12 @@ function applyMemberDiscount(price: number): number {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventId, quantity, uid, userEmail } = body as {
+    const { eventId, quantity, uid, userEmail, ticketType } = body as {
       eventId: string;
       quantity: number;
       uid?: string;
       userEmail?: string;
+      ticketType?: "early_bird" | "general" | "vip"; // optional — defaults to "general"
     };
 
     // ── 1. Validate inputs ──────────────────────────────────
@@ -81,6 +82,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ── 3b. Validate ticket type ────────────────────────────
+    const resolvedType = ticketType ?? "general";
+    if (!["early_bird", "general", "vip"].includes(resolvedType)) {
+      return NextResponse.json({ error: "Invalid ticket type." }, { status: 400 });
+    }
+    if (resolvedType === "early_bird" && event.earlyBirdSoldOut) {
+      return NextResponse.json({ error: "Early Bird tickets are sold out." }, { status: 400 });
+    }
+
     if (!event.imageUrl) {
       console.warn(`[event-checkout] Event ${eventId} has no imageUrl — proceeding without image.`);
     }
@@ -115,15 +125,20 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 6. Server-side pricing ──────────────────────────────
-    // generalPrice is the single source of truth from Firestore.
-    // Members receive MEMBER_DISCOUNT (30%) off UNLESS noMemberDiscount is set
-    // (flat-price events like the Founding 15 $300 launch).
-    const generalPrice = Number(event.generalPrice) || 0;
+    // Price is resolved from Firestore by ticketType.
+    // early_bird → earlyBirdPrice, vip → vipPrice, general (default) → generalPrice
+    // noMemberDiscount: flat price for all buyers — no member discount applied
+    const priceByType: Record<string, number> = {
+      early_bird: Number(event.earlyBirdPrice) || 0,
+      general:    Number(event.generalPrice)   || 0,
+      vip:        Number(event.vipPrice)        || 0,
+    };
+    const generalPrice = priceByType[resolvedType];
 
     if (!generalPrice || isNaN(generalPrice) || generalPrice <= 0) {
       console.error(
-        `[event-checkout] Event ${eventId} has no valid generalPrice. ` +
-        `generalPrice=${generalPrice}`
+        `[event-checkout] Event ${eventId} has no valid price for ticketType=${resolvedType}. ` +
+        `prices=${JSON.stringify(priceByType)}`
       );
       return NextResponse.json(
         { error: "Ticket pricing is not available for this event." },
@@ -158,6 +173,7 @@ export async function POST(req: NextRequest) {
       userEmail: userEmail ?? null,
       eventId,
       eventTitle: event.title,
+      ticketType: resolvedType,
       quantity: qty,
       unitPrice: unitPriceDollars,
       unitPriceCents,
@@ -203,8 +219,8 @@ export async function POST(req: NextRequest) {
       : null;
 
     console.log(
-      `[event-checkout] Creating session | event="${event.title}" qty=${qty} ` +
-      `generalPrice=${generalPrice} unitPriceCents=${unitPriceCents} ` +
+      `[event-checkout] Creating session | event="${event.title}" ticketType=${resolvedType} qty=${qty} ` +
+      `price=${generalPrice} unitPriceCents=${unitPriceCents} ` +
       `isMember=${isMember} noMemberDiscount=${noMemberDiscount} discount=${eligibleForDiscount ? "30%" : "none"} imageUrl=${imageUrl ?? "none"}`
     );
 

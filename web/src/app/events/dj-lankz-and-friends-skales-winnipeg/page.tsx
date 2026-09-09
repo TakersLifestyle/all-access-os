@@ -6,7 +6,36 @@ import { track } from "@vercel/analytics";
 import { useAuth } from "@/lib/auth-context";
 
 const EVENT_ID = "EQIimnVZ5jPhVKPLyAJ2";
-const EARLY_BIRD_PRICE = 25;
+
+// Ticket tiers — prices must match Firestore event doc
+const TIERS = [
+  {
+    id: "early_bird" as const,
+    label: "Early Bird",
+    price: 25,
+    soldOut: true,
+    description: "General admission · Doors 10 PM · Oct 9, 2026",
+    features: ["General admission", "Full concert access", "Doors open 10 PM", "Early bird pricing"],
+  },
+  {
+    id: "general" as const,
+    label: "General Admission",
+    price: 35,
+    soldOut: false,
+    description: "General admission · Doors 10 PM · Oct 9, 2026",
+    features: ["General admission", "Full concert access", "Doors open 10 PM"],
+  },
+  {
+    id: "vip" as const,
+    label: "VIP — Skip The Line",
+    price: 50,
+    soldOut: false,
+    description: "VIP admission · Skip the line · Oct 9, 2026",
+    features: ["Skip the line", "Priority entry", "Full concert access", "Doors open 10 PM"],
+  },
+] as const;
+
+type TierId = "early_bird" | "general" | "vip";
 
 // ── Accent palette — lime-green from Skales' signature look ──────────────────
 // Only applies to this page. No other ALL ACCESS page is affected.
@@ -34,15 +63,18 @@ const EVENT = {
 
 export default function DJLankzSkalesPage() {
   const { user } = useAuth();
+  const [selectedTier, setSelectedTier] = useState<TierId>("general");
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const activeTier = TIERS.find(t => t.id === selectedTier) ?? TIERS[1];
+  const total = activeTier.price * qty;
+
   const handleCheckout = useCallback(async () => {
     setError(null);
     setLoading(true);
-    // Track every click — shows in Vercel Analytics custom events
-    track("get_tickets_click", { event: "skales_oct9", quantity: qty, source: "event_page" });
+    track("get_tickets_click", { event: "skales_oct9", ticketType: selectedTier, quantity: qty, source: "event_page" });
     try {
       const res = await fetch("/api/event-checkout", {
         method: "POST",
@@ -50,6 +82,7 @@ export default function DJLankzSkalesPage() {
         body: JSON.stringify({
           eventId: EVENT_ID,
           quantity: qty,
+          ticketType: selectedTier,
           uid: user?.uid ?? null,
           userEmail: user?.email ?? null,
         }),
@@ -62,9 +95,7 @@ export default function DJLankzSkalesPage() {
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
     }
-  }, [qty, user]);
-
-  const total = EARLY_BIRD_PRICE * qty;
+  }, [qty, selectedTier, user]);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -372,33 +403,64 @@ export default function DJLankzSkalesPage() {
 
           <div className={`rounded-2xl border ${LIME.border} bg-white/[0.02] p-6 sm:p-8 space-y-5`}>
 
-            {/* Early Bird badge */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-4 py-2`}>
-                <span className={`w-2 h-2 rounded-full ${LIME.badge} animate-pulse`} />
-                <span className={`${LIME.text} text-xs font-bold uppercase tracking-widest`}>Early Bird — Limited Quantity</span>
-              </div>
-            </div>
-
-            {/* Tier card */}
-            <div className={`rounded-xl border ${LIME.border} bg-black/40 p-5 space-y-3`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-white font-black text-lg leading-tight">Early Bird</p>
-                  <p className="text-white/40 text-sm mt-0.5">General admission · Doors 10 PM · Oct 9, 2026</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-3xl font-black text-white">$25</p>
-                  <p className="text-white/30 text-xs">CAD per ticket</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {["General admission", "Full concert access", "Doors open 10 PM", "Early bird pricing"].map(f => (
-                  <span key={f} className="flex items-center gap-1.5 text-xs text-white/50">
-                    <span className={`text-[10px] ${LIME.text}`}>✓</span> {f}
-                  </span>
-                ))}
-              </div>
+            {/* Tier selector — 3 cards */}
+            <div className="space-y-3">
+              {TIERS.map(tier => {
+                const isSelected = selectedTier === tier.id && !tier.soldOut;
+                return (
+                  <button
+                    key={tier.id}
+                    onClick={() => !tier.soldOut && setSelectedTier(tier.id)}
+                    disabled={tier.soldOut}
+                    className={[
+                      "w-full text-left rounded-xl border p-5 space-y-3 transition-all duration-150",
+                      tier.soldOut
+                        ? "border-white/8 bg-black/20 opacity-50 cursor-not-allowed"
+                        : isSelected
+                        ? `border-[#84cc16]/60 bg-black/50 shadow-[0_0_20px_rgba(132,204,22,0.08)]`
+                        : `border-white/10 bg-black/30 hover:border-white/20`,
+                    ].join(" ")}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {/* Radio dot */}
+                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                          tier.soldOut ? "border-white/20" : isSelected ? "border-[#84cc16]" : "border-white/30"
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-[#84cc16]" />}
+                        </div>
+                        <div>
+                          <p className="text-white font-black text-base leading-tight flex items-center gap-2">
+                            {tier.label}
+                            {tier.soldOut && (
+                              <span className="text-[10px] font-black bg-red-950/60 border border-red-800/40 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Sold Out
+                              </span>
+                            )}
+                            {tier.id === "vip" && !tier.soldOut && (
+                              <span className={`text-[10px] font-black ${LIME.badgeDim} ${LIME.text} px-2 py-0.5 rounded-full uppercase tracking-wider`}>
+                                Best
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-white/40 text-xs mt-0.5">{tier.description}</p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-2xl font-black ${tier.soldOut ? "text-white/30" : "text-white"}`}>${tier.price}</p>
+                        <p className="text-white/25 text-xs">CAD / ticket</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 pl-7">
+                      {tier.features.map(f => (
+                        <span key={f} className="flex items-center gap-1.5 text-xs text-white/40">
+                          <span className={`text-[10px] ${tier.soldOut ? "text-white/25" : LIME.text}`}>✓</span> {f}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Quantity selector */}
@@ -419,11 +481,11 @@ export default function DJLankzSkalesPage() {
               </div>
               <div className="text-right shrink-0">
                 <p className="text-white font-black text-xl tabular-nums">${total}</p>
-                {qty > 1 && <p className="text-white/30 text-xs">$25 × {qty}</p>}
+                {qty > 1 && <p className="text-white/30 text-xs">${activeTier.price} × {qty}</p>}
               </div>
             </div>
 
-            {/* CTA — no login required, guest checkout supported */}
+            {/* CTA */}
             <button
               onClick={handleCheckout}
               disabled={loading}
@@ -436,7 +498,7 @@ export default function DJLankzSkalesPage() {
                 </>
               ) : (
                 <>
-                  <span>🎟 Get Early Bird Tickets — ${total}</span>
+                  <span>🎟 Get {activeTier.label} — ${total}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
                   </svg>
@@ -516,9 +578,14 @@ export default function DJLankzSkalesPage() {
             SKALES LIVE IN WINNIPEG
           </h3>
           <p className="text-white/40 text-sm">Presented by DJ LANKZ & ALL ACCESS Winnipeg</p>
-          <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-4 py-2 mt-2`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${LIME.badge} animate-pulse`} />
-            <span className={`${LIME.text} text-xs font-bold`}>Early Bird $25 · Limited Quantity</span>
+          <div className="flex flex-wrap justify-center gap-2 mt-2">
+            <div className="inline-flex items-center gap-2 bg-red-950/40 border border-red-800/30 rounded-full px-3 py-1.5">
+              <span className="text-red-400 text-xs font-bold">Early Bird — Sold Out</span>
+            </div>
+            <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-3 py-1.5`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${LIME.badge} animate-pulse`} />
+              <span className={`${LIME.text} text-xs font-bold`}>General $35 · VIP $50</span>
+            </div>
           </div>
           <p className="text-white/20 text-xs pt-1">
             Questions?{" "}
