@@ -251,7 +251,7 @@ export default function Home() {
                 disabled={checkoutLoading}
                 className="border border-pink-500/40 hover:border-pink-500/70 px-7 py-3.5 rounded-xl font-semibold text-base transition text-pink-300 hover:text-pink-200"
               >
-                {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10.61/mo"}
+                {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo"}
               </button>
             ) : (
               <Link
@@ -616,7 +616,7 @@ export default function Home() {
             <p className="text-pink-500 text-[10px] font-black uppercase tracking-[0.2em]">Go ALL ACCESS</p>
             <h2 className="text-2xl font-bold">More access to the community.</h2>
             <p className="text-white/40 text-sm max-w-sm mx-auto">
-              For just $10.61/month (includes processing fee). Cancel anytime. No commitment.
+              For just $10/month. Cancel anytime. No commitment.
             </p>
           </div>
 
@@ -625,7 +625,7 @@ export default function Home() {
 
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold">$10.61</span>
+                <span className="text-5xl font-bold">$10</span>
                 <span className="text-white/50">/month</span>
               </div>
               <p className="text-pink-400 text-sm font-semibold">Cancel anytime. No commitment.</p>
@@ -652,7 +652,7 @@ export default function Home() {
               disabled={checkoutLoading}
               className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
             >
-              {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10.61/mo"}
+              {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo"}
             </button>
 
             {error && (
