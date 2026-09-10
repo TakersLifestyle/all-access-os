@@ -368,6 +368,35 @@ export default function MemoriesPage() {
             </section>
           )}
 
+          {/* Membership upsell — shown to non-members between sections */}
+          {!user && (
+            <div className="rounded-2xl border border-pink-500/20 bg-pink-500/5 overflow-hidden">
+              <div className="px-6 pt-6 pb-4 space-y-2">
+                <p className="text-xs font-black uppercase tracking-[0.15em] text-pink-500">Go ALL ACCESS — $10/mo</p>
+                <h3 className="text-xl font-black text-white leading-tight">You might be in one of these photos.</h3>
+                <p className="text-white/40 text-sm leading-relaxed">
+                  Members download every photo — full resolution, free, forever.
+                  4,000+ community photos across every event and Founding 15 episode.
+                </p>
+              </div>
+              <div className="border-t border-pink-500/10 px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-5">
+                  {[["📸", "4K+ photos"], ["🎟", "30% off tickets"], ["⚡", "Early access"]].map(([icon, label]) => (
+                    <span key={label} className="text-xs text-white/35 flex items-center gap-1.5">
+                      <span>{icon}</span>{label}
+                    </span>
+                  ))}
+                </div>
+                <Link
+                  href="/membership"
+                  className="bg-pink-600 hover:bg-pink-500 text-white font-black text-sm px-5 py-2.5 rounded-xl transition whitespace-nowrap shrink-0"
+                >
+                  Download Photos — $10/mo →
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Event Albums */}
           {eventAlbums.length > 0 && (
             <section className="space-y-5">

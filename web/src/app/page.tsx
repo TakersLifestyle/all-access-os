@@ -426,6 +426,23 @@ export default function Home() {
             </span>
           </div>
         </Link>
+
+        {/* Download upsell — only for non-members */}
+        {!isActive && (
+          <div className="flex items-center justify-between gap-4 flex-wrap bg-white/[0.03] border border-white/[0.07] rounded-2xl px-5 py-3.5">
+            <p className="text-white/40 text-sm">
+              📥 <span className="text-white/65 font-semibold">Members download any photo — full resolution, free.</span>
+              {" "}You might be in one of these.
+            </p>
+            <button
+              onClick={handleCheckout}
+              disabled={checkoutLoading}
+              className="text-pink-400 hover:text-pink-300 text-sm font-bold transition shrink-0 whitespace-nowrap"
+            >
+              {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo →"}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* ── URGENCY BANNER (dynamic — only shows when spots are low) ─────── */}

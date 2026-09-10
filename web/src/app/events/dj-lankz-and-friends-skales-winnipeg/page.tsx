@@ -62,7 +62,7 @@ const EVENT = {
 };
 
 export default function DJLankzSkalesPage() {
-  const { user } = useAuth();
+  const { user, isActive } = useAuth();
   const [selectedTier, setSelectedTier] = useState<TierId>("general");
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -392,6 +392,47 @@ export default function DJLankzSkalesPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Member discount banner ─────────────────────────────────────── */}
+        {isActive ? (
+          <div className="flex items-center gap-4 bg-[#84cc16]/8 border border-[#84cc16]/25 rounded-2xl px-5 py-4">
+            <span className="text-2xl shrink-0">✅</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[#84cc16] font-black text-sm">You&apos;re ALL ACCESS — 30% off applied at checkout</p>
+              <p className="text-white/40 text-xs mt-0.5">GA tickets: <span className="line-through text-white/25">$35</span> → <span className="text-[#84cc16] font-bold">$24.50</span> · VIP: <span className="line-through text-white/25">$50</span> → <span className="text-[#84cc16] font-bold">$35</span></p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[#84cc16]/30 bg-[#84cc16]/5 overflow-hidden">
+            {/* Top row — the hook */}
+            <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-3 flex-wrap">
+              <div>
+                <p className="text-[#84cc16] font-black text-base leading-tight">Members pay $24.50</p>
+                <p className="text-white/50 text-sm mt-0.5">
+                  You&apos;re paying <span className="text-white font-bold">$35</span> — that&apos;s{" "}
+                  <span className="text-[#84cc16] font-bold">$10.50 extra</span> vs. an ALL ACCESS member
+                </p>
+              </div>
+              <div className="bg-[#84cc16]/15 border border-[#84cc16]/30 rounded-xl px-4 py-2 text-center shrink-0">
+                <p className="text-[#84cc16] font-black text-xl leading-none">30%</p>
+                <p className="text-[#84cc16]/60 text-[10px] font-bold uppercase tracking-wider mt-0.5">off</p>
+              </div>
+            </div>
+            {/* Bottom row — the math */}
+            <div className="border-t border-[#84cc16]/15 mx-5 pt-3 pb-4 flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-white/35 text-xs leading-relaxed">
+                Join ALL ACCESS for $10/mo → your ticket goes from $35 to $24.50.<br className="hidden sm:block" />
+                <span className="text-white/50">Membership pays for itself with one ticket.</span>
+              </p>
+              <Link
+                href="/membership"
+                className="bg-[#84cc16] hover:bg-[#a3e635] text-black font-black text-xs px-4 py-2.5 rounded-xl transition whitespace-nowrap shrink-0"
+              >
+                Join $10/mo → Save $10.50
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── Ticket CTA ─────────────────────────────────────────────────── */}
         <section id="tickets" className="space-y-4">
