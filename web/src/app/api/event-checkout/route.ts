@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
         userId: uid ?? "",
         type: "event_ticket",
         isMemberPrice: String(isMember),
-        discountPct: isMember ? "15" : "0",
+        discountPct: isMember ? "30" : "0",
       },
       payment_intent_data: {
         statement_descriptor: "ALL ACCESS WINNIPEG",
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
           userId: uid ?? "",
           type: "event_ticket",
           isMemberPrice: String(isMember),
-          discountPct: isMember ? "15" : "0",
+          discountPct: isMember ? "30" : "0",
         },
       },
     };

@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 
 // ── Pricing constant ────────────────────────────────────────────────────────
-const MEMBER_DISCOUNT = 0.15;
+const MEMBER_DISCOUNT = 0.30;
 
 function calcMemberPrice(generalPrice: number): number {
   return Math.round(generalPrice * (1 - MEMBER_DISCOUNT) * 100) / 100;
