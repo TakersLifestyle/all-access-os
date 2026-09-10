@@ -83,6 +83,8 @@ export default async function Image() {
         {/* Main headline */}
         <div
           style={{
+            display: "flex",
+            flexDirection: "column",
             fontSize: "88px",
             fontWeight: "900",
             color: "white",
@@ -92,7 +94,7 @@ export default async function Image() {
             textTransform: "uppercase",
           }}
         >
-          BUILT FOR THE<br />
+          <span>BUILT FOR THE</span>
           <span style={{ color: "#ff007f" }}>COMMUNITY</span>
         </div>
 
