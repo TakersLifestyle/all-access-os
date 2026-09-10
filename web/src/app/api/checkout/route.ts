@@ -1,6 +1,10 @@
 // Membership subscription checkout — $10/month CAD (ALL ACCESS)
 // Membership unlocks downloads, reactions, high-res Memories + perks
 // Does NOT gate event ticket access
+//
+// Stripe fee passthrough: buyer pays Stripe fee so ALL ACCESS nets the full $10
+//   chargeAmount = ceil((base + 30) / (1 - 0.029))
+//   ceil((1000 + 30) / 0.971) = ceil(1060.76) = 1061 cents = $10.61 charged → $10.00 net
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -33,19 +37,23 @@ export async function POST(req: NextRequest) {
       } catch { /* new user — no customer yet */ }
     }
 
+    // Fee passthrough: buyer covers Stripe's 2.9% + $0.30 so ALL ACCESS nets the full $10
+    const BASE_CENTS = 1000; // $10.00 CAD
+    const chargeCents = Math.ceil((BASE_CENTS + 30) / (1 - 0.029)); // → 1061 = $10.61
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [
         {
           price_data: {
             currency: "cad",
-            unit_amount: 1000, // $10.00 CAD in cents
+            unit_amount: chargeCents,
             recurring: { interval: "month" },
             product_data: {
               name: "ALL ACCESS Membership",
               description:
                 "High-res Memories, downloads, reactions, 30% off tickets, partner perks. " +
-                "Cancel anytime.",
+                "Cancel anytime. (Includes processing fee)",
             },
           },
           quantity: 1,
