@@ -89,7 +89,7 @@ export default function MembershipPage() {
         <div className="flex items-center justify-between px-6 py-4 bg-pink-500/10 border-b border-pink-500/10">
           <p className="text-xs font-black uppercase tracking-[0.15em] text-pink-400">ALL ACCESS Membership</p>
           <p className="text-2xl font-black text-white tracking-tight">
-            $10<span className="text-sm font-medium text-white/30">/mo CAD</span>
+            $10.61<span className="text-sm font-medium text-white/30">/mo CAD</span>
           </p>
         </div>
         {/* Perks */}
@@ -128,10 +128,10 @@ export default function MembershipPage() {
             disabled={checkoutLoading}
             className="w-full bg-pink-600 hover:bg-pink-500 disabled:opacity-50 text-white font-black text-sm uppercase tracking-wide py-4 rounded-xl transition mb-3"
           >
-            {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10/mo →"}
+            {checkoutLoading ? "Redirecting…" : "Go ALL ACCESS — $10.61/mo →"}
           </button>
           <p className="text-center text-xs text-white/20">
-            Cancel anytime · No contracts · Community first
+            $10.61/mo includes Stripe processing fee · Cancel anytime · Community first
           </p>
           {!user && (
             <p className="text-center text-xs text-white/25 mt-3">
