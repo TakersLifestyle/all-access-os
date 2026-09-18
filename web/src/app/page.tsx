@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { collection, getDocs, orderBy, query, where, limit } from "firebase/firestore";
@@ -71,15 +71,26 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
-/** Hero rotation — 2 photos, cross-fades every 4.5s. Used in the top hero right column. */
+/** Hero rotation — 2 square photos side by side, randomly ordered, cross-fades every 4.5s. */
 function HeroCinematic({ albums }: { albums: Album[] }) {
   const prefersReduced = useReducedMotion();
   const [groupIdx, setGroupIdx] = useState(0);
   const [opacity, setOpacity] = useState(1);
 
+  // Shuffle randomly once when albums first load — different order every page visit
+  const shuffled = useMemo(() => {
+    const arr = [...albums];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albums.length]);
+
   const groups: Album[][] = [];
-  for (let i = 0; i < albums.length; i += 2) {
-    const g = albums.slice(i, i + 2);
+  for (let i = 0; i < shuffled.length; i += 2) {
+    const g = shuffled.slice(i, i + 2);
     if (g.length > 0) groups.push(g);
   }
 
@@ -114,16 +125,16 @@ function HeroCinematic({ albums }: { albums: Album[] }) {
 
   return (
     <div
-      className="rounded-2xl overflow-hidden border border-white/10 flex flex-col gap-0.5 h-full"
+      className="grid grid-cols-2 gap-1.5"
       style={{ transition: prefersReduced ? "none" : "opacity 0.5s ease", opacity }}
     >
-      {/* Top photo — taller */}
-      <div className="flex-[3] min-h-0">
+      {/* Left square */}
+      <div className="aspect-square rounded-2xl overflow-hidden border border-white/10">
         {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
       </div>
-      {/* Bottom photo */}
-      <div className="flex-[2] min-h-0">
-        {(p2 ?? p1) && <ArchivePhoto album={p2 ?? p1} className="w-full h-full" />}
+      {/* Right square */}
+      <div className="aspect-square rounded-2xl overflow-hidden border border-white/10">
+        <ArchivePhoto album={p2 ?? p1} className="w-full h-full" />
       </div>
     </div>
   );
@@ -430,7 +441,7 @@ export default function Home() {
         ) : memoryPreviews.length > 0 ? (
           <Link
             href="/memories"
-            className="hidden md:block group h-[320px] hover:opacity-95 transition-opacity duration-300"
+            className="hidden md:block group hover:opacity-95 transition-opacity duration-300"
           >
             <HeroCinematic albums={memoryPreviews} />
           </Link>
