@@ -80,6 +80,15 @@ function useEventTeasers() {
           .map((d) => ({ id: d.id, ...d.data() } as EventTeaser))
           .filter((e) => e.status !== "draft");
         all.sort((a, b) => {
+          const aCancelled = a.status === "cancelled";
+          const bCancelled = b.status === "cancelled";
+          const aCompleted = a.status === "completed";
+          const bCompleted = b.status === "completed";
+          // Cancelled last, then completed, then upcoming
+          if (!aCancelled && bCancelled) return -1;
+          if (aCancelled && !bCancelled) return 1;
+          if (!aCompleted && bCompleted) return -1;
+          if (aCompleted && !bCompleted) return 1;
           if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
           if (!a.isLaunchEvent && b.isLaunchEvent) return 1;
           if (a.status === "coming_soon" && b.status !== "coming_soon") return 1;
@@ -484,9 +493,11 @@ export default function Home() {
             {events.map((ev) => {
               const isComingSoon = ev.status === "coming_soon";
               const isCompleted = ev.status === "completed";
+              const isCancelled = ev.status === "cancelled";
               const spotsLow =
                 !isComingSoon &&
                 !isCompleted &&
+                !isCancelled &&
                 ev.capacity > 0 &&
                 ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.35);
               const isSeriesCard = ev.type === "series_event";
@@ -555,6 +566,11 @@ export default function Home() {
                           Coming Soon
                         </span>
                       )}
+                      {isCancelled && (
+                        <span className="bg-red-900/90 backdrop-blur-sm border border-red-700/50 text-red-300 text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          CANCELLED
+                        </span>
+                      )}
                       {isCompleted && (
                         <span className="bg-black/80 backdrop-blur-sm border border-white/20 text-white/50 text-xs font-bold px-2.5 py-0.5 rounded-full">
                           ✓ Completed
@@ -575,7 +591,9 @@ export default function Home() {
                       <span className="text-white/40 text-xs">
                         {isComingSoon ? "📅 Date TBA" : `📅 ${formatDate(ev.date)}`}
                       </span>
-                      {isCompleted ? (
+                      {isCancelled ? (
+                        <span className="text-red-400 text-xs font-semibold">Cancelled</span>
+                      ) : isCompleted ? (
                         <span className="text-white/30 text-xs font-semibold">✓ Completed</span>
                       ) : isComingSoon ? (
                         <span className="text-purple-400 text-xs font-semibold">Details soon</span>
