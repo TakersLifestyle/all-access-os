@@ -1374,9 +1374,13 @@ export default function EventsList() {
           .map((d) => ({ id: d.id, ...d.data() } as Event))
           .filter((ev) => ev.status !== "draft");
         all.sort((a, b) => {
-          // Completed events sort after all upcoming events
           const aCompleted = a.status === "completed";
           const bCompleted = b.status === "completed";
+          const aCancelled = a.status === "cancelled";
+          const bCancelled = b.status === "cancelled";
+          // Cancelled events go last, then completed, then upcoming
+          if (!aCancelled && bCancelled) return -1;
+          if (aCancelled && !bCancelled) return 1;
           if (!aCompleted && bCompleted) return -1;
           if (aCompleted && !bCompleted) return 1;
           if (a.isLaunchEvent && !b.isLaunchEvent) return -1;
