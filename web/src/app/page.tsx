@@ -71,14 +71,15 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
-function CinematicArchive({ albums }: { albums: Album[] }) {
+/** Hero rotation — 2 photos, cross-fades every 4.5s. Used in the top hero right column. */
+function HeroCinematic({ albums }: { albums: Album[] }) {
   const prefersReduced = useReducedMotion();
   const [groupIdx, setGroupIdx] = useState(0);
   const [opacity, setOpacity] = useState(1);
 
   const groups: Album[][] = [];
-  for (let i = 0; i < albums.length; i += 4) {
-    const g = albums.slice(i, i + 4);
+  for (let i = 0; i < albums.length; i += 2) {
+    const g = albums.slice(i, i + 2);
     if (g.length > 0) groups.push(g);
   }
 
@@ -95,7 +96,6 @@ function CinematicArchive({ albums }: { albums: Album[] }) {
     return () => { clearInterval(iid); clearTimeout(tid); };
   }, [groups.length, prefersReduced]);
 
-  // Preload next group
   useEffect(() => {
     if (groups.length <= 1) return;
     const next = groups[(groupIdx + 1) % groups.length];
@@ -108,42 +108,22 @@ function CinematicArchive({ albums }: { albums: Album[] }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIdx]);
 
-  if (groups.length === 0) {
-    return <div className="rounded-2xl overflow-hidden border border-white/10 h-80 bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20" />;
-  }
+  if (groups.length === 0) return null;
 
-  const group = groups[groupIdx];
-  const [p1, p2, p3, p4] = group;
+  const [p1, p2] = groups[groupIdx];
 
   return (
     <div
-      className="rounded-2xl overflow-hidden border border-white/10"
+      className="rounded-2xl overflow-hidden border border-white/10 flex flex-col gap-0.5 h-full"
       style={{ transition: prefersReduced ? "none" : "opacity 0.5s ease", opacity }}
     >
-      {/* Mobile: 1 photo */}
-      <div className="sm:hidden h-64 bg-black">
+      {/* Top photo — taller */}
+      <div className="flex-[3] min-h-0">
         {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
       </div>
-      {/* Tablet: 2 photos side by side */}
-      <div className="hidden sm:flex lg:hidden h-64 gap-0.5">
-        {p1 && <ArchivePhoto album={p1} className="flex-1" />}
-        {<ArchivePhoto album={p2 ?? p1} className="flex-1" />}
-      </div>
-      {/* Desktop: editorial layout — 1 large hero left + 3 stacked right */}
-      <div className="hidden lg:flex h-80 gap-0.5">
-        <div className="flex-[3]">
-          {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
-        </div>
-        <div className="flex-[2] flex flex-col gap-0.5">
-          {[p2, p3, p4].map((a, i) => (
-            <div key={i} className="flex-1">
-              {a
-                ? <ArchivePhoto album={a} className="w-full h-full" />
-                : <div className="w-full h-full bg-gradient-to-br from-pink-950/40 via-black to-purple-950/20" />
-              }
-            </div>
-          ))}
-        </div>
+      {/* Bottom photo */}
+      <div className="flex-[2] min-h-0">
+        {(p2 ?? p1) && <ArchivePhoto album={p2 ?? p1} className="w-full h-full" />}
       </div>
     </div>
   );
@@ -374,8 +354,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right: hero event card — shows next active event (never completed/sold-out) */}
-        {heroEvent && (
+        {/* Right: hero event card OR cinematic photo rotation when no active event */}
+        {heroEvent ? (
           <Link
             href={getEventHref(heroEvent)}
             className={`group block rounded-2xl overflow-hidden border transition-all duration-300 ${
@@ -447,7 +427,14 @@ export default function Home() {
               </div>
             </div>
           </Link>
-        )}
+        ) : memoryPreviews.length > 0 ? (
+          <Link
+            href="/memories"
+            className="hidden md:block group h-[320px] hover:opacity-95 transition-opacity duration-300"
+          >
+            <HeroCinematic albums={memoryPreviews} />
+          </Link>
+        ) : null}
       </section>
 
       {/* ── WHY ALL ACCESS WINNIPEG ───────────────────────────────────────── */}
@@ -499,8 +486,18 @@ export default function Home() {
           </Link>
         </div>
 
-        <Link href="/memories" className="group block hover:opacity-90 transition-opacity duration-300">
-          <CinematicArchive albums={memoryPreviews} />
+        <Link
+          href="/memories"
+          className="group block rounded-2xl overflow-hidden border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(236,72,153,0.08)]"
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-4 h-44 sm:h-52 gap-0.5 bg-black">
+            {memoryPreviews.slice(0, 4).map(album => (
+              <ArchivePhoto key={album.id} album={album} className="w-full h-full" />
+            ))}
+            {Array.from({ length: Math.max(0, 4 - Math.min(memoryPreviews.length, 4)) }).map((_, i) => (
+              <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20" />
+            ))}
+          </div>
         </Link>
 
         {/* Download upsell — only for non-members */}
