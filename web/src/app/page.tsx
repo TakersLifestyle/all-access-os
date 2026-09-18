@@ -36,18 +36,20 @@ function albumCoverUrl(albumId: string): string {
   return `/api/memories/cover?albumId=${encodeURIComponent(albumId)}&size=card&v=5`;
 }
 
-/** Mosaic tile — self-contained error state so a missing cover shows gradient, not broken img. */
-function MosaicTile({ album }: { album: { id: string; title: string; coverImageUrl?: string; coverStoragePath?: string } }) {
-  const [imgError, setImgError] = useState(false);
-  const hasCover = !!(album.coverImageUrl || album.coverStoragePath) && !imgError;
+type Album = { id: string; title: string; coverImageUrl?: string; coverStoragePath?: string };
+
+function ArchivePhoto({ album, className = "" }: { album: Album; className?: string }) {
+  const [err, setErr] = useState(false);
+  const hasCover = !!(album.coverImageUrl || album.coverStoragePath) && !err;
   return (
-    <div className="relative overflow-hidden">
+    <div className={`relative overflow-hidden bg-black ${className}`}>
       {hasCover ? (
         <img
           src={albumCoverUrl(album.id)}
           alt={album.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          onError={() => setImgError(true)}
+          className="w-full h-full object-cover"
+          onError={() => setErr(true)}
+          loading="lazy"
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-pink-950/60 via-black to-purple-950/40" />
@@ -56,15 +58,106 @@ function MosaicTile({ album }: { album: { id: string; title: string; coverImageU
   );
 }
 
-function useMemoryPreviews() {
-  const [albums, setAlbums] = useState<{ id: string; title: string; coverImageUrl?: string; coverStoragePath?: string; photoCount?: number }[]>([]);
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(8)))
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const h = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return reduced;
+}
+
+function CinematicArchive({ albums }: { albums: Album[] }) {
+  const prefersReduced = useReducedMotion();
+  const [groupIdx, setGroupIdx] = useState(0);
+  const [opacity, setOpacity] = useState(1);
+
+  const groups: Album[][] = [];
+  for (let i = 0; i < albums.length; i += 4) {
+    const g = albums.slice(i, i + 4);
+    if (g.length > 0) groups.push(g);
+  }
+
+  useEffect(() => {
+    if (prefersReduced || groups.length <= 1) return;
+    let tid: ReturnType<typeof setTimeout>;
+    const iid = setInterval(() => {
+      setOpacity(0);
+      tid = setTimeout(() => {
+        setGroupIdx(n => (n + 1) % groups.length);
+        setOpacity(1);
+      }, 500);
+    }, 4500);
+    return () => { clearInterval(iid); clearTimeout(tid); };
+  }, [groups.length, prefersReduced]);
+
+  // Preload next group
+  useEffect(() => {
+    if (groups.length <= 1) return;
+    const next = groups[(groupIdx + 1) % groups.length];
+    next.forEach(a => {
+      if (a.coverImageUrl || a.coverStoragePath) {
+        const img = new window.Image();
+        img.src = albumCoverUrl(a.id);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIdx]);
+
+  if (groups.length === 0) {
+    return <div className="rounded-2xl overflow-hidden border border-white/10 h-80 bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20" />;
+  }
+
+  const group = groups[groupIdx];
+  const [p1, p2, p3, p4] = group;
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden border border-white/10"
+      style={{ transition: prefersReduced ? "none" : "opacity 0.5s ease", opacity }}
+    >
+      {/* Mobile: 1 photo */}
+      <div className="sm:hidden h-64 bg-black">
+        {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
+      </div>
+      {/* Tablet: 2 photos side by side */}
+      <div className="hidden sm:flex lg:hidden h-64 gap-0.5">
+        {p1 && <ArchivePhoto album={p1} className="flex-1" />}
+        {<ArchivePhoto album={p2 ?? p1} className="flex-1" />}
+      </div>
+      {/* Desktop: editorial layout — 1 large hero left + 3 stacked right */}
+      <div className="hidden lg:flex h-80 gap-0.5">
+        <div className="flex-[3]">
+          {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
+        </div>
+        <div className="flex-[2] flex flex-col gap-0.5">
+          {[p2, p3, p4].map((a, i) => (
+            <div key={i} className="flex-1">
+              {a
+                ? <ArchivePhoto album={a} className="w-full h-full" />
+                : <div className="w-full h-full bg-gradient-to-br from-pink-950/40 via-black to-purple-950/20" />
+              }
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useMemoryPreviews() {
+  const [albums, setAlbums] = useState<Album[]>([]);
+  useEffect(() => {
+    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(12)))
       .then(snap => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
         all.sort((a: any, b: any) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
-        setAlbums(all.slice(0, 4));
+        setAlbums(all.slice(0, 12));
       })
       .catch(() => {});
   }, []);
@@ -191,6 +284,10 @@ export default function Home() {
   const isSeries = false; // Series events are never the homepage hero
   const isConcert = heroEvent?.type === "concert" || (heroEvent?.homepageFeatured && heroEvent?.type !== "series_event" && heroEvent?.type !== undefined);
   const heroMinPrice = heroEvent ? getMinPrice(heroEvent) : 0;
+
+  // Only show Upcoming section when there are genuinely active, future events
+  const TODAY = new Date().toISOString().split("T")[0];
+  const upcomingActive = events.filter(e => e.status === "active" && (e.date ?? "") >= TODAY);
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10 sm:space-y-14 pb-32">
@@ -394,46 +491,16 @@ export default function Home() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-1">Community Archive</p>
-            <h2 className="text-2xl font-bold">4,000+ Moments Captured</h2>
-            <p className="text-white/40 text-sm mt-1">Winnipeg, you might be in here 👀</p>
+            <h2 className="text-2xl font-bold">4,000+ Moments. One Community.</h2>
+            <p className="text-white/40 text-sm mt-1">Real people. Real nights. Real memories.</p>
           </div>
           <Link href="/memories" className="text-pink-400 hover:text-pink-300 text-sm transition shrink-0 font-medium">
-            Browse all →
+            View All Memories →
           </Link>
         </div>
 
-        <Link
-          href="/memories"
-          className="group block relative overflow-hidden rounded-2xl border border-white/10 hover:border-pink-500/25 transition-all duration-300 hover:shadow-[0_8px_40px_rgba(236,72,153,0.10)]"
-        >
-          {/* Photo mosaic grid */}
-          <div className="grid grid-cols-4 h-44 sm:h-56 gap-0.5 bg-black">
-            {memoryPreviews.map((album) => (
-              <MosaicTile key={album.id} album={album} />
-            ))}
-            {Array.from({ length: Math.max(0, 4 - memoryPreviews.length) }).map((_, i) => (
-              <div key={`ph-${i}`} className="bg-gradient-to-br from-pink-950/30 via-black to-purple-950/20 flex items-center justify-center">
-                <span className="text-4xl opacity-[0.04]">📸</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Gradient overlay + CTA */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-5 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mb-1">
-                Founding 15 · Community Moments · Events
-              </p>
-              <p className="text-white font-bold text-base leading-tight">
-                Browse the archive. Find your people.
-              </p>
-            </div>
-            <span className="bg-pink-600 group-hover:bg-pink-500 transition px-5 py-2.5 rounded-xl text-sm font-bold text-white shrink-0">
-              Open →
-            </span>
-          </div>
+        <Link href="/memories" className="group block hover:opacity-90 transition-opacity duration-300">
+          <CinematicArchive albums={memoryPreviews} />
         </Link>
 
         {/* Download upsell — only for non-members */}
@@ -477,7 +544,7 @@ export default function Home() {
       )}
 
       {/* ── UPCOMING COMMUNITY EXPERIENCES ───────────────────────────────── */}
-      {events.length > 0 && (
+      {upcomingActive.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -490,7 +557,7 @@ export default function Home() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            {events.map((ev) => {
+            {upcomingActive.map((ev) => {
               const isComingSoon = ev.status === "coming_soon";
               const isCompleted = ev.status === "completed";
               const isCancelled = ev.status === "cancelled";
