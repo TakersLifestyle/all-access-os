@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { collection, getDocs, orderBy, query, where, limit } from "firebase/firestore";
@@ -71,70 +71,53 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
-/** Hero rotation — 2 square photos side by side, randomly ordered, cross-fades every 4.5s. */
+/** Pick 2 different random albums from the pool — never the same photo twice in a pair. */
+function pickPair(pool: Album[]): [Album, Album] | null {
+  if (pool.length < 2) return null;
+  const i = Math.floor(Math.random() * pool.length);
+  let j: number;
+  do { j = Math.floor(Math.random() * pool.length); } while (j === i);
+  return [pool[i], pool[j]];
+}
+
+/** Hero rotation — 2 square photos, brand-new random pair on every switch. */
 function HeroCinematic({ albums }: { albums: Album[] }) {
   const prefersReduced = useReducedMotion();
-  const [groupIdx, setGroupIdx] = useState(0);
   const [opacity, setOpacity] = useState(1);
+  const [pair, setPair] = useState<[Album, Album] | null>(null);
 
-  // Shuffle randomly once when albums first load — different order every page visit
-  const shuffled = useMemo(() => {
-    const arr = [...albums];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Pick a fresh random pair on initial load
+  useEffect(() => {
+    if (albums.length >= 2) setPair(pickPair(albums));
   }, [albums.length]);
 
-  const groups: Album[][] = [];
-  for (let i = 0; i < shuffled.length; i += 2) {
-    const g = shuffled.slice(i, i + 2);
-    if (g.length > 0) groups.push(g);
-  }
-
+  // Every 4.5s: fade out, pick a completely new random pair, fade in
   useEffect(() => {
-    if (prefersReduced || groups.length <= 1) return;
+    if (prefersReduced || albums.length < 2) return;
     let tid: ReturnType<typeof setTimeout>;
     const iid = setInterval(() => {
       setOpacity(0);
       tid = setTimeout(() => {
-        setGroupIdx(n => (n + 1) % groups.length);
+        setPair(pickPair(albums));
         setOpacity(1);
       }, 500);
     }, 4500);
     return () => { clearInterval(iid); clearTimeout(tid); };
-  }, [groups.length, prefersReduced]);
+  }, [albums.length, prefersReduced]);
 
-  useEffect(() => {
-    if (groups.length <= 1) return;
-    const next = groups[(groupIdx + 1) % groups.length];
-    next.forEach(a => {
-      if (a.coverImageUrl || a.coverStoragePath) {
-        const img = new window.Image();
-        img.src = albumCoverUrl(a.id);
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupIdx]);
-
-  if (groups.length === 0) return null;
-
-  const [p1, p2] = groups[groupIdx];
+  if (!pair) return null;
+  const [p1, p2] = pair;
 
   return (
     <div
       className="grid grid-cols-2 gap-1.5"
       style={{ transition: prefersReduced ? "none" : "opacity 0.5s ease", opacity }}
     >
-      {/* Left square */}
       <div className="aspect-square rounded-2xl overflow-hidden border border-white/10">
-        {p1 && <ArchivePhoto album={p1} className="w-full h-full" />}
+        <ArchivePhoto album={p1} className="w-full h-full" />
       </div>
-      {/* Right square */}
       <div className="aspect-square rounded-2xl overflow-hidden border border-white/10">
-        <ArchivePhoto album={p2 ?? p1} className="w-full h-full" />
+        <ArchivePhoto album={p2} className="w-full h-full" />
       </div>
     </div>
   );
@@ -143,7 +126,7 @@ function HeroCinematic({ albums }: { albums: Album[] }) {
 function useMemoryPreviews() {
   const [albums, setAlbums] = useState<Album[]>([]);
   useEffect(() => {
-    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(100)))
+    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active")))
       .then(snap => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
