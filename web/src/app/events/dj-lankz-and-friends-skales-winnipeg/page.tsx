@@ -1,41 +1,4 @@
-"use client";
-
-import { useState, useCallback } from "react";
 import Link from "next/link";
-import { track } from "@vercel/analytics";
-import { useAuth } from "@/lib/auth-context";
-
-const EVENT_ID = "EQIimnVZ5jPhVKPLyAJ2";
-
-// Ticket tiers — prices must match Firestore event doc
-const TIERS = [
-  {
-    id: "early_bird" as const,
-    label: "Early Bird",
-    price: 25,
-    soldOut: true,
-    description: "General admission · Doors 10 PM · Oct 9, 2026",
-    features: ["General admission", "Full concert access", "Doors open 10 PM", "Early bird pricing"],
-  },
-  {
-    id: "general" as const,
-    label: "General Admission",
-    price: 35,
-    soldOut: false,
-    description: "General admission · Doors 10 PM · Oct 9, 2026",
-    features: ["General admission", "Full concert access", "Doors open 10 PM"],
-  },
-  {
-    id: "vip" as const,
-    label: "VIP — Skip The Line",
-    price: 50,
-    soldOut: false,
-    description: "VIP admission · Skip the line · Oct 9, 2026",
-    features: ["Skip the line", "Priority entry", "Full concert access", "Doors open 10 PM"],
-  },
-] as const;
-
-type TierId = "early_bird" | "general" | "vip";
 
 // ── Accent palette — lime-green from Skales' signature look ──────────────────
 // Only applies to this page. No other ALL ACCESS page is affected.
@@ -62,41 +25,6 @@ const EVENT = {
 };
 
 export default function DJLankzSkalesPage() {
-  const { user, isActive } = useAuth();
-  const [selectedTier, setSelectedTier] = useState<TierId>("general");
-  const [qty, setQty] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const activeTier = TIERS.find(t => t.id === selectedTier) ?? TIERS[1];
-  const total = activeTier.price * qty;
-
-  const handleCheckout = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-    track("get_tickets_click", { event: "skales_oct9", ticketType: selectedTier, quantity: qty, source: "event_page" });
-    try {
-      const res = await fetch("/api/event-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: EVENT_ID,
-          quantity: qty,
-          ticketType: selectedTier,
-          uid: user?.uid ?? null,
-          userEmail: user?.email ?? null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Checkout failed. Please try again.");
-      if (data.url) { window.location.href = data.url; return; }
-      throw new Error("No redirect URL. Please try again.");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-      setLoading(false);
-    }
-  }, [qty, selectedTier, user]);
-
   return (
     <main className="min-h-screen bg-black text-white">
 
@@ -154,10 +82,10 @@ export default function DJLankzSkalesPage() {
           <div className="flex-1 space-y-4 lg:pr-4">
             {/* Badges */}
             <div className="flex flex-wrap gap-2">
-              <span className={`${LIME.badge} text-black text-xs font-black px-3 py-1.5 rounded-full`}>
-                LIVE CONCERT
+              <span className="bg-red-900/90 border border-red-700/50 text-red-300 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider">
+                CANCELLED
               </span>
-              <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full">
+              <span className="bg-black/70 backdrop-blur-sm border border-white/20 text-white/70 text-xs font-bold px-3 py-1.5 rounded-full line-through">
                 {EVENT.dateShort}
               </span>
             </div>
@@ -393,177 +321,35 @@ export default function DJLankzSkalesPage() {
           </div>
         </section>
 
-        {/* ── Member discount banner ─────────────────────────────────────── */}
-        {isActive ? (
-          <div className="flex items-center gap-4 bg-[#84cc16]/8 border border-[#84cc16]/25 rounded-2xl px-5 py-4">
-            <span className="text-2xl shrink-0">✅</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[#84cc16] font-black text-sm">You&apos;re ALL ACCESS — 30% off applied at checkout</p>
-              <p className="text-white/40 text-xs mt-0.5">GA tickets: <span className="line-through text-white/25">$35</span> → <span className="text-[#84cc16] font-bold">$24.50</span> · VIP: <span className="line-through text-white/25">$50</span> → <span className="text-[#84cc16] font-bold">$35</span></p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[#84cc16]/30 bg-[#84cc16]/5 overflow-hidden">
-            {/* Top row — the hook */}
-            <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-3 flex-wrap">
-              <div>
-                <p className="text-[#84cc16] font-black text-base leading-tight">Members pay $24.50</p>
-                <p className="text-white/50 text-sm mt-0.5">
-                  You&apos;re paying <span className="text-white font-bold">$35</span> — that&apos;s{" "}
-                  <span className="text-[#84cc16] font-bold">$10.50 extra</span> vs. an ALL ACCESS member
-                </p>
-              </div>
-              <div className="bg-[#84cc16]/15 border border-[#84cc16]/30 rounded-xl px-4 py-2 text-center shrink-0">
-                <p className="text-[#84cc16] font-black text-xl leading-none">30%</p>
-                <p className="text-[#84cc16]/60 text-[10px] font-bold uppercase tracking-wider mt-0.5">off</p>
-              </div>
-            </div>
-            {/* Bottom row — the math */}
-            <div className="border-t border-[#84cc16]/15 mx-5 pt-3 pb-4 flex items-center justify-between gap-4 flex-wrap">
-              <p className="text-white/35 text-xs leading-relaxed">
-                Join ALL ACCESS for $10/mo → your ticket goes from $35 to $24.50.<br className="hidden sm:block" />
-                <span className="text-white/50">Membership pays for itself with one ticket.</span>
-              </p>
-              <Link
-                href="/membership"
-                className="bg-[#84cc16] hover:bg-[#a3e635] text-black font-black text-xs px-4 py-2.5 rounded-xl transition whitespace-nowrap shrink-0"
-              >
-                Join $10/mo → Save $10.50
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* ── Ticket CTA ─────────────────────────────────────────────────── */}
-        <section id="tickets" className="space-y-4">
+        {/* ── Cancellation notice ────────────────────────────────────────── */}
+        <div className="rounded-2xl border border-red-800/40 bg-red-950/20 p-6 sm:p-8 space-y-4">
           <div className="flex items-center gap-3">
-            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
-            <p className={`${LIME.text} text-xs font-bold uppercase tracking-[0.18em]`}>Tickets</p>
-            <div className={`h-px flex-1 ${LIME.bar} opacity-20`} />
+            <span className="bg-red-900/60 border border-red-700/50 text-red-300 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider">
+              Cancelled
+            </span>
           </div>
-
-          <div className={`rounded-2xl border ${LIME.border} bg-white/[0.02] p-6 sm:p-8 space-y-5`}>
-
-            {/* Tier selector — 3 cards */}
-            <div className="space-y-3">
-              {TIERS.map(tier => {
-                const isSelected = selectedTier === tier.id && !tier.soldOut;
-                return (
-                  <button
-                    key={tier.id}
-                    onClick={() => !tier.soldOut && setSelectedTier(tier.id)}
-                    disabled={tier.soldOut}
-                    className={[
-                      "w-full text-left rounded-xl border p-5 space-y-3 transition-all duration-150",
-                      tier.soldOut
-                        ? "border-white/8 bg-black/20 opacity-50 cursor-not-allowed"
-                        : isSelected
-                        ? `border-[#84cc16]/60 bg-black/50 shadow-[0_0_20px_rgba(132,204,22,0.08)]`
-                        : `border-white/10 bg-black/30 hover:border-white/20`,
-                    ].join(" ")}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {/* Radio dot */}
-                        <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                          tier.soldOut ? "border-white/20" : isSelected ? "border-[#84cc16]" : "border-white/30"
-                        }`}>
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-[#84cc16]" />}
-                        </div>
-                        <div>
-                          <p className="text-white font-black text-base leading-tight flex items-center gap-2">
-                            {tier.label}
-                            {tier.soldOut && (
-                              <span className="text-[10px] font-black bg-red-950/60 border border-red-800/40 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                Sold Out
-                              </span>
-                            )}
-                            {tier.id === "vip" && !tier.soldOut && (
-                              <span className={`text-[10px] font-black ${LIME.badgeDim} ${LIME.text} px-2 py-0.5 rounded-full uppercase tracking-wider`}>
-                                Best
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-white/40 text-xs mt-0.5">{tier.description}</p>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className={`text-2xl font-black ${tier.soldOut ? "text-white/30" : "text-white"}`}>${tier.price}</p>
-                        <p className="text-white/25 text-xs">CAD / ticket</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 pl-7">
-                      {tier.features.map(f => (
-                        <span key={f} className="flex items-center gap-1.5 text-xs text-white/40">
-                          <span className={`text-[10px] ${tier.soldOut ? "text-white/25" : LIME.text}`}>✓</span> {f}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quantity selector */}
-            <div className="flex items-center justify-between bg-black/30 border border-white/10 rounded-xl px-4 py-3 gap-3">
-              <span className="text-sm text-white/50 shrink-0">Qty</span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setQty(q => Math.max(1, q - 1))}
-                  disabled={qty <= 1}
-                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                >−</button>
-                <span className="w-8 text-center font-bold text-lg tabular-nums">{qty}</span>
-                <button
-                  onClick={() => setQty(q => Math.min(5, q + 1))}
-                  disabled={qty >= 5}
-                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white font-bold text-xl flex items-center justify-center transition select-none"
-                >+</button>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-white font-black text-xl tabular-nums">${total}</p>
-                {qty > 1 && <p className="text-white/30 text-xs">${activeTier.price} × {qty}</p>}
-              </div>
-            </div>
-
-            {/* CTA */}
-            <button
-              onClick={handleCheckout}
-              disabled={loading}
-              className="w-full bg-[#84cc16] hover:bg-[#a3e635] active:bg-[#65a30d] disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-base py-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#84cc16]/20 hover:shadow-[#84cc16]/30 hover:-translate-y-0.5"
-            >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                  <span>Redirecting…</span>
-                </>
-              ) : (
-                <>
-                  <span>🎟 Get {activeTier.label} — ${total}</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/>
-                  </svg>
-                </>
-              )}
-            </button>
-
-            {error && (
-              <div className="bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2.5">
-                <p className="text-red-400 text-xs flex items-start gap-2">
-                  <span className="shrink-0 mt-0.5">⚠</span>
-                  <span>{error}</span>
-                </p>
-              </div>
-            )}
-
-            <p className="text-center text-white/20 text-xs flex items-center justify-center gap-1.5">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-              </svg>
-              Secure checkout via Stripe · Refundable up to 72 hrs before the event
+          <div className="space-y-2">
+            <h3 className="text-white font-black text-lg leading-tight">This event has been cancelled.</h3>
+            <p className="text-white/50 text-sm leading-relaxed">
+              We&apos;re deeply sorry. Some things happened outside of our control and we had no choice but to cancel.
+              Full refunds have been issued to all ticket holders — your money is already on its way back to you
+              within 5–10 business days, straight to the card you used.
             </p>
           </div>
-        </section>
+          <div className="flex items-start gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3.5">
+            <span className="text-base shrink-0 mt-0.5">💸</span>
+            <div>
+              <p className="text-white font-bold text-sm">Full refund processed</p>
+              <p className="text-white/40 text-xs mt-0.5">No action needed — refunds were issued September 18, 2026. Allow 5–10 business days to appear.</p>
+            </div>
+          </div>
+          <p className="text-white/25 text-xs">
+            Questions?{" "}
+            <a href="mailto:hello@allaccesswinnipeg.ca" className="text-white/40 hover:text-white/60 transition underline">
+              hello@allaccesswinnipeg.ca
+            </a>
+          </p>
+        </div>
 
         {/* ── 6 Reasons ──────────────────────────────────────────────────── */}
         <section className="space-y-4">
@@ -621,11 +407,7 @@ export default function DJLankzSkalesPage() {
           <p className="text-white/40 text-sm">Presented by DJ LANKZ & ALL ACCESS Winnipeg</p>
           <div className="flex flex-wrap justify-center gap-2 mt-2">
             <div className="inline-flex items-center gap-2 bg-red-950/40 border border-red-800/30 rounded-full px-3 py-1.5">
-              <span className="text-red-400 text-xs font-bold">Early Bird — Sold Out</span>
-            </div>
-            <div className={`inline-flex items-center gap-2 ${LIME.badgeDim} rounded-full px-3 py-1.5`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${LIME.badge} animate-pulse`} />
-              <span className={`${LIME.text} text-xs font-bold`}>General $35 · VIP $50</span>
+              <span className="text-red-400 text-xs font-bold">Event Cancelled — Full Refunds Issued</span>
             </div>
           </div>
           <p className="text-white/20 text-xs pt-1">

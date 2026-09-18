@@ -949,9 +949,10 @@ function EventCard({
   userTicket?: EventPurchase | null;
 }) {
   const isCompleted = ev.status === "completed";
+  const isCancelled = ev.status === "cancelled";
   const isSoldOut = isCompleted || ev.status === "sold_out" || ev.ticketsRemaining === 0;
-  const isCritical = !isSoldOut && !isCompleted && ev.capacity > 0 && ev.ticketsRemaining <= 5;
-  const isLow = !isSoldOut && !isCompleted && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
+  const isCritical = !isSoldOut && !isCompleted && !isCancelled && ev.capacity > 0 && ev.ticketsRemaining <= 5;
+  const isLow = !isSoldOut && !isCompleted && !isCancelled && ev.capacity > 0 && ev.ticketsRemaining <= Math.ceil(ev.capacity * 0.25);
   const isConfirmed = !!userTicket;
 
   // ── Pricing ──────────────────────────────────────────────
@@ -988,7 +989,9 @@ function EventCard({
 
   return (
     <div className={`rounded-2xl overflow-hidden transition-all duration-300 group ${
-      isCompleted
+      isCancelled
+        ? "border border-red-900/30 bg-white/[0.02] opacity-70"
+        : isCompleted
         ? "border border-white/10 bg-white/[0.03]"
         : isConfirmed
         ? "border border-emerald-500/20 bg-white/5 shadow-[0_0_40px_rgba(16,185,129,0.04)]"
@@ -1011,7 +1014,11 @@ function EventCard({
 
           {/* Status badges */}
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-            {isCompleted ? (
+            {isCancelled ? (
+              <span className="bg-red-900/90 backdrop-blur-sm border border-red-700/50 text-red-300 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider">
+                CANCELLED
+              </span>
+            ) : isCompleted ? (
               <>
                 {isConfirmed ? (
                   <span className="bg-emerald-900/90 backdrop-blur-sm border border-emerald-600/40 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
@@ -1059,8 +1066,8 @@ function EventCard({
             )}
           </div>
 
-          {/* Price badge — bottom right (hidden for completed events) */}
-          {!isCompleted && <div className="absolute bottom-4 right-4 text-right">
+          {/* Price badge — bottom right (hidden for completed/cancelled events) */}
+          {!isCompleted && !isCancelled && <div className="absolute bottom-4 right-4 text-right">
             {isConfirmed ? (
               /* Confirmed — show paid amount */
               <div className="bg-emerald-600/90 backdrop-blur-sm border border-emerald-400/30 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg">
@@ -1148,8 +1155,8 @@ function EventCard({
           )}
         </div>
 
-        {/* Member / savings callout — only when not confirmed */}
-        {!isConfirmed && isSignedIn && generalPrice > 0 && savingsAmount > 0 && (
+        {/* Member / savings callout — only when not confirmed and not cancelled */}
+        {!isConfirmed && !isCancelled && isSignedIn && generalPrice > 0 && savingsAmount > 0 && (
           isMember ? (
             <div className="flex items-center gap-2 bg-emerald-950/30 border border-emerald-500/20 rounded-xl px-4 py-2.5">
               <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -1172,8 +1179,8 @@ function EventCard({
           )
         )}
 
-        {/* Capacity bar — hidden for completed events */}
-        {ev.capacity > 0 && !isSoldOut && !isCompleted && (
+        {/* Capacity bar — hidden for completed/cancelled events */}
+        {ev.capacity > 0 && !isSoldOut && !isCompleted && !isCancelled && (
           <UrgencyBar capacity={ev.capacity} remaining={ev.ticketsRemaining ?? ev.capacity} />
         )}
 
@@ -1205,7 +1212,12 @@ function EventCard({
 
         {/* ── Action section ── */}
         <div className="pt-1 space-y-3">
-          {isCompleted ? (
+          {isCancelled ? (
+            <div className="rounded-xl border border-red-800/40 bg-red-950/20 px-4 py-4 space-y-2">
+              <p className="text-red-300 font-bold text-sm">This event has been cancelled.</p>
+              <p className="text-white/40 text-xs leading-relaxed">Full refunds were issued September 18, 2026. Allow 5–10 business days to appear on your statement.</p>
+            </div>
+          ) : isCompleted ? (
             isConfirmed ? (
               ev.isLaunchEvent
                 ? <FoundingAttendedState ticket={userTicket} ev={ev} />
