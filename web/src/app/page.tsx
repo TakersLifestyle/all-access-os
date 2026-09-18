@@ -143,12 +143,11 @@ function HeroCinematic({ albums }: { albums: Album[] }) {
 function useMemoryPreviews() {
   const [albums, setAlbums] = useState<Album[]>([]);
   useEffect(() => {
-    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(12)))
+    getDocs(query(collection(db, "memoryAlbums"), where("status", "==", "active"), limit(100)))
       .then(snap => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        all.sort((a: any, b: any) => Number(b.isFeatured ?? false) - Number(a.isFeatured ?? false));
-        setAlbums(all.slice(0, 12));
+        setAlbums(all);
       })
       .catch(() => {});
   }, []);
